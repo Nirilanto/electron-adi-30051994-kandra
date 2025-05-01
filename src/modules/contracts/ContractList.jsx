@@ -1,32 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import DatabaseService from '../../services/DatabaseService';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import DatabaseService from "../../services/DatabaseService";
+import PDFGenerator from './PDFGenerator';
 
 // Icônes
-import { 
-  PlusIcon, 
-  PencilIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
   TrashIcon,
   DocumentTextIcon,
   DocumentArrowDownIcon,
   MagnifyingGlassIcon,
-  FunnelIcon
-} from '@heroicons/react/24/outline';
+  FunnelIcon,
+} from "@heroicons/react/24/outline";
 
 const ContractList = () => {
   // État pour stocker la liste des contrats
   const [contracts, setContracts] = useState([]);
-  
+  const [generatingPDF, setGeneratingPDF] = useState(null);
+
   // État pour gérer le chargement
   const [loading, setLoading] = useState(true);
-  
+
   // État pour la recherche et le filtrage
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
   // État pour la confirmation de suppression
   const [contractToDelete, setContractToDelete] = useState(null);
-  
+
   // Charger la liste des contrats au montage du composant
   useEffect(() => {
     const loadContracts = async () => {
@@ -35,7 +37,7 @@ const ContractList = () => {
         const contractData = await DatabaseService.getContracts();
         setContracts(contractData);
       } catch (error) {
-        console.error('Erreur lors du chargement des contrats:', error);
+        console.error("Erreur lors du chargement des contrats:", error);
       } finally {
         setLoading(false);
       }
@@ -44,21 +46,61 @@ const ContractList = () => {
     loadContracts();
   }, []);
 
+
+// Fonction pour générer un PDF pour un contrat spécifique
+const handleGeneratePDF = async (contractId) => {
+  try {
+    // Indiquer quel contrat est en cours de génération
+    setGeneratingPDF(contractId);
+    
+    // Récupérer les données complètes nécessaires pour le PDF
+    const contract = await DatabaseService.getContractById(contractId);
+    const employee = await DatabaseService.getEmployeeById(contract.employee_id);
+    const client = await DatabaseService.getClientById(contract.client_id);
+    
+    // Utiliser le service PDF pour générer le document
+    // Importer PDFGenerator au début du fichier: import PDFGenerator from './PDFGenerator';
+    const result = await PDFGenerator.generateContractPDF(contract, employee, client);
+    
+    // Afficher un message de succès
+    if (result.success) {
+      // Utiliser une notification ou une alerte
+      alert(`PDF généré avec succès: ${result.fileName}`);
+    }
+  } catch (error) {
+    console.error('Erreur lors de la génération du PDF:', error);
+    alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
+  } finally {
+    // Réinitialiser l'état
+    setGeneratingPDF(null);
+  }
+};
+
   // Fonction pour filtrer les contrats en fonction de la recherche et des filtres
-  const filteredContracts = contracts.filter(contract => {
+  const filteredContracts = contracts.filter((contract) => {
     // Filtrer par recherche (titre, référence, employé, client)
-    const matchesSearch = 
-      (contract.title && contract.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.reference && contract.reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.employee_firstname && contract.employee_firstname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.employee_lastname && contract.employee_lastname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.client_company && contract.client_company.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+    const matchesSearch =
+      (contract.title &&
+        contract.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.reference &&
+        contract.reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (contract.employee_firstname &&
+        contract.employee_firstname
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      (contract.employee_lastname &&
+        contract.employee_lastname
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())) ||
+      (contract.client_company &&
+        contract.client_company
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()));
+
     // Filtrer par statut
-    const matchesStatus = 
-      statusFilter === 'all' || 
-      contract.status === statusFilter;
-    
+    const matchesStatus =
+      statusFilter === "all" || contract.status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -66,55 +108,56 @@ const ContractList = () => {
   const handleDeleteContract = async (id) => {
     try {
       await DatabaseService.deleteContract(id);
-      
+
       // Mettre à jour la liste des contrats
-      setContracts(contracts.filter(contract => contract.id !== id));
-      
+      setContracts(contracts.filter((contract) => contract.id !== id));
+
       // Réinitialiser l'état de suppression
       setContractToDelete(null);
     } catch (error) {
-      console.error('Erreur lors de la suppression du contrat:', error);
+      console.error("Erreur lors de la suppression du contrat:", error);
     }
   };
 
   // Formatter les dates
   const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    
+    if (!dateString) return "-";
+
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   // Générer un badge de statut pour un contrat
   const getStatusBadge = (status) => {
-    let classes = 'px-2 inline-flex text-xs leading-5 font-semibold rounded-full ';
+    let classes =
+      "px-2 inline-flex text-xs leading-5 font-semibold rounded-full ";
     let text = status;
-    
+
     switch (status) {
-      case 'active':
-        classes += 'bg-green-100 text-green-800';
-        text = 'Actif';
+      case "active":
+        classes += "bg-green-100 text-green-800";
+        text = "Actif";
         break;
-      case 'draft':
-        classes += 'bg-gray-100 text-gray-800';
-        text = 'Brouillon';
+      case "draft":
+        classes += "bg-gray-100 text-gray-800";
+        text = "Brouillon";
         break;
-      case 'completed':
-        classes += 'bg-blue-100 text-blue-800';
-        text = 'Terminé';
+      case "completed":
+        classes += "bg-blue-100 text-blue-800";
+        text = "Terminé";
         break;
-      case 'canceled':
-        classes += 'bg-red-100 text-red-800';
-        text = 'Annulé';
+      case "canceled":
+        classes += "bg-red-100 text-red-800";
+        text = "Annulé";
         break;
       default:
-        classes += 'bg-gray-100 text-gray-800';
+        classes += "bg-gray-100 text-gray-800";
     }
-    
+
     return <span className={classes}>{text}</span>;
   };
 
@@ -133,11 +176,10 @@ const ContractList = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-800">Gestion des contrats</h1>
-        <Link 
-          to="/contracts/new" 
-          className="btn btn-primary flex items-center"
-        >
+        <h1 className="text-2xl font-semibold text-gray-800">
+          Gestion des contrats
+        </h1>
+        <Link to="/contracts/new" className="btn btn-primary flex items-center">
           <PlusIcon className="w-5 h-5 mr-2" />
           Nouveau contrat
         </Link>
@@ -182,22 +224,40 @@ const ContractList = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Référence / Titre
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Employé
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Client
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Période
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Statut
                   </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
                     Actions
                   </th>
                 </tr>
@@ -222,7 +282,8 @@ const ContractList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {contract.employee_firstname} {contract.employee_lastname}
+                        {contract.employee_firstname}{" "}
+                        {contract.employee_lastname}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -235,14 +296,16 @@ const ContractList = () => {
                         {formatDate(contract.start_date)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {contract.end_date ? `→ ${formatDate(contract.end_date)}` : 'Non définie'}
+                        {contract.end_date
+                          ? `→ ${formatDate(contract.end_date)}`
+                          : "Non définie"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {getStatusBadge(contract.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link 
+                      <Link
                         to={`/contracts/${contract.id}`}
                         className="text-primary-500 hover:text-primary-700 mx-1"
                         title="Modifier"
@@ -257,6 +320,10 @@ const ContractList = () => {
                         <TrashIcon className="h-5 w-5 inline" />
                       </button>
                       <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleGeneratePDF(contract.id);
+                        }}
                         className="text-gray-500 hover:text-gray-700 mx-1"
                         title="Télécharger le contrat PDF"
                       >
@@ -270,7 +337,10 @@ const ContractList = () => {
           </div>
         ) : (
           <div className="p-6 text-center text-gray-500">
-            Aucun contrat trouvé. {searchTerm || statusFilter !== 'all' ? 'Essayez de modifier vos filtres.' : ''}
+            Aucun contrat trouvé.{" "}
+            {searchTerm || statusFilter !== "all"
+              ? "Essayez de modifier vos filtres."
+              : ""}
           </div>
         )}
       </div>
@@ -279,10 +349,15 @@ const ContractList = () => {
       {contractToDelete && (
         <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmer la suppression</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Confirmer la suppression
+            </h3>
             <p className="text-gray-600 mb-4">
-              Êtes-vous sûr de vouloir supprimer le contrat <span className="font-medium">{contractToDelete.reference || `CONT-${contractToDelete.id}`}</span> ?
-              Cette action est irréversible.
+              Êtes-vous sûr de vouloir supprimer le contrat{" "}
+              <span className="font-medium">
+                {contractToDelete.reference || `CONT-${contractToDelete.id}`}
+              </span>{" "}
+              ? Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
               <button
