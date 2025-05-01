@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DatabaseService from "../../services/DatabaseService";
-import PDFGenerator from './PDFGenerator';
+import PDFGenerator from "./PDFGenerator";
 
 // Icônes
 import {
@@ -18,6 +18,12 @@ const ContractList = () => {
   // État pour stocker la liste des contrats
   const [contracts, setContracts] = useState([]);
   const [generatingPDF, setGeneratingPDF] = useState(null);
+  const [pdfExportModal, setPdfExportModal] = useState({
+    isOpen: false,
+    contractId: null,
+    fileName: "",
+    contract: null,
+  });
 
   // État pour gérer le chargement
   const [loading, setLoading] = useState(true);
@@ -46,35 +52,84 @@ const ContractList = () => {
     loadContracts();
   }, []);
 
+  // Fonction pour générer le PDF avec le nom personnalisé
+  const handleGeneratePDF = async () => {
+    try {
+      const { contractId, fileName } = pdfExportModal;
 
-// Fonction pour générer un PDF pour un contrat spécifique
-const handleGeneratePDF = async (contractId) => {
-  try {
-    // Indiquer quel contrat est en cours de génération
-    setGeneratingPDF(contractId);
-    
-    // Récupérer les données complètes nécessaires pour le PDF
-    const contract = await DatabaseService.getContractById(contractId);
-    const employee = await DatabaseService.getEmployeeById(contract.employee_id);
-    const client = await DatabaseService.getClientById(contract.client_id);
-    
-    // Utiliser le service PDF pour générer le document
-    // Importer PDFGenerator au début du fichier: import PDFGenerator from './PDFGenerator';
-    const result = await PDFGenerator.generateContractPDF(contract, employee, client);
-    
-    // Afficher un message de succès
-    if (result.success) {
-      // Utiliser une notification ou une alerte
-      alert(`PDF généré avec succès: ${result.fileName}`);
+      // Indiquer que la génération est en cours
+      setGeneratingPDF(contractId);
+
+      // Récupérer les données complètes nécessaires pour le PDF
+      const contract = await DatabaseService.getContractById(contractId);
+      const employee = await DatabaseService.getEmployeeById(
+        contract.employee_id
+      );
+      const client = await DatabaseService.getClientById(contract.client_id);
+
+      // Si nous sommes dans Electron, montrer une boîte de dialogue pour choisir l'emplacement
+      if (window.electron) {
+        // Importer PDFGenerator au début du fichier: import PDFGenerator from './PDFGenerator';
+        const result = await window.electron.dialog.showSaveDialog({
+          title: "Enregistrer le PDF",
+          defaultPath: fileName,
+          filters: [{ name: "PDF", extensions: ["pdf"] }],
+        });
+
+        if (!result.canceled) {
+          const savePath = result.filePath;
+          // Générer le PDF à l'emplacement spécifié
+          const pdfResult = await PDFGenerator.generateContractPDF(
+            contract,
+            employee,
+            client,
+            savePath
+          );
+
+          if (pdfResult.success) {
+            alert(`PDF généré avec succès 2222 : ${savePath}`);
+          }
+        }
+      } else {
+        // En mode développement, utiliser l'emplacement par défaut
+        const result = await PDFGenerator.generateContractPDF(
+          contract,
+          employee,
+          client,
+          fileName
+        );
+        alert(`PDF généré avec succès: ${result.filePath}`);
+      }
+
+      // Fermer la modale
+      setPdfExportModal({
+        isOpen: false,
+        contractId: null,
+        fileName: "",
+        contract: null,
+      });
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF:", error);
+      alert("Erreur lors de la génération du PDF. Veuillez réessayer.");
+    } finally {
+      // Réinitialiser l'état
+      setGeneratingPDF(null);
     }
-  } catch (error) {
-    console.error('Erreur lors de la génération du PDF:', error);
-    alert('Erreur lors de la génération du PDF. Veuillez réessayer.');
-  } finally {
-    // Réinitialiser l'état
-    setGeneratingPDF(null);
-  }
-};
+  };
+
+  const handleOpenPdfExportModal = (contract) => {
+    // Générer un nom de fichier par défaut
+    const defaultFileName = `contrat_${contract.reference || contract.id}_${
+      new Date().toISOString().split("T")[0]
+    }.pdf`;
+
+    setPdfExportModal({
+      isOpen: true,
+      contractId: contract.id,
+      fileName: defaultFileName,
+      contract: contract,
+    });
+  };
 
   // Fonction pour filtrer les contrats en fonction de la recherche et des filtres
   const filteredContracts = contracts.filter((contract) => {
@@ -322,7 +377,7 @@ const handleGeneratePDF = async (contractId) => {
                       <button
                         onClick={(e) => {
                           e.preventDefault();
-                          handleGeneratePDF(contract.id);
+                          handleOpenPdfExportModal(contract);
                         }}
                         className="text-gray-500 hover:text-gray-700 mx-1"
                         title="Télécharger le contrat PDF"
@@ -371,6 +426,118 @@ const handleGeneratePDF = async (contractId) => {
                 className="btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
               >
                 Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Modale d'exportation PDF */}
+      {pdfExportModal.isOpen && (
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-auto">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Exporter le contrat en PDF
+            </h3>
+
+            <div className="mb-4">
+              <label
+                htmlFor="pdf-filename"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Nom du fichier
+              </label>
+              <input
+                type="text"
+                id="pdf-filename"
+                className="form-input w-full"
+                value={pdfExportModal.fileName}
+                onChange={(e) =>
+                  setPdfExportModal({
+                    ...pdfExportModal,
+                    fileName: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            {pdfExportModal.contract && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                <p className="text-sm text-gray-600">
+                  <strong>Contrat :</strong> {pdfExportModal.contract.title}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Référence :</strong>{" "}
+                  {pdfExportModal.contract.reference ||
+                    `CONT-${pdfExportModal.contract.id}`}
+                </p>
+                {pdfExportModal.contract.employee_firstname && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Employé :</strong>{" "}
+                    {pdfExportModal.contract.employee_firstname}{" "}
+                    {pdfExportModal.contract.employee_lastname}
+                  </p>
+                )}
+                {pdfExportModal.contract.client_company && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Client :</strong>{" "}
+                    {pdfExportModal.contract.client_company}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="text-sm text-gray-500 mb-4">
+              {window.electron
+                ? "Choisissez un nom pour le fichier. Vous pourrez ensuite sélectionner l'emplacement de sauvegarde."
+                : "Choisissez un nom pour le fichier. Il sera enregistré dans le dossier par défaut de l'application."}
+            </p>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() =>
+                  setPdfExportModal({
+                    isOpen: false,
+                    contractId: null,
+                    fileName: "",
+                    contract: null,
+                  })
+                }
+                className="btn btn-outline"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleGeneratePDF}
+                className="btn btn-primary"
+                disabled={generatingPDF === pdfExportModal.contractId}
+              >
+                {generatingPDF === pdfExportModal.contractId ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Génération...
+                  </>
+                ) : (
+                  "Générer le PDF"
+                )}
               </button>
             </div>
           </div>
