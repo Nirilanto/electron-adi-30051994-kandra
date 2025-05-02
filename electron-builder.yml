@@ -1,0 +1,32 @@
+appId: com.contratmanager.app
+productName: Contrat Manager
+directories:
+  buildResources: assets
+  output: dist
+files:
+  - build/**/*
+  - main.js
+  - preload.js
+  - config.js
+  - assets/**/*
+  - package.json
+extraFiles:
+  - from: "node_modules/electron-store"
+    to: "node_modules/electron-store"
+extraResources:
+  - from: templates
+    to: templates
+    filter:
+      - "**/*"
+  - from: portable.txt
+    to: portable.txt
+win:
+  target:
+    - portable
+  icon: assets/icon.ico
+portable:
+  artifactName: ContratManager.exe
+asar: false
+electronDist: node_modules/electron/dist
+extraMetadata:
+  main: main.js

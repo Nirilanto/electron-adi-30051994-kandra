@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Certificat de Réalisation de Mission</title>
+    <style>
+      /* Styles globaux */
+      body {
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        margin: 0;
+        padding: 0;
+        font-size: 11pt;
+      }
+      .container {
+        padding: 40px;
+        max-width: 210mm; /* A4 width */
+      }
+      /* En-tête */
+      .header {
+        text-align: center;
+        margin-bottom: 40px;
+      }
+      .logo-placeholder {
+        width: 180px;
+        height: 60px;
+        border: 1px dashed #ccc;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px auto;
+        color: #999;
+        font-size: 14px;
+      }
+      .document-title {
+        color: #1a73e8;
+        font-weight: 600;
+        font-size: 24px;
+        margin: 20px 0;
+      }
+      /* Contenu */
+      .content {
+        margin-bottom: 30px;
+      }
+      .attestation {
+        font-size: 14pt;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .info-section {
+        background: #f7f9fc;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      .info-label {
+        font-weight: 600;
+        color: #1a73e8;
+        margin-bottom: 5px;
+      }
+      h2 {
+        color: #1a73e8;
+        font-size: 14pt;
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 8px;
+        margin-top: 30px;
+        font-weight: 600;
+      }
+      /* Signature */
+      .signature-section {
+        margin-top: 60px;
+        page-break-inside: avoid;
+      }
+      .signature-date {
+        text-align: right;
+        margin-bottom: 10px;
+      }
+      .signature-box {
+        width: 50%;
+        margin-left: auto;
+        border-top: 1px solid #e0e0e0;
+        padding-top: 10px;
+        text-align: center;
+      }
+      /* Footer */
+      .footer {
+        margin-top: 60px;
+        text-align: center;
+        color: #999;
+        font-size: 9pt;
+        page-break-inside: avoid;
+      }
+      .watermark {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 100px;
+        color: rgba(200, 200, 200, 0.1);
+        font-weight: bold;
+        z-index: -1;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Watermark (optional) -->
+      <div class="watermark">CERTIFICAT</div>
+      
+      <!-- En-tête du document -->
+      <div class="header">
+        <div class="logo-placeholder">LOGO</div>
+        <h1 class="document-title">CERTIFICAT DE RÉALISATION DE MISSION</h1>
+      </div>
+
+      <!-- Contenu principal -->
+      <div class="content">
+        <p class="attestation">
+          Je soussigné(e), <strong>[Nom et fonction du signataire]</strong>, représentant la société <strong>{{client.companyName}}</strong>,
+          certifie par la présente que :
+        </p>
+        
+        <div class="info-section">
+          <div class="info-label">CONSULTANT</div>
+          <p><strong>{{employee.fullName}}</strong></p>
+        </div>
+        
+        <h2>A RÉALISÉ LA MISSION SUIVANTE</h2>
+        
+        <div class="info-section">
+          <p><span class="info-label">Intitulé :</span> {{title}}</p>
+          <p><span class="info-label">Description :</span> {{description}}</p>
+          <p><span class="info-label">Période :</span> Du {{startDate}} au {{endDate}}</p>
+          <p><span class="info-label">Durée :</span> {{duration}}</p>
+          <p><span class="info-label">Lieu :</span> {{location}}</p>
+        </div>
+        
+        <h2>COMPÉTENCES MISES EN ŒUVRE</h2>
+        
+        <div class="info-section">
+          <p>{{employee.skills}}</p>
+        </div>
+      </div>
+      
+      <!-- Signature -->
+      <div class="signature-section">
+        <p class="signature-date">Fait à ________________, le {{generationDate}}</p>
+        
+        <div class="signature-box">
+          <p><strong>Pour {{client.companyName}}</strong></p>
+          <p style="margin-top: 60px; font-style: italic;">Signature et cachet</p>
+        </div>
+      </div>
+      
+      <!-- Pied de page -->
+      <div class="footer">
+        <p>Document généré par Contrat Manager © {{year}}</p>
+      </div>
+    </div>
+  </body>
+  </html>

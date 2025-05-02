@@ -1,16 +1,19 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const path = require('path');
-const isDev = require('electron-is-dev');
-const fs = require('fs');
-const Store = require('electron-store');
-const puppeteer = require('puppeteer');
-const handlebars = require('handlebars');
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const path = require("path");
+const isDev = false; //require('electron-is-dev');
+const fs = require("fs");
+const Store = require("electron-store");
+const puppeteer = require("puppeteer");
+const handlebars = require("handlebars");
 
-// Configurer electron-store pour stocker les données à un emplacement spécifique
+// Importer la configuration des chemins d'accès
+const config = require("./config");
+
+// Configurer electron-store pour stocker les données à l'emplacement spécifique
 Store.initRenderer();
 
-// S'assurer que le dossier de données existe
-const dataPath = path.join(app.getPath('userData'), 'database');
+// S'assurer que le dossier de base de données existe
+const dataPath = config.paths.databasePath;
 if (!fs.existsSync(dataPath)) {
   fs.mkdirSync(dataPath, { recursive: true });
 }
@@ -24,19 +27,20 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    icon: path.join(__dirname, "assets", "icon.ico"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       enableRemoteModule: false,
-      preload: path.join(__dirname, 'preload.js')
-    }
+      preload: path.join(__dirname, "preload.js"),
+    },
   });
 
   // Charger l'URL de l'app.
   mainWindow.loadURL(
     isDev
-      ? 'http://localhost:3000'
-      : `file://${path.join(__dirname, './build/index.html')}`
+      ? "http://localhost:3000"
+      : `file://${path.join(__dirname, "./build/index.html")}`
   );
 
   // Ouvrir les DevTools en mode développement.
@@ -44,8 +48,22 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
+  // Ajouter après la création de la fenêtre
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:",
+          ],
+        },
+      });
+    }
+  );
+
   // Émis lorsque la fenêtre est fermée.
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     // Dé-référencer l'objet window, généralement vous stockeriez les fenêtres
     // dans un tableau si votre application prend en charge le multi-fenêtres,
     // c'est le moment où vous devez supprimer l'élément correspondant.
@@ -59,15 +77,15 @@ function createWindow() {
 app.whenReady().then(createWindow);
 
 // Quitter quand toutes les fenêtres sont fermées, sauf sur macOS.
-app.on('window-all-closed', () => {
+app.on("window-all-closed", () => {
   // Sur macOS, il est commun pour une application et leur barre de menu
   // de rester active tant que l'utilisateur ne quitte pas explicitement avec Cmd + Q
-  if (process.platform !== 'darwin') {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   // Sur macOS, il est commun de re-créer une fenêtre de l'application quand
   // l'icône du dock est cliquée et qu'il n'y a pas d'autres fenêtres d'ouvertes.
   if (mainWindow === null) {
@@ -76,167 +94,235 @@ app.on('activate', () => {
 });
 
 // Gestionnaires IPC pour communiquer avec le processus de rendu
-ipcMain.handle('get-app-path', async () => {
-  return app.getPath('userData');
+ipcMain.handle("get-app-path", async () => {
+  return app.getPath("userData");
 });
 
-ipcMain.handle('get-data-path', async () => {
+ipcMain.handle("get-data-path", async () => {
   return dataPath;
 });
 
+ipcMain.handle("get-is-portable", async () => {
+  return config.isPortable;
+});
+
+ipcMain.handle("get-app-version", async () => {
+  return app.getVersion();
+});
+
 // Gestion des fichiers
-ipcMain.handle('read-file', async (_, filePath) => {
+ipcMain.handle("read-file", async (_, filePath) => {
   try {
-    return fs.readFileSync(path.resolve(filePath), 'utf8');
+    return fs.readFileSync(path.resolve(filePath), "utf8");
   } catch (error) {
-    console.error('Erreur lors de la lecture du fichier:', error);
+    console.error("Erreur lors de la lecture du fichier:", error);
     throw error;
   }
 });
 
-ipcMain.handle('write-file', async (_, filePath, content) => {
+ipcMain.handle("write-file", async (_, filePath, content) => {
   try {
-    fs.writeFileSync(path.resolve(filePath), content, 'utf8');
+    fs.writeFileSync(path.resolve(filePath), content, "utf8");
     return { success: true };
   } catch (error) {
-    console.error('Erreur lors de l\'écriture du fichier:', error);
+    console.error("Erreur lors de l'écriture du fichier:", error);
     throw error;
   }
 });
 
 // Gérer les exports/imports de données
-ipcMain.handle('export-data', async (_, data, filePath) => {
+ipcMain.handle("export-data", async (_, data, filePath) => {
   try {
     if (!filePath) {
       // Demander où enregistrer le fichier
       const result = await dialog.showSaveDialog({
-        title: 'Exporter les données',
-        defaultPath: path.join(app.getPath('documents'), 'contrat-manager-backup.json'),
-        filters: [{ name: 'JSON', extensions: ['json'] }]
+        title: "Exporter les données",
+        defaultPath: path.join(
+          app.getPath("documents"),
+          "contrat-manager-backup.json"
+        ),
+        filters: [{ name: "JSON", extensions: ["json"] }],
       });
-      
+
       if (result.canceled) {
-        return { success: false, reason: 'canceled' };
+        return { success: false, reason: "canceled" };
       }
-      
+
       filePath = result.filePath;
     }
-    
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
     return { success: true, filePath };
   } catch (error) {
-    console.error('Erreur lors de l\'export des données:', error);
+    console.error("Erreur lors de l'export des données:", error);
     throw error;
   }
 });
 
-ipcMain.handle('import-data', async (_, filePath) => {
+ipcMain.handle("import-data", async (_, filePath) => {
   try {
     if (!filePath) {
       // Demander quel fichier importer
       const result = await dialog.showOpenDialog({
-        title: 'Importer des données',
-        properties: ['openFile'],
-        filters: [{ name: 'JSON', extensions: ['json'] }]
+        title: "Importer des données",
+        properties: ["openFile"],
+        filters: [{ name: "JSON", extensions: ["json"] }],
       });
-      
+
       if (result.canceled) {
-        return { success: false, reason: 'canceled' };
+        return { success: false, reason: "canceled" };
       }
-      
+
       filePath = result.filePaths[0];
     }
-    
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
     return { success: true, data };
   } catch (error) {
-    console.error('Erreur lors de l\'import des données:', error);
+    console.error("Erreur lors de l'import des données:", error);
     throw error;
   }
 });
 
 // Dialogue pour sélectionner des fichiers
-ipcMain.handle('show-save-dialog', async (_, options) => {
+ipcMain.handle("show-save-dialog", async (_, options) => {
   return await dialog.showSaveDialog(options);
 });
 
-ipcMain.handle('show-open-dialog', async (_, options) => {
+ipcMain.handle("show-open-dialog", async (_, options) => {
   return await dialog.showOpenDialog(options);
 });
 
-// Remplacez cette partie dans main.js
-ipcMain.handle('generate-pdf', async (_, args) => {
+// Ajouter les gestionnaires pour le presse-papier
+ipcMain.handle("clipboard-write-text", async (_, text) => {
+  require("electron").clipboard.writeText(text);
+  return { success: true };
+});
+
+ipcMain.handle("clipboard-read-text", async () => {
+  return require("electron").clipboard.readText();
+});
+
+// Ajouter les gestionnaires pour le shell
+ipcMain.handle("shell-open-external", async (_, url) => {
+  await require("electron").shell.openExternal(url);
+  return { success: true };
+});
+
+ipcMain.handle("shell-open-path", async (_, path) => {
+  await require("electron").shell.openPath(path);
+  return { success: true };
+});
+
+// Génération de PDF
+ipcMain.handle("generate-pdf", async (_, args) => {
   try {
     const { type, data, filename } = args;
-    
+
     // Obtenir le chemin complet du fichier
     let outputPath = filename;
-    
+
     // Si le chemin n'est pas absolu, demander où enregistrer le fichier
     if (!path.isAbsolute(filename)) {
       const result = await dialog.showSaveDialog({
-        title: 'Enregistrer le PDF',
-        defaultPath: path.join(app.getPath('documents'), filename),
-        filters: [{ name: 'PDF', extensions: ['pdf'] }]
+        title: "Enregistrer le PDF",
+        defaultPath: path.join(app.getPath("documents"), filename),
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
       });
-      
+
       if (result.canceled) {
-        return { success: false, reason: 'canceled' };
+        return { success: false, reason: "canceled" };
       }
-      
+
       outputPath = result.filePath;
     }
-    
-    // Au lieu d'importer depuis le chemin relatif, utiliser le template HTML directement
-    let template;
-    if (type === 'certificate') {
-      template = getCertificateTemplate();
-    } else { // contract par défaut
-      template = getContractTemplate();
+
+    // Déterminer le chemin du template en fonction du type
+    let templatePath;
+    if (type === "certificate") {
+      templatePath = path.join(
+        config.paths.templatesPath,
+        "certificates",
+        "default.html"
+      );
+    } else {
+      // contract par défaut
+      templatePath = path.join(
+        config.paths.templatesPath,
+        "contracts",
+        "default.html"
+      );
     }
-    
+
+    // Vérifier si le template existe
+    let template;
+    if (fs.existsSync(templatePath)) {
+      // Utiliser le template depuis le fichier
+      template = fs.readFileSync(templatePath, "utf8");
+    } else {
+      // Utiliser le template intégré dans le code
+      if (type === "certificate") {
+        template = getCertificateTemplate();
+      } else {
+        template = getContractTemplate();
+      }
+    }
+
+    // Ajouter la date actuelle et l'année aux données
+    const now = new Date();
+    const formattedDate = `${now.getDate().toString().padStart(2, "0")}/${(
+      now.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}/${now.getFullYear()}`;
+    const enhancedData = {
+      ...data,
+      generationDate: formattedDate,
+      year: now.getFullYear(),
+    };
+
     // Compiler le template avec Handlebars
     const compiledTemplate = handlebars.compile(template);
-    const html = compiledTemplate(data);
-    
+    const html = compiledTemplate(enhancedData);
+
     // Lancer Puppeteer pour générer le PDF
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    
+
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
     // Générer le PDF avec les options appropriées
     await page.pdf({
       path: outputPath,
-      format: 'A4',
+      format: "A4",
       printBackground: true,
       margin: {
-        top: '10mm',
-        right: '10mm',
-        bottom: '10mm',
-        left: '10mm'
-      }
+        top: "10mm",
+        right: "10mm",
+        bottom: "10mm",
+        left: "10mm",
+      },
     });
-    
+
     await browser.close();
-    
+
     // Ouvrir le PDF automatiquement après la génération
-    const { shell } = require('electron');
+    const { shell } = require("electron");
     shell.openPath(outputPath);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       filePath: outputPath,
-      fileName: path.basename(outputPath)
+      fileName: path.basename(outputPath),
     };
   } catch (error) {
-    console.error('Erreur lors de la génération du PDF:', error);
-    return { 
-      success: false, 
-      error: error.message
+    console.error("Erreur lors de la génération du PDF:", error);
+    return {
+      success: false,
+      error: error.message,
     };
   }
 });

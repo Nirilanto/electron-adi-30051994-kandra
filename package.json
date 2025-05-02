@@ -9,8 +9,9 @@
     "react-start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "electron-build": "electron-builder",
-    "release": "npm run build && electron-builder --publish=always",
-    "build-portable": "npm run build && electron-builder --win portable"
+    "package-win": "npx electron-builder --win portable --config electron-builder.yml",
+    "make-portable": "npm run build && npm run package-win",
+    "release": "npm run build && electron-builder --publish=always"
   },
   "author": "Votre Nom",
   "license": "MIT",
@@ -68,18 +69,36 @@
       "node_modules/**/*",
       "main.js",
       "preload.js",
-      "db/**/*"
+      "config.js",
+      "assets/**/*"
     ],
     "directories": {
-      "buildResources": "public/assets"
+      "buildResources": "assets",
+      "output": "dist"
     },
     "win": {
       "target": [
         "portable"
-      ]
+      ],
+      "icon": "assets/icon.ico"
     },
     "portable": {
       "artifactName": "ContratManager.exe"
-    }
+    },
+    "extraResources": [
+      {
+        "from": "templates",
+        "to": "templates",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "portable.txt",
+        "to": "portable.txt"
+      }
+    ],
+    "asar": false,
+    "asarUnpack": [
+      "node_modules/puppeteer/.local-chromium/**/*"
+    ]
   }
 }

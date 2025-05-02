@@ -1,0 +1,3 @@
+Cette application s'exécute en mode portable.
+Toutes les données sont stockées localement dans le dossier "data" situé au même emplacement que l'exécutable.
+Ne pas supprimer ce fichier, sinon l'application ne fonctionnera pas correctement en mode portable.

@@ -1,0 +1,16 @@
+appId: com.contratmanager.app
+productName: Contrat Manager
+directories:
+  buildResources: assets
+  output: C:/Users/raher/Desktop/evo/contrat-manager-build
+files:
+  - build/**/*
+  - main.js
+  - preload.js
+  - config.js
+win:
+  target:
+    - portable
+portable:
+  artifactName: ContratManager.exe
+asar: false

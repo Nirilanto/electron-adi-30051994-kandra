@@ -38,13 +38,16 @@ const Sidebar = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Logo et titre */}
-      <div className="p-6 border-b border-gray-200">
+      <div onClick={()=>{
+        console.log(" hahahhahahha !!!!!!!!!!!!!!!!");
+        
+      }} className="p-6 border-b border-gray-200">
         <h2 className="text-2xl font-bold text-primary-600">
           <span className="text-primary-500">C</span>ontrat
           <span className="text-primary-500">M</span>anager
         </h2>
         <p className="text-sm text-gray-500 mt-1">
-          Gestion des contrats de mission
+          Gestion des contrats de mission BETA-001
         </p>
       </div>
 
