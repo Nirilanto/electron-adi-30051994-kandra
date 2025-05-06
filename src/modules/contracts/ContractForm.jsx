@@ -1,835 +1,644 @@
+// src/modules/contracts/ContractForm.js
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import DatabaseService from "../../services/DatabaseService";
-import PDFService from "../../services/PDFService";
-
-// Icônes
+import { useNavigate, useParams } from "react-router-dom";
 import {
-  ArrowLeftIcon,
-  CheckIcon,
-  DocumentArrowDownIcon,
+  CalendarIcon,
   DocumentTextIcon,
+  BanknotesIcon,
   BuildingOfficeIcon,
   UserIcon,
-  CalendarIcon,
-  ClockIcon,
-  MapPinIcon,
-  CurrencyEuroIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
-const ContractForm = () => {
+import ContractService from "./ContractService";
+import EmployeeService from "../employees/EmployeeService";
+import ClientService from "../clients/ClientService";
+import SettingsService from "../settings/SettingsService";
+
+function ContractForm() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isEditMode = !!id;
+  const isEdit = Boolean(id);
 
-  // État du formulaire
-  const [formData, setFormData] = useState({
-    employee_id: "",
-    client_id: "",
-    reference: "",
+  // États pour le formulaire
+  const [contract, setContract] = useState({
+    type: "employee", // 'employee' ou 'client'
     title: "",
     description: "",
-    start_date: "",
-    end_date: "",
+    startDate: new Date(),
+    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
     location: "",
-    working_hours: "",
-    hourly_rate: "",
-    billing_rate: "",
-    status: "draft",
-    notes: "",
+    workingHours: "08:00 - 12:00, 13:00 - 17:00",
+    hourlyRate: 0,
+    billingRate: 0,
+    employeeId: "",
+    clientId: "",
+    motifId: "",
+    justificatifId: "",
+    transportId: "",
   });
 
   // États pour les listes déroulantes
   const [employees, setEmployees] = useState([]);
   const [clients, setClients] = useState([]);
+  const [motifs, setMotifs] = useState([]);
+  const [justificatifs, setJustificatifs] = useState([]);
+  const [transports, setTransports] = useState([]);
 
-  // États pour gérer le chargement et les erreurs
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [successMessage, setSuccessMessage] = useState("");
+  // État pour le chargement
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
-  // État pour la génération de PDF
-  const [generatingPDF, setGeneratingPDF] = useState(false);
-
-  // Charger les données nécessaires au montage du composant
+  // Chargement initial des données
   useEffect(() => {
-    const loadFormData = async () => {
+    const loadData = async () => {
       try {
-        // Charger les employés et les clients
-        const employeeData = await DatabaseService.getEmployees({
-          status: "active",
-        });
-        const clientData = await DatabaseService.getClients({
-          status: "active",
-        });
+        setIsLoading(true);
 
-        setEmployees(employeeData);
-        setClients(clientData);
+        // Charger les employés
+        const employeesList = await EmployeeService.getAllEmployees();
+        setEmployees(employeesList);
 
-        // Si on est en mode édition, charger les données du contrat
-        if (isEditMode) {
-          const contractData = await DatabaseService.getContractById(
-            parseInt(id)
-          );
+        // Charger les clients
+        const clientsList = await ClientService.getAllClients();
+        setClients(clientsList);
 
-          // Mettre à jour les données du formulaire
-          setFormData({
-            ...formData,
-            ...contractData,
-          });
+        // Charger les paramètres
+        const motifsList = await SettingsService.getMotifTypes();
+        setMotifs(motifsList);
+
+        const justificatifsList = await SettingsService.getJustificatifTypes();
+        setJustificatifs(justificatifsList);
+
+        const transportsList = await SettingsService.getTransportModes();
+        setTransports(transportsList);
+
+        // Si on est en mode édition, charger le contrat
+        if (isEdit) {
+          const contractData = await ContractService.getContractById(id);
+          if (contractData) {
+            setContract({
+              ...contractData,
+              startDate: new Date(contractData.startDate),
+              endDate: new Date(contractData.endDate),
+            });
+          } else {
+            toast.error("Contrat non trouvé");
+            navigate("/contracts");
+          }
         }
       } catch (error) {
-        console.error(
-          "Erreur lors du chargement des données du formulaire:",
-          error
-        );
+        console.error("Erreur lors du chargement des données :", error);
+        toast.error("Erreur lors du chargement des données");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    loadFormData();
-  }, [id, isEditMode]);
+    loadData();
+  }, [id, isEdit, navigate]);
 
-  // Gérer les changements dans le formulaire
+  // Gestionnaire de changement de champ
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    const { name, value, type } = e.target;
 
-    // Effacer l'erreur pour ce champ si elle existe
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      });
-    }
+    setContract((prev) => ({
+      ...prev,
+      [name]: type === "number" ? parseFloat(value) : value,
+    }));
   };
 
-  // Mettre à jour automatiquement le taux de facturation
-  const updateBillingRate = (formDatas, employeeId, hourlyRate) => {
-    console.log(" updateBillingRate ", employeeId, hourlyRate);
-    // Si un taux horaire est fourni, l'utiliser
-    if (hourlyRate) {
-      const rate = parseFloat(hourlyRate);
-      // Appliquer une marge de 50% par défaut
-      const billingRate = (rate * 1.5).toFixed(2);
-
-      setFormData({
-        ...formDatas,
-        hourly_rate: hourlyRate,
-        billing_rate: billingRate,
-      });
-    }
-    // Sinon, rechercher le taux horaire de l'employé
-    else if (employeeId) {
-      const selectedEmployee = employees.find(
-        (emp) => emp.id === parseInt(employeeId)
-      );
-
-      console.log(" MANDAL -------------- ", selectedEmployee);
-
-      if (selectedEmployee && selectedEmployee.hourly_rate) {
-        const rate = parseFloat(selectedEmployee.hourly_rate);
-        // Appliquer une marge de 50% par défaut
-        const billingRate = (rate * 1.5).toFixed(2);
-
-        setFormData({
-          ...formDatas,
-          hourly_rate: selectedEmployee.hourly_rate,
-          billing_rate: billingRate,
-        });
-      }
-    }
+  // Gestionnaire de changement de date
+  const handleDateChange = (date, field) => {
+    setContract((prev) => ({
+      ...prev,
+      [field]: date,
+    }));
   };
 
-  console.log("formData ------ ", formData);
-
-// Gérer le changement d'employé
-const handleEmployeeChange = (e) => {
-    const employeeId = e.target.value;
-    
-    // Mettre à jour l'ID de l'employé dans le formulaire
-    setFormData({
-      ...formData,
-      employee_id: employeeId
-    });
-    
-    // Si un employé est sélectionné, mettre à jour le taux horaire
-    if (employeeId) {
-      const selectedEmployee = employees.find(emp => emp.id === parseInt(employeeId));
-      
-      if (selectedEmployee && selectedEmployee.hourly_rate) {
-        const rate = parseFloat(selectedEmployee.hourly_rate);
-        // Appliquer une marge de 50% par défaut
-        const billingRate = (rate * 1.5).toFixed(2);
-        
-        setFormData(prevState => ({
-          ...prevState,
-          hourly_rate: selectedEmployee.hourly_rate,
-          billing_rate: billingRate
-        }));
-      }
-    }
-    
-    // Effacer l'erreur pour ce champ si elle existe
-    if (errors.employee_id) {
-      setErrors({
-        ...errors,
-        employee_id: null
-      });
-    }
-  };
-
-  // Gérer le changement du taux horaire
-  const handleHourlyRateChange = (e) => {
-    const hourlyRate = e.target.value;
-
-    // Mettre à jour le taux de facturation
-    updateBillingRate(null, hourlyRate);
-
-    // Effacer l'erreur pour ce champ si elle existe
-    if (errors.hourly_rate) {
-      setErrors({
-        ...errors,
-        hourly_rate: null,
-      });
-    }
-  };
-
-  // Valider le formulaire
-  const validateForm = () => {
-    const newErrors = {};
-
-    // Vérifier les champs obligatoires
-    if (!formData.employee_id) {
-      newErrors.employee_id = "L'employé est obligatoire";
-    }
-
-    if (!formData.client_id) {
-      newErrors.client_id = "Le client est obligatoire";
-    }
-
-    if (!formData.title.trim()) {
-      newErrors.title = "Le titre du contrat est obligatoire";
-    }
-
-    if (!formData.start_date) {
-      newErrors.start_date = "La date de début est obligatoire";
-    }
-
-    // Valider les taux
-    if (!formData.hourly_rate) {
-      newErrors.hourly_rate = "Le taux horaire est obligatoire";
-    } else if (
-      isNaN(parseFloat(formData.hourly_rate)) ||
-      parseFloat(formData.hourly_rate) <= 0
-    ) {
-      newErrors.hourly_rate = "Le taux horaire doit être un nombre positif";
-    }
-
-    if (!formData.billing_rate) {
-      newErrors.billing_rate = "Le taux de facturation est obligatoire";
-    } else if (
-      isNaN(parseFloat(formData.billing_rate)) ||
-      parseFloat(formData.billing_rate) <= 0
-    ) {
-      newErrors.billing_rate =
-        "Le taux de facturation doit être un nombre positif";
-    }
-
-    // Vérifier la cohérence des dates
-    if (formData.start_date && formData.end_date) {
-      const startDate = new Date(formData.start_date);
-      const endDate = new Date(formData.end_date);
-
-      if (endDate < startDate) {
-        newErrors.end_date =
-          "La date de fin doit être postérieure à la date de début";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  // Soumettre le formulaire
+  // Gestionnaire de soumission du formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Valider le formulaire
-    if (!validateForm()) {
-      return;
-    }
-
-    setSaving(true);
-
     try {
-      // Préparer les données pour la soumission
+      setIsSubmitting(true);
+
+      // Préparer l'objet contrat
       const contractData = {
-        ...formData,
-        hourly_rate: parseFloat(formData.hourly_rate),
-        billing_rate: parseFloat(formData.billing_rate),
-        employee_id: parseInt(formData.employee_id),
-        client_id: parseInt(formData.client_id),
+        ...contract,
+        startDate: contract.startDate.toISOString(),
+        endDate: contract.endDate.toISOString(),
+        employee: contract.employeeId
+          ? employees.find((e) => e.id === contract.employeeId)
+          : null,
+        client: contract.clientId
+          ? clients.find((c) => c.id === contract.clientId)
+          : null,
+        motif: contract.motifId
+          ? motifs.find((m) => m.id === parseInt(contract.motifId))?.title
+          : null,
+        justificatif: contract.justificatifId
+          ? justificatifs.find(
+              (j) => j.id === parseInt(contract.justificatifId)
+            )?.title
+          : null,
+        transport: contract.transportId
+          ? transports.find((t) => t.id === parseInt(contract.transportId))
+              ?.title
+          : null,
       };
 
-      // Créer ou mettre à jour le contrat
-      if (isEditMode) {
-        await DatabaseService.updateContract(parseInt(id), contractData);
-        setSuccessMessage("Contrat mis à jour avec succès");
-      } else {
-        const newContract = await DatabaseService.createContract(contractData);
-        setSuccessMessage("Contrat créé avec succès");
+      // Enregistrer le contrat
+      const savedContract = await ContractService.saveContract(contractData);
 
-        // Rediriger vers le mode édition après la création
-        setTimeout(() => {
-          navigate(`/contracts/${newContract.id}`);
-        }, 1500);
-      }
+      toast.success(`Contrat ${isEdit ? "modifié" : "créé"} avec succès`);
+
+      // Redirection vers la liste des contrats après un court délai
+      setTimeout(() => {
+        navigate(`/contracts/${savedContract.id}`, { replace: true });
+      }, 1500);
     } catch (error) {
-      console.error("Erreur lors de la sauvegarde du contrat:", error);
-      setErrors({
-        ...errors,
-        submit:
-          "Une erreur est survenue lors de la sauvegarde. Veuillez réessayer.",
-      });
+      console.error("Erreur lors de l'enregistrement du contrat :", error);
+      toast.error("Erreur lors de l'enregistrement du contrat");
     } finally {
-      setSaving(false);
-
-      // Faire disparaître le message de succès après quelques secondes
-      if (successMessage) {
-        setTimeout(() => {
-          setSuccessMessage("");
-        }, 3000);
-      }
+      setIsSubmitting(false);
     }
   };
 
-  // Générer un PDF du contrat
+  // Génération de PDF
   const handleGeneratePDF = async () => {
-    if (!isEditMode) {
-      // On ne peut pas générer de PDF pour un contrat qui n'a pas encore été créé
-      return;
-    }
-
-    setGeneratingPDF(true);
-
     try {
-      // Récupérer les informations complètes
-      const contract = await DatabaseService.getContractById(parseInt(id));
-      const employee = await DatabaseService.getEmployeeById(
-        contract.employee_id
-      );
-      const client = await DatabaseService.getClientById(contract.client_id);
+      setIsPdfGenerating(true);
 
-      // Générer le PDF
-      const pdf = await PDFService.generateContractPDF(
-        contract,
-        employee,
-        client
-      );
+      // Préparer l'objet contrat avec les objets complets
+      const contractData = {
+        ...contract,
+        startDate: contract.startDate.toISOString(),
+        endDate: contract.endDate.toISOString(),
+        employee: contract.employeeId
+          ? employees.find((e) => e.id === contract.employeeId)
+          : null,
+        client: contract.clientId
+          ? clients.find((c) => c.id === contract.clientId)
+          : null,
+        motif: contract.motifId
+          ? motifs.find((m) => m.id === parseInt(contract.motifId))?.title
+          : null,
+        justificatif: contract.justificatifId
+          ? justificatifs.find(
+              (j) => j.id === parseInt(contract.justificatifId)
+            )?.title
+          : null,
+        transport: contract.transportId
+          ? transports.find((t) => t.id === parseInt(contract.transportId))
+              ?.title
+          : null,
+      };
 
-      // Dans une vraie application, on ouvrirait le PDF ou proposerait le téléchargement
-      console.log("PDF généré:", pdf);
-
-      // Afficher un message de succès
-      setSuccessMessage("PDF généré avec succès");
-    } catch (error) {
-      console.error("Erreur lors de la génération du PDF:", error);
-      setErrors({
-        ...errors,
-        pdf: "Une erreur est survenue lors de la génération du PDF. Veuillez réessayer.",
-      });
-    } finally {
-      setGeneratingPDF(false);
-
-      // Faire disparaître le message de succès après quelques secondes
-      if (successMessage) {
-        setTimeout(() => {
-          setSuccessMessage("");
-        }, 3000);
+      let result;
+      if (contract.type === "employee") {
+        result = await ContractService.generateEmployeeContractPDF(
+          contractData
+        );
+      } else {
+        result = await ContractService.generateClientContractPDF(contractData);
       }
+
+      if (result.success) {
+        toast.success("PDF généré avec succès");
+      } else {
+        toast.error("Erreur lors de la génération du PDF");
+      }
+    } catch (error) {
+      console.error("Erreur lors de la génération du PDF :", error);
+      toast.error("Erreur lors de la génération du PDF");
+    } finally {
+      setIsPdfGenerating(false);
     }
   };
 
-  // Afficher un indicateur de chargement pendant le chargement des données
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">
-            Chargement des données du contrat...
-          </p>
+          <p className="mt-4 text-gray-600">Chargement du contrat...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <Link
-            to="/contracts"
-            className="text-gray-500 hover:text-gray-700 mr-4"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold text-gray-800">
-            {isEditMode ? "Modifier le contrat" : "Nouveau contrat"}
-          </h1>
-        </div>
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isEdit ? "Modifier le contrat" : "Nouveau contrat"}
+        </h1>
 
-        {/* Actions pour les contrats existants */}
-        {isEditMode && (
-          <div>
-            <button
-              onClick={handleGeneratePDF}
-              className="btn btn-outline flex items-center"
-              disabled={generatingPDF}
-            >
-              {generatingPDF ? (
-                <>
-                  <svg
-                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-700"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                  Génération...
-                </>
-              ) : (
-                <>
-                  <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
-                  Générer PDF
-                </>
-              )}
-            </button>
-          </div>
+        {isEdit && (
+          <button
+            type="button"
+            onClick={handleGeneratePDF}
+            disabled={isPdfGenerating}
+            className={`flex items-center px-4 py-2 rounded-md ${
+              isPdfGenerating
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700 text-white"
+            }`}
+          >
+            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+            {isPdfGenerating ? "Génération en cours..." : "Générer PDF"}
+          </button>
         )}
       </div>
 
-      {/* Message de succès */}
-      {successMessage && (
-        <div className="bg-green-50 border-l-4 border-green-500 p-4 mb-4">
-          <div className="flex items-center">
-            <CheckIcon className="w-5 h-5 text-green-500 mr-2" />
-            <p className="text-green-700">{successMessage}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Erreur de soumission */}
-      {errors.submit && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+      <form onSubmit={handleSubmit}>
+        {/* Type de contrat */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Type de contrat
+          </label>
           <div className="flex">
-            <p className="text-red-700">{errors.submit}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Erreur de génération de PDF */}
-      {errors.pdf && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
-          <div className="flex">
-            <p className="text-red-700">{errors.pdf}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Formulaire */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Informations principales */}
-          <div className="md:col-span-2">
-            <h2 className="text-lg font-medium text-gray-700 mb-4 flex items-center">
-              <DocumentTextIcon className="w-5 h-5 mr-2 text-primary-500" />
-              Informations du contrat
-            </h2>
-          </div>
-
-          {/* Référence */}
-          <div>
-            <label htmlFor="reference" className="form-label">
-              Référence
+            <label className="inline-flex items-center mr-6">
+              <input
+                type="radio"
+                name="type"
+                value="employee"
+                checked={contract.type === "employee"}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="ml-2">Contrat de mission (salarié)</span>
             </label>
-            <input
-              type="text"
-              id="reference"
-              name="reference"
-              className="form-input"
-              value={formData.reference}
-              onChange={handleChange}
-              placeholder={`CONT-${new Date().getFullYear()}-${
-                isEditMode ? id : "XXX"
-              }`}
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              Laissez vide pour une référence automatique
-            </p>
-          </div>
-
-          {/* Titre */}
-          <div>
-            <label htmlFor="title" className="form-label">
-              Titre <span className="text-red-500">*</span>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                name="type"
+                value="client"
+                checked={contract.type === "client"}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="ml-2">Contrat client</span>
             </label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              className={`form-input ${
-                errors.title
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.title}
-              onChange={handleChange}
-              required
-            />
-            {errors.title && (
-              <p className="mt-1 text-sm text-red-500">{errors.title}</p>
-            )}
-          </div>
-
-          {/* Statut */}
-          <div>
-            <label htmlFor="status" className="form-label">
-              Statut
-            </label>
-            <select
-              id="status"
-              name="status"
-              className="form-input"
-              value={formData.status}
-              onChange={handleChange}
-            >
-              <option value="draft">Brouillon</option>
-              <option value="active">Actif</option>
-              <option value="completed">Terminé</option>
-              <option value="canceled">Annulé</option>
-            </select>
-          </div>
-
-          {/* Description */}
-          <div className="md:col-span-2">
-            <label htmlFor="description" className="form-label">
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              rows="3"
-              className="form-input"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="Description du contrat de mission..."
-            />
-          </div>
-
-          {/* Parties impliquées */}
-          <div className="md:col-span-2">
-            <h2 className="text-lg font-medium text-gray-700 mb-4 mt-4 flex items-center">
-              <UserIcon className="w-5 h-5 mr-2 text-primary-500" />
-              Parties impliquées
-            </h2>
-          </div>
-
-          {/* Employé */}
-          <div>
-            <label htmlFor="employee_id" className="form-label">
-              Employé <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="employee_id"
-              name="employee_id"
-              className={`form-input ${
-                errors.employee_id
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.employee_id}
-              onChange={handleEmployeeChange}
-              required
-            >
-              <option value="">Sélectionner un employé</option>
-              {employees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
-                  {employee.firstname} {employee.lastname}{" "}
-                  {employee.hourly_rate
-                    ? `(${new Intl.NumberFormat("fr-FR", {
-                        style: "currency",
-                        currency: "EUR",
-                      }).format(employee.hourly_rate)}/h)`
-                    : ""}
-                </option>
-              ))}
-            </select>
-            {errors.employee_id && (
-              <p className="mt-1 text-sm text-red-500">{errors.employee_id}</p>
-            )}
-          </div>
-
-          {/* Client */}
-          <div>
-            <label htmlFor="client_id" className="form-label">
-              Client <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="client_id"
-              name="client_id"
-              className={`form-input ${
-                errors.client_id
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.client_id}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Sélectionner un client</option>
-              {clients.map((client) => (
-                <option key={client.id} value={client.id}>
-                  {client.company_name}
-                </option>
-              ))}
-            </select>
-            {errors.client_id && (
-              <p className="mt-1 text-sm text-red-500">{errors.client_id}</p>
-            )}
-          </div>
-
-          {/* Détails de la mission */}
-          <div className="md:col-span-2">
-            <h2 className="text-lg font-medium text-gray-700 mb-4 mt-4 flex items-center">
-              <CalendarIcon className="w-5 h-5 mr-2 text-primary-500" />
-              Détails de la mission
-            </h2>
-          </div>
-
-          {/* Date de début */}
-          <div>
-            <label htmlFor="start_date" className="form-label">
-              Date de début <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              id="start_date"
-              name="start_date"
-              className={`form-input ${
-                errors.start_date
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.start_date}
-              onChange={handleChange}
-              required
-            />
-            {errors.start_date && (
-              <p className="mt-1 text-sm text-red-500">{errors.start_date}</p>
-            )}
-          </div>
-
-          {/* Date de fin */}
-          <div>
-            <label htmlFor="end_date" className="form-label">
-              Date de fin
-            </label>
-            <input
-              type="date"
-              id="end_date"
-              name="end_date"
-              className={`form-input ${
-                errors.end_date
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.end_date}
-              onChange={handleChange}
-            />
-            {errors.end_date && (
-              <p className="mt-1 text-sm text-red-500">{errors.end_date}</p>
-            )}
-            <p className="mt-1 text-sm text-gray-500">
-              Laissez vide pour une durée indéterminée
-            </p>
-          </div>
-
-          {/* Lieu de mission */}
-          <div>
-            <label htmlFor="location" className="form-label flex items-center">
-              <MapPinIcon className="w-4 h-4 mr-1 text-gray-500" />
-              Lieu de mission
-            </label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              className="form-input"
-              value={formData.location}
-              onChange={handleChange}
-              placeholder="Ex: Paris, télétravail, locaux du client..."
-            />
-          </div>
-
-          {/* Horaires de travail */}
-          <div>
-            <label
-              htmlFor="working_hours"
-              className="form-label flex items-center"
-            >
-              <ClockIcon className="w-4 h-4 mr-1 text-gray-500" />
-              Horaires de travail
-            </label>
-            <input
-              type="text"
-              id="working_hours"
-              name="working_hours"
-              className="form-input"
-              value={formData.working_hours}
-              onChange={handleChange}
-              placeholder="Ex: 35h/semaine, temps partiel..."
-            />
-          </div>
-
-          {/* Informations financières */}
-          <div className="md:col-span-2">
-            <h2 className="text-lg font-medium text-gray-700 mb-4 mt-4 flex items-center">
-              <CurrencyEuroIcon className="w-5 h-5 mr-2 text-primary-500" />
-              Informations financières
-            </h2>
-          </div>
-
-          {/* Taux horaire */}
-          <div>
-            <label htmlFor="hourly_rate" className="form-label">
-              Taux horaire (€) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              id="hourly_rate"
-              name="hourly_rate"
-              step="0.01"
-              min="0"
-              className={`form-input ${
-                errors.hourly_rate
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.hourly_rate}
-              onChange={handleHourlyRateChange}
-              required
-            />
-            {errors.hourly_rate && (
-              <p className="mt-1 text-sm text-red-500">{errors.hourly_rate}</p>
-            )}
-            <p className="mt-1 text-sm text-gray-500">
-              Taux horaire versé à l'employé
-            </p>
-          </div>
-
-          {/* Taux de facturation */}
-          <div>
-            <label htmlFor="billing_rate" className="form-label">
-              Taux de facturation (€) <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              id="billing_rate"
-              name="billing_rate"
-              step="0.01"
-              min="0"
-              className={`form-input ${
-                errors.billing_rate
-                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
-                  : ""
-              }`}
-              value={formData.billing_rate}
-              onChange={handleChange}
-              required
-            />
-            {errors.billing_rate && (
-              <p className="mt-1 text-sm text-red-500">{errors.billing_rate}</p>
-            )}
-            <p className="mt-1 text-sm text-gray-500">
-              Taux horaire facturé au client
-            </p>
-          </div>
-
-          {/* Notes */}
-          <div className="md:col-span-2">
-            <label htmlFor="notes" className="form-label">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              name="notes"
-              rows="4"
-              className="form-input"
-              value={formData.notes}
-              onChange={handleChange}
-              placeholder="Notes ou informations supplémentaires..."
-            />
           </div>
         </div>
 
-        {/* Boutons */}
-        <div className="mt-8 flex justify-end space-x-3">
-          <Link to="/contracts" className="btn btn-outline">
-            Annuler
-          </Link>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
-            {saving ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+        {/* Informations générales */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-500" />
+            Informations générales
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="title"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Titre du contrat
+              </label>
+              <input
+                type="text"
+                id="title"
+                name="title"
+                value={contract.title}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="location"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Lieu de mission
+              </label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={contract.location}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label
+                htmlFor="description"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Description
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows="3"
+                value={contract.description}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        {/* Période et horaires */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <CalendarIcon className="h-5 w-5 mr-2 text-blue-500" />
+            Période et horaires
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label
+                htmlFor="startDate"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Date de début
+              </label>
+              <DatePicker
+                id="startDate"
+                selected={contract.startDate}
+                onChange={(date) => handleDateChange(date, "startDate")}
+                dateFormat="dd/MM/yyyy"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="endDate"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Date de fin
+              </label>
+              <DatePicker
+                id="endDate"
+                selected={contract.endDate}
+                onChange={(date) => handleDateChange(date, "endDate")}
+                dateFormat="dd/MM/yyyy"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                minDate={contract.startDate}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="workingHours"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Horaires de travail
+              </label>
+              <input
+                type="text"
+                id="workingHours"
+                name="workingHours"
+                value={contract.workingHours}
+                onChange={handleChange}
+                placeholder="ex: 08:00 - 12:00, 13:00 - 17:00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Tarification */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <BanknotesIcon className="h-5 w-5 mr-2 text-blue-500" />
+            Tarification
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="hourlyRate"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                {contract.type === "employee"
+                  ? "Taux horaire consultant (€)"
+                  : "Taux horaire (€)"}
+              </label>
+              <input
+                type="number"
+                id="hourlyRate"
+                name="hourlyRate"
+                value={contract.hourlyRate}
+                onChange={handleChange}
+                min="0"
+                step="0.01"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {contract.type === "employee" && (
+              <div>
+                <label
+                  htmlFor="billingRate"
+                  className="block text-sm font-medium text-gray-700 mb-1"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Enregistrement...
-              </>
-            ) : (
-              "Enregistrer"
+                  Taux horaire facturation client (€)
+                </label>
+                <input
+                  type="number"
+                  id="billingRate"
+                  name="billingRate"
+                  value={contract.billingRate}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             )}
+          </div>
+        </div>
+
+        {/* Employé et client */}
+        <div className="mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {contract.type === "employee" && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <UserIcon className="h-5 w-5 mr-2 text-blue-500" />
+                  Employé
+                </h2>
+                <div>
+                  <label
+                    htmlFor="employeeId"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Sélectionner un employé
+                  </label>
+                  <select
+                    id="employeeId"
+                    name="employeeId"
+                    value={contract.employeeId}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required={contract.type === "employee"}
+                  >
+                    <option value="">Sélectionner...</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <BuildingOfficeIcon className="h-5 w-5 mr-2 text-blue-500" />
+                Client
+              </h2>
+              <div>
+                <label
+                  htmlFor="clientId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Sélectionner un client
+                </label>
+                <select
+                  id="clientId"
+                  name="clientId"
+                  value={contract.clientId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Sélectionner...</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.companyName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Options spécifiques au contrat de mission */}
+        {contract.type === "employee" && (
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              Informations complémentaires
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label
+                  htmlFor="motifId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Motif
+                </label>
+                <select
+                  id="motifId"
+                  name="motifId"
+                  value={contract.motifId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {motifs.map((motif) => (
+                    <option key={motif.id} value={motif.id}>
+                      {motif.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="justificatifId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Justificatif
+                </label>
+                <select
+                  id="justificatifId"
+                  name="justificatifId"
+                  value={contract.justificatifId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {justificatifs.map((justificatif) => (
+                    <option key={justificatif.id} value={justificatif.id}>
+                      {justificatif.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="transportId"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  Moyen de transport
+                </label>
+                <select
+                  id="transportId"
+                  name="transportId"
+                  value={contract.transportId}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sélectionner...</option>
+                  {transports.map((transport) => (
+                    <option key={transport.id} value={transport.id}>
+                      {transport.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Boutons d'action */}
+        <div className="flex justify-end space-x-4 mt-8">
+          <button
+            type="button"
+            onClick={() => navigate("/contracts")}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`px-6 py-2 rounded-md ${
+              isSubmitting
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+          >
+            {isSubmitting
+              ? "Enregistrement..."
+              : isEdit
+              ? "Mettre à jour"
+              : "Enregistrer"}
           </button>
         </div>
       </form>
+
+      <ToastContainer position="bottom-right" />
     </div>
   );
-};
+}
 
 export default ContractForm;

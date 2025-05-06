@@ -12,6 +12,7 @@ import ClientList from './modules/clients/ClientList';
 import ClientForm from './modules/clients/ClientForm';
 import ContractList from './modules/contracts/ContractList';
 import ContractForm from './modules/contracts/ContractForm';
+import Settings from './modules/settings/Settings';
 
 // Services
 import DatabaseService from './services/DatabaseService';
@@ -85,6 +86,8 @@ function App() {
         <Route path="/clients" element={<ClientList />} />
         <Route path="/clients/new" element={<ClientForm />} />
         <Route path="/clients/:id" element={<ClientForm />} />
+
+        <Route path="/settings" element={<Settings />} />
         
         {/* Module Contrats */}
         <Route path="/contracts" element={<ContractList />} />

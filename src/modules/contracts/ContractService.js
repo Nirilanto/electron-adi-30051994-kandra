@@ -1,337 +1,250 @@
+// src/modules/contracts/ContractService.js
+import { v4 as uuidv4 } from 'uuid';
 import DatabaseService from '../../services/DatabaseService';
-import PDFService from '../../services/PDFService';
+import SettingsService from '../settings/SettingsService';
+import { formatDateToFrench, addMonths } from '../../utils/dateUtils';
 
 class ContractService {
-  // Obtenir tous les contrats
-  async getAllContracts(filters = {}) {
-    try {
-      return await DatabaseService.getContracts(filters);
-    } catch (error) {
-      console.error('Erreur dans ContractService.getAllContracts:', error);
-      throw error;
-    }
+  constructor() {
+    this.db = DatabaseService;
+    this.contractsKey = 'contracts';
+    this.settings = SettingsService;
+    this.lastContractNumberKey = 'last_contract_number';
   }
 
-  // Obtenir un contrat par son ID
+  async getAllContracts() {
+    const contracts = await this.db.get(this.contractsKey);
+    return contracts || [];
+  }
+
   async getContractById(id) {
-    try {
-      return await DatabaseService.getContractById(id);
-    } catch (error) {
-      console.error(`Erreur dans ContractService.getContractById(${id}):`, error);
-      throw error;
-    }
+    const contracts = await this.getAllContracts();
+    return contracts.find(contract => contract.id === id) || null;
   }
 
-  // Créer un nouveau contrat
-  async createContract(contractData) {
-    try {
-      // Générer une référence si elle n'est pas fournie
-      if (!contractData.reference) {
-        contractData.reference = await this.generateContractReference();
-      }
-      
-      return await DatabaseService.createContract(contractData);
-    } catch (error) {
-      console.error('Erreur dans ContractService.createContract:', error);
-      throw error;
-    }
+  async getNextContractNumber() {
+    const lastNumber = await this.db.get(this.lastContractNumberKey) || 100000;
+    const nextNumber = lastNumber + 1;
+    await this.db.set(this.lastContractNumberKey, nextNumber);
+    return nextNumber;
   }
 
-  // Mettre à jour un contrat
-  async updateContract(id, contractData) {
-    try {
-      return await DatabaseService.updateContract(id, contractData);
-    } catch (error) {
-      console.error(`Erreur dans ContractService.updateContract(${id}):`, error);
-      throw error;
-    }
-  }
-
-  // Supprimer un contrat
-  async deleteContract(id) {
-    try {
-      return await DatabaseService.deleteContract(id);
-    } catch (error) {
-      console.error(`Erreur dans ContractService.deleteContract(${id}):`, error);
-      throw error;
-    }
-  }
-
-  // Rechercher des contrats
-  async searchContracts(searchTerm, status = 'all') {
-    try {
-      const contracts = await DatabaseService.getContracts();
-      
-      // Filtrer les contrats en fonction du terme de recherche et du statut
-      return contracts.filter(contract => {
-        // Vérifier si le titre, la référence, l'employé ou le client correspond au terme de recherche
-        const matchesTerm = 
-          searchTerm === '' ||
-          (contract.title && contract.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (contract.reference && contract.reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (contract.employee_firstname && contract.employee_firstname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (contract.employee_lastname && contract.employee_lastname.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (contract.client_company && contract.client_company.toLowerCase().includes(searchTerm.toLowerCase()));
-        
-        // Vérifier si le statut correspond
-        const matchesStatus = 
-          status === 'all' || 
-          contract.status === status;
-        
-        return matchesTerm && matchesStatus;
-      });
-    } catch (error) {
-      console.error('Erreur dans ContractService.searchContracts:', error);
-      throw error;
-    }
-  }
-
-  // Générer une référence de contrat
-  async generateContractReference() {
-    try {
-      // Récupérer le nombre de contrats pour générer un numéro séquentiel
-      const contracts = await DatabaseService.getContracts();
-      const nextNumber = contracts.length + 1;
-      
-      // Format: CONT-ANNÉE-NUMÉRO (ex: CONT-2023-001)
-      const year = new Date().getFullYear();
-      const paddedNumber = nextNumber.toString().padStart(3, '0');
-      
-      return `CONT-${year}-${paddedNumber}`;
-    } catch (error) {
-      console.error('Erreur dans ContractService.generateContractReference:', error);
-      // En cas d'erreur, utiliser un timestamp comme référence de secours
-      const timestamp = Date.now();
-      return `CONT-${timestamp}`;
-    }
-  }
-
-  // Valider les données d'un contrat
-  validateContractData(data) {
-    const errors = {};
+  async saveContract(contract) {
+    let contracts = await this.getAllContracts();
     
-    // Vérifier les champs obligatoires
-    if (!data.employee_id) {
-      errors.employee_id = 'L\'employé est obligatoire';
-    }
-    
-    if (!data.client_id) {
-      errors.client_id = 'Le client est obligatoire';
-    }
-    
-    if (!data.title || data.title.trim() === '') {
-      errors.title = 'Le titre du contrat est obligatoire';
-    }
-    
-    if (!data.start_date) {
-      errors.start_date = 'La date de début est obligatoire';
-    }
-    
-    // Valider les taux
-    if (!data.hourly_rate) {
-      errors.hourly_rate = 'Le taux horaire est obligatoire';
-    } else if (isNaN(parseFloat(data.hourly_rate)) || parseFloat(data.hourly_rate) <= 0) {
-      errors.hourly_rate = 'Le taux horaire doit être un nombre positif';
-    }
-    
-    if (!data.billing_rate) {
-      errors.billing_rate = 'Le taux de facturation est obligatoire';
-    } else if (isNaN(parseFloat(data.billing_rate)) || parseFloat(data.billing_rate) <= 0) {
-      errors.billing_rate = 'Le taux de facturation doit être un nombre positif';
-    }
-    
-    // Vérifier la cohérence des dates
-    if (data.start_date && data.end_date) {
-      const startDate = new Date(data.start_date);
-      const endDate = new Date(data.end_date);
-      
-      if (endDate < startDate) {
-        errors.end_date = 'La date de fin doit être postérieure à la date de début';
-      }
-    }
-    
-    return {
-      isValid: Object.keys(errors).length === 0,
-      errors
-    };
-  }
-
-  // Générer un PDF de contrat
-  async generateContractPDF(contractId) {
-    try {
-      // Récupérer les informations nécessaires
-      const contract = await this.getContractById(contractId);
-      const employee = await DatabaseService.getEmployeeById(contract.employee_id);
-      const client = await DatabaseService.getClientById(contract.client_id);
-      
-      // Générer le PDF
-      return await PDFService.generateContractPDF(contract, employee, client);
-    } catch (error) {
-      console.error(`Erreur dans ContractService.generateContractPDF(${contractId}):`, error);
-      throw error;
-    }
-  }
-
-  // Générer un certificat de mission
-  async generateMissionCertificatePDF(contractId) {
-    try {
-      // Récupérer les informations nécessaires
-      const contract = await this.getContractById(contractId);
-      const employee = await DatabaseService.getEmployeeById(contract.employee_id);
-      const client = await DatabaseService.getClientById(contract.client_id);
-      
-      // Générer le certificat
-      return await PDFService.generateMissionCertificatePDF(contract, employee, client);
-    } catch (error) {
-      console.error(`Erreur dans ContractService.generateMissionCertificatePDF(${contractId}):`, error);
-      throw error;
-    }
-  }
-
-  // Calculer la durée d'un contrat en jours
-  calculateContractDuration(contract) {
-    if (!contract.start_date) return null;
-    
-    const startDate = new Date(contract.start_date);
-    let endDate;
-    
-    if (contract.end_date) {
-      endDate = new Date(contract.end_date);
+    if (contract.id) {
+      // Mise à jour d'un contrat existant
+      contracts = contracts.map(c => c.id === contract.id ? { ...contract, updatedAt: new Date().toISOString() } : c);
     } else {
-      // Si pas de date de fin, utiliser la date actuelle
-      endDate = new Date();
+      // Nouveau contrat
+      const contractNumber = await this.getNextContractNumber();
+      const newContract = {
+        ...contract,
+        id: uuidv4(),
+        contractNumber: contractNumber,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      contracts.push(newContract);
     }
     
-    // Calculer la différence en jours
-    const differenceInTime = endDate.getTime() - startDate.getTime();
-    const differenceInDays = Math.ceil(differenceInTime / (1000 * 3600 * 24));
-    
-    return differenceInDays;
+    await this.db.set(this.contractsKey, contracts);
+    return contract.id ? contract : contracts[contracts.length - 1];
   }
 
-  // Calculer le montant total facturé pour un contrat
-  calculateTotalBilling(contract) {
-    if (!contract.start_date || !contract.billing_rate) return 0;
-    
-    // Calculer la durée en jours
-    const durationInDays = this.calculateContractDuration(contract);
-    if (!durationInDays) return 0;
-    
-    // Estimer le nombre d'heures travaillées (en supposant une semaine de 5 jours à 7h par jour)
-    const workingHoursPerDay = 7;
-    const workingDaysPerWeek = 5;
-    const weekendDays = Math.floor(durationInDays / 7) * 2;
-    const actualWorkingDays = durationInDays - weekendDays;
-    const totalHours = actualWorkingDays * workingHoursPerDay;
-    
-    // Calculer le montant total
-    return totalHours * parseFloat(contract.billing_rate);
+  async deleteContract(id) {
+    const contracts = await this.getAllContracts();
+    const filteredContracts = contracts.filter(c => c.id !== id);
+    await this.db.set(this.contractsKey, filteredContracts);
+    return true;
   }
 
-  // Formatter un contrat pour l'affichage
-  formatContractForDisplay(contract) {
-    if (!contract) return null;
-    
-    // Calculer la durée et le montant total
-    const durationInDays = this.calculateContractDuration(contract);
-    const totalBilling = this.calculateTotalBilling(contract);
-    
-    // Formatters
-    const formatCurrency = (amount) => {
-      return new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR'
-      }).format(amount);
-    };
-    
-    const formatDate = (dateString) => {
-      if (!dateString) return '';
-      
-      const date = new Date(dateString);
-      return date.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-    };
-    
-    // Déterminer le statut textuel
-    let statusText = '';
-    switch (contract.status) {
-      case 'draft':
-        statusText = 'Brouillon';
-        break;
-      case 'active':
-        statusText = 'Actif';
-        break;
-      case 'completed':
-        statusText = 'Terminé';
-        break;
-      case 'canceled':
-        statusText = 'Annulé';
-        break;
-      default:
-        statusText = contract.status;
-    }
-    
-    // Retourner un objet formaté
-    return {
-      ...contract,
-      durationInDays,
-      totalBilling,
-      formattedHourlyRate: formatCurrency(contract.hourly_rate),
-      formattedBillingRate: formatCurrency(contract.billing_rate),
-      formattedTotalBilling: formatCurrency(totalBilling),
-      formattedStartDate: formatDate(contract.start_date),
-      formattedEndDate: formatDate(contract.end_date),
-      statusText,
-      displayReference: contract.reference || `CONT-${contract.id}`
-    };
-  }
-
-  // Obtenir les statistiques des contrats
-  async getContractStats() {
+  async generateEmployeeContractPDF(contract) {
     try {
-      const contracts = await this.getAllContracts();
+      // Récupérer les informations de l'entreprise
+      const companySettings = await this.settings.getCompanySettings();
       
-      // Compteurs par statut
-      const countByStatus = {
-        draft: 0,
-        active: 0,
-        completed: 0,
-        canceled: 0,
-        total: contracts.length
-      };
-      
-      // Montants totaux
-      let totalBillingAmount = 0;
-      let activeBillingAmount = 0;
-      
-      // Calculer les statistiques
-      contracts.forEach(contract => {
-        // Incrémenter le compteur correspondant au statut
-        if (countByStatus.hasOwnProperty(contract.status)) {
-          countByStatus[contract.status]++;
-        }
+      // Préparer les données pour le template
+      const data = {
+        // Informations sur le contrat
+        reference: `N° ${contract.contractNumber}`,
+        title: contract.title || "CONTRAT DE MISSION",
+        description: contract.description || "",
+        startDate: formatDateToFrench(new Date(contract.startDate)),
+        endDate: formatDateToFrench(new Date(contract.endDate)),
+        duration: this.calculateDuration(contract.startDate, contract.endDate),
+        location: contract.location || "",
+        workingHours: contract.workingHours || "08:00 - 12:00, 13:00 - 17:00",
+        hourlyRate: `${contract.hourlyRate || 0} €`,
+        billingRate: `${contract.billingRate || 0} €`,
         
-        // Calculer les montants
-        const amount = this.calculateTotalBilling(contract);
-        totalBillingAmount += amount;
+        // Informations sur l'employé
+        employee: {
+          fullName: `${contract.employee?.firstName || ""} ${contract.employee?.lastName || ""}`.trim(),
+          address: contract.employee?.address || "",
+          email: contract.employee?.email || "",
+          phone: contract.employee?.phone || "",
+          skills: contract.employee?.skills || "",
+        },
         
-        if (contract.status === 'active') {
-          activeBillingAmount += amount;
-        }
-      });
-      
-      return {
-        counts: countByStatus,
-        totalBillingAmount,
-        activeBillingAmount,
-        averageContractValue: countByStatus.total > 0 ? totalBillingAmount / countByStatus.total : 0
+        // Informations sur le client
+        client: {
+          companyName: contract.client?.companyName || "",
+          address: contract.client?.address || "",
+          siret: contract.client?.siret || "",
+          contactName: contract.client?.contactName || "",
+        },
+        
+        // Informations sur la société
+        company: {
+          name: companySettings.name || "VOTRE ENTREPRISE",
+          address: companySettings.address || "",
+          zipCode: companySettings.zipCode || "",
+          city: companySettings.city || "",
+          siret: companySettings.siret || "",
+          rcs: companySettings.rcs || "",
+          ape: companySettings.ape || "",
+          phone: companySettings.phone || "",
+          email: companySettings.email || "",
+          logo: companySettings.logo || null,
+        },
+        
+        // Autres informations
+        generationDate: formatDateToFrench(new Date()),
+        year: new Date().getFullYear(),
+        motif: contract.motif || "ACCROISSEMENT TEMP. D'ACTIVITE",
+        justificatif: contract.justificatif || "RENFORT DE PERSONNEL",
+        transport: contract.transport || "SELON MOYENS",
       };
+
+      // Générer le PDF
+      const result = await window.electron.generatePDF(
+        'contract', // Type de document
+        data,       // Données pour le template
+        `Contrat_${contract.contractNumber}.pdf` // Nom du fichier
+      );
+
+      return result;
     } catch (error) {
-      console.error('Erreur dans ContractService.getContractStats:', error);
+      console.error('Erreur lors de la génération du contrat PDF:', error);
       throw error;
     }
+  }
+
+  async generateClientContractPDF(contract) {
+    // Similaire à generateEmployeeContractPDF mais avec des champs spécifiques pour les contrats clients
+    try {
+      // Récupérer les informations de l'entreprise
+      const companySettings = await this.settings.getCompanySettings();
+      
+      // Préparer les données pour le template
+      const data = {
+        // Informations sur le contrat
+        reference: `N° ${contract.contractNumber}`,
+        title: contract.title || "CONTRAT DE PRESTATION",
+        description: contract.description || "",
+        startDate: formatDateToFrench(new Date(contract.startDate)),
+        endDate: formatDateToFrench(new Date(contract.endDate)),
+        duration: this.calculateDuration(contract.startDate, contract.endDate),
+        location: contract.location || "",
+        
+        // Tarifs et conditions financières
+        hourlyRate: `${contract.hourlyRate || 0} €`,
+        totalAmount: `${contract.totalAmount || 0} €`,
+        paymentMethod: contract.paymentMethod || "Virement bancaire",
+        paymentTerms: contract.paymentTerms || "30 jours fin de mois",
+        
+        // Informations sur le client
+        client: {
+          companyName: contract.client?.companyName || "",
+          address: contract.client?.address || "",
+          zipCode: contract.client?.zipCode || "",
+          city: contract.client?.city || "",
+          siret: contract.client?.siret || "",
+          contactName: contract.client?.contactName || "",
+          contactEmail: contract.client?.contactEmail || "",
+          contactPhone: contract.client?.contactPhone || "",
+        },
+        
+        // Informations sur la société
+        company: {
+          name: companySettings.name || "VOTRE ENTREPRISE",
+          address: companySettings.address || "",
+          zipCode: companySettings.zipCode || "",
+          city: companySettings.city || "",
+          siret: companySettings.siret || "",
+          rcs: companySettings.rcs || "",
+          ape: companySettings.ape || "",
+          phone: companySettings.phone || "",
+          email: companySettings.email || "",
+          logo: companySettings.logo || null,
+        },
+        
+        // Autres informations
+        generationDate: formatDateToFrench(new Date()),
+        year: new Date().getFullYear(),
+        services: contract.services || [],
+        conditions: contract.conditions || []
+      };
+
+      // Générer le PDF
+      const result = await window.electron.generatePDF(
+        'client_contract', // Type de document
+        data,             // Données pour le template
+        `Contrat_Client_${contract.contractNumber}.pdf` // Nom du fichier
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Erreur lors de la génération du contrat client PDF:', error);
+      throw error;
+    }
+  }
+
+  generateEmployeeCertificatePDF(contract) {
+    // Code pour générer un certificat d'accomplissement pour l'employé
+  }
+
+  // Utilitaires
+  calculateDuration(startDate, endDate) {
+    if (!startDate || !endDate) return "";
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Calculer les mois et jours
+    let months = 0;
+    let days = diffDays;
+    
+    // Si plus de 30 jours, convertir en mois + jours
+    if (days > 30) {
+      let tempDate = new Date(start);
+      while (true) {
+        const nextMonth = addMonths(tempDate, 1);
+        if (nextMonth > end) break;
+        months++;
+        tempDate = nextMonth;
+      }
+      
+      // Calculer les jours restants
+      const remainingDays = Math.ceil((end - tempDate) / (1000 * 60 * 60 * 24));
+      days = remainingDays;
+    }
+    
+    // Formater la durée
+    let duration = "";
+    if (months > 0) {
+      duration += `${months} mois`;
+      if (days > 0) duration += ` et ${days} jours`;
+    } else {
+      duration = `${days} jours`;
+    }
+    
+    return duration;
   }
 }
+
+export default new ContractService();

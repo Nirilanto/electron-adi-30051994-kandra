@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const isDev = false; //require('electron-is-dev');
+// const isDev = false; //require('electron-is-dev');
+const isDev = true; //require('electron-is-dev');
 const fs = require("fs");
 const Store = require("electron-store");
 const puppeteer = require("puppeteer");
