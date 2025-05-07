@@ -13,8 +13,50 @@ class ContractService {
   }
 
   async getAllContracts() {
-    const contracts = await this.db.get(this.contractsKey);
-    return contracts || [];
+    try {
+      // Récupérer tous les contrats
+      const contracts = await this.db.get(this.contractsKey) || [];
+      
+      // Si aucun contrat n'est trouvé, retourner un tableau vide
+      if (!contracts || contracts.length === 0) {
+        return [];
+      }
+      
+      // Pour chaque contrat, récupérer les données du client et de l'employé
+      const enrichedContracts = await Promise.all(contracts.map(async (contract) => {
+        try {
+          let enrichedContract = { ...contract };
+          
+          // Si un client est référencé, récupérer ses informations
+          if (contract.clientId) {
+            const client = await this.db.getClientById(contract.clientId);
+            if (client) {
+              enrichedContract.client = client;
+            }
+          }
+          
+          // Si un employé est référencé, récupérer ses informations
+          if (contract.employeeId) {
+            const employee = await this.db.getEmployeeById(contract.employeeId);
+            if (employee) {
+              enrichedContract.employee = employee;
+            }
+          }
+          
+          return enrichedContract;
+        } catch (error) {
+          console.error(`Erreur lors de l'enrichissement du contrat ${contract.id}:`, error);
+          // Retourner le contrat original si une erreur se produit
+          return contract;
+        }
+      }));
+      
+      console.log('Contrats enrichis:', enrichedContracts);
+      return enrichedContracts;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des contrats:', error);
+      return [];
+    }
   }
 
   async getContractById(id) {

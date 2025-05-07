@@ -448,13 +448,13 @@ function ContractList() {
                         >
                           <EyeIcon className="h-5 w-5" />
                         </Link>
-                        <Link
+                        {/* <Link
                           to={`/contracts/${contract.id}/edit`}
                           className="text-yellow-600 hover:text-yellow-800 p-1"
                           title="Modifier"
                         >
                           <PencilSquareIcon className="h-5 w-5" />
-                        </Link>
+                        </Link> */}
                         <button
                           type="button"
                           onClick={(e) => handleDelete(contract.id, e)}
