@@ -215,7 +215,7 @@ ipcMain.handle("shell-open-path", async (_, path) => {
   return { success: true };
 });
 
-// Génération de PDF
+// Modification à apporter au gestionnaire ipcMain.handle("generate-pdf", async (_, args))
 ipcMain.handle("generate-pdf", async (_, args) => {
   try {
     const { type, data, filename } = args;
@@ -240,11 +240,26 @@ ipcMain.handle("generate-pdf", async (_, args) => {
 
     // Déterminer le chemin du template en fonction du type
     let templatePath;
+    let template;
+
+    // Sélectionner le type de template approprié
     if (type === "certificate") {
       templatePath = path.join(
         config.paths.templatesPath,
         "certificates",
         "default.html"
+      );
+    } else if (type === "employee_contract") {
+      templatePath = path.join(
+        config.paths.templatesPath,
+        "contracts",
+        "employee.html"
+      );
+    } else if (type === "client_contract") {
+      templatePath = path.join(
+        config.paths.templatesPath,
+        "contracts",
+        "client.html"
       );
     } else {
       // contract par défaut
@@ -256,7 +271,6 @@ ipcMain.handle("generate-pdf", async (_, args) => {
     }
 
     // Vérifier si le template existe
-    let template;
     if (fs.existsSync(templatePath)) {
       // Utiliser le template depuis le fichier
       template = fs.readFileSync(templatePath, "utf8");
@@ -264,6 +278,10 @@ ipcMain.handle("generate-pdf", async (_, args) => {
       // Utiliser le template intégré dans le code
       if (type === "certificate") {
         template = getCertificateTemplate();
+      } else if (type === "employee_contract") {
+        template = getEmployeeContractTemplate();
+      } else if (type === "client_contract") {
+        template = getClientContractTemplate();
       } else {
         template = getContractTemplate();
       }
@@ -278,8 +296,8 @@ ipcMain.handle("generate-pdf", async (_, args) => {
       .padStart(2, "0")}/${now.getFullYear()}`;
     const enhancedData = {
       ...data,
-      generationDate: formattedDate,
-      year: now.getFullYear(),
+      generationDate: data.generationDate || formattedDate,
+      year: data.year || now.getFullYear(),
     };
 
     // Compiler le template avec Handlebars
@@ -328,452 +346,1306 @@ ipcMain.handle("generate-pdf", async (_, args) => {
   }
 });
 
-// Ajouter ces fonctions pour obtenir les templates HTML des PDFs
-function getContractTemplate() {
+// Ajoutez ces nouvelles fonctions pour obtenir les templates HTML des PDFs
+function getEmployeeContractTemplate() {
   return `
   <!DOCTYPE html>
-  <html>
+  <html lang="fr">
   <head>
-    <meta charset="UTF-8">
-    <title>Contrat de Mission</title>
-    <style>
-      /* Styles globaux */
-      body {
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        margin: 0;
-        padding: 0;
-        font-size: 11pt;
-      }
-      .container {
-        padding: 40px;
-        max-width: 210mm; /* A4 width */
-      }
-      /* En-tête */
-      .header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 30px;
-        align-items: flex-start;
-      }
-      .logo-placeholder {
-        width: 180px;
-        height: 60px;
-        border: 1px dashed #ccc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 10px;
-        color: #999;
-        font-size: 14px;
-      }
-      .document-title {
-        color: #1a73e8;
-        text-align: right;
-        font-weight: 600;
-        font-size: 24px;
-        margin: 0;
-      }
-      .reference {
-        text-align: right;
-        color: #666;
-        font-size: 14px;
-        margin-top: 5px;
-      }
-      /* Sections */
-      h2 {
-        color: #1a73e8;
-        font-size: 14pt;
-        border-bottom: 1px solid #e0e0e0;
-        padding-bottom: 8px;
-        margin-top: 30px;
-        font-weight: 600;
-      }
-      .section {
-        margin-bottom: 25px;
-      }
-      .party-info {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 20px;
-        margin-bottom: 5px;
-      }
-      .party-box {
-        flex: 1;
-        min-width: 200px;
-        background: #f7f9fc;
-        border-radius: 8px;
-        padding: 15px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-      .party-title {
-        font-weight: 600;
-        margin-bottom: 10px;
-        color: #1a73e8;
-      }
-      /* Table des conditions financières */
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-      }
-      th, td {
-        padding: 12px 15px;
-        text-align: left;
-        border-bottom: 1px solid #e0e0e0;
-      }
-      th {
-        background-color: #f7f9fc;
-        font-weight: 600;
-        color: #333;
-      }
-      tr:hover {
-        background-color: #f8f9fa;
-      }
-      /* Footer */
-      .signatures {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 60px;
-        page-break-inside: avoid;
-      }
-      .signature-box {
-        flex: 1;
-        max-width: 30%;
-        border-top: 1px solid #e0e0e0;
-        padding-top: 10px;
-        text-align: center;
-        margin: 0 15px;
-      }
-      .footer {
-        margin-top: 60px;
-        text-align: center;
-        color: #999;
-        font-size: 9pt;
-        page-break-inside: avoid;
-      }
-      .page-number {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        font-size: 9pt;
-        color: #999;
-      }
-    </style>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Contrat de mise à disposition - Atlantis</title>
+      <style>
+          :root {
+              --primary: #333333;
+              --secondary: #666666;
+              --light-gray: #e5e5e5;
+              --medium-gray: #cccccc;
+              --dark-gray: #444444;
+              --text: #222222;
+              --white: #ffffff;
+              --divider: #dddddd;
+              --hover: #f5f5f5;
+          }
+          
+          * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+          }
+          
+          body {
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
+              color: var(--text);
+              background-color: var(--white);
+              padding: 0;
+          }
+          
+          .container {
+              width: 100%;
+              max-width: 210mm;
+              margin: 0 auto;
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              padding: 15px;
+          }
+          
+          .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid var(--divider);
+          }
+          
+          .logo-container {
+              display: flex;
+              flex-direction: column;
+          }
+          
+          .logo {
+              font-weight: 700;
+              font-size: 22px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .company-info {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .document-notice {
+              text-align: right;
+              font-size: 9px;
+              color: var(--secondary);
+              max-width: 200px;
+          }
+          
+          .title-section {
+              text-align: center;
+              margin-bottom: 15px;
+          }
+          
+          .title {
+              font-weight: 700;
+              font-size: 16px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .subtitle {
+              font-size: 12px;
+              color: var(--secondary);
+              margin-bottom: 3px;
+          }
+          
+          .document-number {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 10px;
+          }
+          
+          .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 15px;
+          }
+          
+          .full-width {
+              grid-column: 1 / -1;
+          }
+          
+          .card {
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              overflow: hidden;
+          }
+          
+          .card-header {
+              background-color: var(--dark-gray);
+              color: var(--white);
+              padding: 4px 8px;
+              font-weight: 600;
+              font-size: 11px;
+          }
+          
+          .card-body {
+              padding: 6px 8px;
+          }
+          
+          .data-row {
+              display: flex;
+              margin-bottom: 4px;
+              align-items: flex-start;
+          }
+          
+          .data-label {
+              font-weight: 600;
+              min-width: 140px;
+              color: var(--secondary);
+              font-size: 10px;
+          }
+          
+          .data-value {
+              flex: 1;
+              color: var(--text);
+              font-size: 10px;
+          }
+          
+          .data-value.bold {
+              font-weight: 600;
+          }
+          
+          .schedule-box {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 5px;
+              margin-top: 2px;
+              margin-bottom: 5px;
+          }
+          
+          .time-slot {
+              background-color: var(--light-gray);
+              padding: 3px 5px;
+              text-align: center;
+              font-size: 9px;
+          }
+          
+          .checkbox-group {
+              margin: 5px 0;
+          }
+          
+          .checkbox-container {
+              display: inline-flex;
+              align-items: center;
+              margin-right: 15px;
+          }
+          
+          .checkbox {
+              display: inline-block;
+              width: 12px;
+              height: 12px;
+              border: 1px solid var(--secondary);
+              margin-right: 5px;
+              position: relative;
+          }
+          
+          .checked::after {
+              content: "✓";
+              position: absolute;
+              color: var(--primary);
+              font-weight: bold;
+              font-size: 9px;
+              top: -1px;
+              left: 1px;
+          }
+          
+          .notice-box {
+              background-color: var(--light-gray);
+              padding: 5px 8px;
+              font-size: 8px;
+              color: var(--secondary);
+              margin-bottom: 5px;
+          }
+          
+          .signatures {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-top: 10px;
+              margin-bottom: 10px;
+          }
+          
+          .signature-box {
+              border: 1px solid var(--medium-gray);
+              padding: 5px 8px;
+              height: 60px;
+          }
+          
+          .signature-title {
+              font-weight: 600;
+              margin-bottom: 2px;
+              font-size: 9px;
+              color: var(--primary);
+          }
+          
+          .signature-notice {
+              font-size: 8px;
+              color: var(--secondary);
+              margin-bottom: 10px;
+          }
+          
+          .date-section {
+              margin-top: 10px;
+              display: flex;
+              gap: 15px;
+          }
+          
+          .date-item {
+              display: flex;
+              align-items: center;
+          }
+          
+          .date-label {
+              font-weight: 600;
+              margin-right: 5px;
+              color: var(--secondary);
+              font-size: 10px;
+          }
+          
+          .date-value {
+              padding: 2px 5px;
+              background-color: var(--light-gray);
+              font-size: 10px;
+          }
+          
+          .footnote {
+              margin-top: 5px;
+              font-size: 8px;
+              color: var(--secondary);
+              font-style: italic;
+          }
+          
+          .page-number {
+              text-align: right;
+              margin-top: 5px;
+              color: var(--secondary);
+              font-size: 8px;
+          }
+          
+          .mission-tag {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 5px;
+              font-size: 9px;
+              font-weight: 500;
+          }
+          
+          .price-tag {
+              background-color: var(--light-gray);
+              padding: 2px 5px;
+              font-weight: 600;
+              color: var(--primary);
+              font-size: 10px;
+          }
+          
+          .highlight {
+              background-color: var(--light-gray);
+              padding: 1px 3px;
+              font-size: 10px;
+          }
+          
+          .med-section {
+              font-size: 9px;
+              padding: 4px;
+              display: flex;
+              justify-content: space-between;
+          }
+          
+          .compact-section {
+              margin-bottom: 5px;
+          }
+          
+          .risk-section {
+              font-size: 9px;
+              margin-top: 3px;
+          }
+          
+          @media print {
+              body {
+                  background-color: white;
+                  padding: 0;
+              }
+              
+              .container {
+                  box-shadow: none;
+                  max-width: none;
+                  width: 100%;
+                  border: none;
+                  padding: 10px;
+              }
+          }
+      </style>
   </head>
   <body>
-    <div class="container">
-      <!-- En-tête du document -->
-      <div class="header">
-        <div>
-          <div class="logo-placeholder">LOGO</div>
-          <p>Votre Entreprise<br>
-             123 Rue des Missions<br>
-             75000 Paris</p>
-        </div>
-        <div>
-          <h1 class="document-title">CONTRAT DE MISSION</h1>
-          <p class="reference">Réf: {{reference}}</p>
-          <p>Date: {{generationDate}}</p>
-        </div>
-      </div>
-
-      <!-- Parties impliquées -->
-      <h2>PARTIES</h2>
-      <div class="section">
-        <div class="party-info">
-          <div class="party-box">
-            <div class="party-title">ENTREPRISE DE PORTAGE</div>
-            <p>Votre Entreprise<br>
-              123 Rue des Missions<br>
-              75000 Paris<br>
-              SIRET: 123 456 789 00000</p>
+      <div class="container">
+          <div class="header">
+              <div class="logo-container">
+                  <div class="logo">ATLANTIS main</div>
+                  <div class="company-info">
+                      221 RUE DE LAFAYETTE 75010 PARIS<br>
+                      CONTACTATLANTIS75@GMAIL.COM<br>
+                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                  </div>
+              </div>
+              <div class="document-notice">
+                  Merci de nous retourner le double du contrat signé dans les deux jours ouvrables suivant la mise à disposition (L.1251-1 CT)
+              </div>
           </div>
-          
-          <div class="party-box">
-            <div class="party-title">CONSULTANT</div>
-            <p>{{employee.fullName}}<br>
-              {{employee.address}}<br>
-              Email: {{employee.email}}<br>
-              Tél: {{employee.phone}}</p>
+
+          <div class="title-section">
+              <div class="title">CONTRAT DE MISE À DISPOSITION</div>
+              <div class="subtitle">Du {{startDate}} Au {{endDate}}</div>
+              <div class="document-number">N° {{reference}}</div>
           </div>
-          
-          <div class="party-box">
-            <div class="party-title">CLIENT</div>
-            <p>{{client.companyName}}<br>
-              {{client.address}}<br>
-              SIRET: {{client.siret}}<br>
-              Contact: {{client.contactName}}</p>
+
+          <div class="grid">
+              <div class="card">
+                  <div class="card-header">SALARIÉ TEMPORAIRE</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">NOM, PRÉNOM</div>
+                          <div class="data-value bold">{{employee.fullName}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">NATIONALITÉ</div>
+                          <div class="data-value">{{employee.nationality}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">TITRE SÉJOUR</div>
+                          <div class="data-value">CARTE D'IDENTITÉ</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">QUALIFICATION</div>
+                          <div class="data-value">
+                              <div class="mission-tag">{{employee.skills}}</div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">ENTREPRISE UTILISATRICE</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">RAISON SOCIALE</div>
+                          <div class="data-value bold">{{client.companyName}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">SIRET</div>
+                          <div class="data-value">{{client.siret}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">ADRESSE</div>
+                          <div class="data-value">
+                              {{client.address}}<br>
+                              {{client.postalCode}} {{client.city}}
+                          </div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">LIEU DE MISSION</div>
+                          <div class="data-value">{{client.location}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">MOYEN D'ACCÈS</div>
+                          <div class="data-value">{{transport}}</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card full-width">
+                  <div class="card-header">MOTIF MISSION JUSTIFICATIF(S) DU RECOURS</div>
+                  <div class="card-body">
+                      <div class="checkbox-group">
+                          <div class="checkbox-container">
+                              <div class="checkbox {{#if motifs.accroissementActivite}}checked{{/if}}"></div>
+                              <span>ACCROISSEMENT TEMP. D'ACTIVITÉ</span>
+                          </div>
+                          <div class="checkbox-container">
+                              <div class="checkbox {{#if motifs.renforcementPersonnel}}checked{{/if}}"></div>
+                              <span>RENFORT DE PERSONNEL</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">PRÉCISION SUR LE POSTE / FACTURATION</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">Durée mission</div>
+                          <div class="data-value highlight">Du {{startDate}} Au {{endDate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">TERME PRÉCIS</div>
+                          <div class="data-value bold">{{endDate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">HORAIRE MISSION</div>
+                          <div class="data-value"></div>
+                      </div>
+                      <div class="schedule-box">
+                          {{#each workingHoursSlots}}
+                              <div class="time-slot">De {{this.start}} À {{this.end}}</div>
+                          {{/each}}
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">DURÉE HEBDO:</div>
+                          <div class="data-value bold">{{weeklyHours}} HEURES</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">SALAIRE REF/H:</div>
+                          <div class="data-value price-tag">{{hourlyRate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">TARIF H.T.</div>
+                          <div class="data-value price-tag">{{billingRate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">PAIEMENT</div>
+                          <div class="data-value">VIREMENT</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">CARACTÉRISTIQUES DU POSTE DE TRAVAIL</div>
+                  <div class="card-body">
+                      <div class="risk-section">
+                          (protections individuelles de sécurité et surveillance médicale)
+                      </div>
+                      <div class="compact-section">
+                          <div>SECURITÉ A ASSURER PAR LE CLIENT</div>
+                          <div>RESPECT DES CONSIGNES DE SÉCURITÉ</div>
+                          <div class="bold">PORT DE CHAUSSURE DE SÉCURITÉ ET DU CASQUE OBLIGATOIRE</div>
+                      </div>
+                      <div class="risk-section">
+                          <div>Poste à risques (L.4154-2 CT) ?</div>
+                          <div class="checkbox-container">
+                              <div class="checkbox checked"></div>
+                          </div>
+                      </div>
+                      <div class="risk-section">
+                          L'embauche à l'issue de la mission n'est pas interdite, sous réserve art. L.1251-36 CT
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card full-width">
+                  <div class="card-header">LÉGISLATION</div>
+                  <div class="card-body">
+                      <div class="notice-box">
+                          ** Sous peine de sanctions pénales (L.1254-1 et s. CT). L'utilisateur déclare avoir pris connaissance des conditions générales au verso. Les jours fériés chômés et payés sont dûs aux salariés temporaires sans condition d'ancienneté et facturés. Les informations concernant le motif, la durée, la rémunération** et les caractéristiques du poste sont sous la responsabilité de l'utilisateur. L'utilisateur prend en charge les frais d'accès aux installations collectives (art L.251-24 CT).
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card full-width">
+                  <div class="card-header">MÉDECINE DU TRAVAIL</div>
+                  <div class="card-body">
+                      <div class="med-section">
+                          <div>De l'ETT:</div>
+                          <div>Coordonnées du centre de Médecine du Travail:</div>
+                          <div>De l'Utilisateur:</div>
+                      </div>
+                  </div>
+              </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Objet de la mission -->
-      <h2>OBJET DE LA MISSION</h2>
-      <div class="section">
-        <h3 style="color: #333; margin-bottom: 10px; font-size: 12pt;">{{title}}</h3>
-        <p>{{description}}</p>
-      </div>
+          <div class="signatures">
+              <div class="signature-box">
+                  <div class="signature-title">L'ENTREPRISE DE TRAVAIL TEMPORAIRE</div>
+                  <div class="signature-notice">(Cachet et Signature)</div>
+              </div>
+              <div class="signature-box">
+                  <div class="signature-title">L'ENTREPRISE UTILISATRICE</div>
+                  <div class="signature-notice">
+                      Représentant de l'entreprise qui certifie exactes les dispositions générales stipulées au verso<br>
+                      (Cachet et Signature)
+                  </div>
+              </div>
+          </div>
 
-      <!-- Durée de la mission -->
-      <h2>DURÉE DE LA MISSION</h2>
-      <div class="section">
-        <p><strong>Début:</strong> {{startDate}}</p>
-        <p><strong>Fin:</strong> {{endDate}}</p>
-        <p><strong>Durée:</strong> {{duration}}</p>
-      </div>
+          <div class="footnote">
+              *Le terme de la mission prévu peut être aménagé dans les conditions stipulées aux articles L.1251-30 CT et L.1251-31 CT
+          </div>
 
-      <!-- Lieu et horaires -->
-      <h2>LIEU ET HORAIRES</h2>
-      <div class="section">
-        <p><strong>Lieu d'exécution:</strong> {{location}}</p>
-        <p><strong>Horaires de travail:</strong> {{workingHours}}</p>
-      </div>
+          <div class="date-section">
+              <div class="date-item">
+                  <div class="date-label">FAIT À</div>
+                  <div class="date-value">PARIS</div>
+              </div>
+              <div class="date-item">
+                  <div class="date-label">LE</div>
+                  <div class="date-value">{{generationDate}}</div>
+              </div>
+          </div>
 
-      <!-- Conditions financières -->
-      <h2>CONDITIONS FINANCIÈRES</h2>
-      <div class="section">
-        <table>
-          <thead>
-            <tr>
-              <th>Description</th>
-              <th style="text-align: right;">Montant</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Taux horaire consultant</td>
-              <td style="text-align: right;">{{hourlyRate}}</td>
-            </tr>
-            <tr>
-              <td>Taux horaire facturation client</td>
-              <td style="text-align: right;">{{billingRate}}</td>
-            </tr>
-          </tbody>
-        </table>
-        
-        <p><strong>Modalités de paiement:</strong> Facturation mensuelle, paiement à 30 jours fin de mois.</p>
+          <div class="page-number">Page 1 sur 2</div>
       </div>
-
-      <!-- Engagements -->
-      <h2>ENGAGEMENTS DES PARTIES</h2>
-      <div class="section">
-        <p><strong>L'entreprise de portage</strong> s'engage à :</p>
-        <ul>
-          <li>Établir les factures correspondant aux prestations effectuées</li>
-          <li>Verser la rémunération convenue au consultant selon les modalités définies</li>
-          <li>Souscrire les assurances nécessaires pour couvrir l'activité du consultant</li>
-        </ul>
-        
-        <p><strong>Le consultant</strong> s'engage à :</p>
-        <ul>
-          <li>Réaliser la mission conformément aux conditions définies</li>
-          <li>Respecter la confidentialité des informations auxquelles il aura accès</li>
-          <li>Fournir mensuellement un compte-rendu de son activité</li>
-        </ul>
-        
-        <p><strong>Le client</strong> s'engage à :</p>
-        <ul>
-          <li>Permettre au consultant de réaliser sa mission dans de bonnes conditions</li>
-          <li>Régler les factures selon les conditions convenues</li>
-          <li>Fournir les moyens et informations nécessaires à la réalisation de la mission</li>
-        </ul>
-      </div>
-
-      <!-- Signatures -->
-      <div class="signatures">
-        <div class="signature-box">
-          <p>L'entreprise de portage</p>
-          <p style="font-style: italic; color: #999; margin-top: 50px;">Signature et cachet</p>
-        </div>
-        
-        <div class="signature-box">
-          <p>Le consultant</p>
-          <p style="font-style: italic; color: #999; margin-top: 50px;">Signature</p>
-        </div>
-        
-        <div class="signature-box">
-          <p>Le client</p>
-          <p style="font-style: italic; color: #999; margin-top: 50px;">Signature et cachet</p>
-        </div>
-      </div>
-
-      <!-- Pied de page -->
-      <div class="footer">
-        <p>Document généré par Contrat Manager © {{year}} - Ce document a valeur contractuelle</p>
-      </div>
-      
-      <div class="page-number">Page 1/1</div>
-    </div>
   </body>
   </html>`;
 }
 
+function getClientContractTemplate() {
+  return `
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Contrat de prestation - Client</title>
+      <style>
+          :root {
+              --primary: #333333;
+              --secondary: #666666;
+              --light-gray: #e5e5e5;
+              --medium-gray: #cccccc;
+              --dark-gray: #444444;
+              --text: #222222;
+              --white: #ffffff;
+              --divider: #dddddd;
+              --hover: #f5f5f5;
+          }
+          
+          * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+          }
+          
+          body {
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              line-height: 1.4;
+              color: var(--text);
+              background-color: var(--white);
+              padding: 0;
+          }
+          
+          .container {
+              width: 100%;
+              max-width: 210mm;
+              margin: 0 auto;
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              padding: 15px;
+          }
+          
+          .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid var(--divider);
+          }
+          
+          .logo-container {
+              display: flex;
+              flex-direction: column;
+          }
+          
+          .logo {
+              font-weight: 700;
+              font-size: 22px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .company-info {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .document-notice {
+              text-align: right;
+              font-size: 9px;
+              color: var(--secondary);
+              max-width: 200px;
+          }
+          
+          .title-section {
+              text-align: center;
+              margin-bottom: 15px;
+          }
+          
+          .title {
+              font-weight: 700;
+              font-size: 16px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .subtitle {
+              font-size: 12px;
+              color: var(--secondary);
+              margin-bottom: 3px;
+          }
+          
+          .document-number {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 10px;
+          }
+          
+          .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-bottom: 15px;
+          }
+          
+          .full-width {
+              grid-column: 1 / -1;
+          }
+          
+          .card {
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              overflow: hidden;
+          }
+          
+          .card-header {
+              background-color: var(--dark-gray);
+              color: var(--white);
+              padding: 4px 8px;
+              font-weight: 600;
+              font-size: 11px;
+          }
+          
+          .card-body {
+              padding: 6px 8px;
+          }
+          
+          .data-row {
+              display: flex;
+              margin-bottom: 4px;
+              align-items: flex-start;
+          }
+          
+          .data-label {
+              font-weight: 600;
+              min-width: 140px;
+              color: var(--secondary);
+              font-size: 10px;
+          }
+          
+          .data-value {
+              flex: 1;
+              color: var(--text);
+              font-size: 10px;
+          }
+          
+          .data-value.bold {
+              font-weight: 600;
+          }
+          
+          .schedule-box {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 5px;
+              margin-top: 2px;
+              margin-bottom: 5px;
+          }
+          
+          .time-slot {
+              background-color: var(--light-gray);
+              padding: 3px 5px;
+              text-align: center;
+              font-size: 9px;
+          }
+          
+          .checkbox-group {
+              margin: 5px 0;
+          }
+          
+          .checkbox-container {
+              display: inline-flex;
+              align-items: center;
+              margin-right: 15px;
+          }
+          
+          .checkbox {
+              display: inline-block;
+              width: 12px;
+              height: 12px;
+              border: 1px solid var(--secondary);
+              margin-right: 5px;
+              position: relative;
+          }
+          
+          .checked::after {
+              content: "✓";
+              position: absolute;
+              color: var(--primary);
+              font-weight: bold;
+              font-size: 9px;
+              top: -1px;
+              left: 1px;
+          }
+          
+          .notice-box {
+              background-color: var(--light-gray);
+              padding: 5px 8px;
+              font-size: 8px;
+              color: var(--secondary);
+              margin-bottom: 5px;
+          }
+          
+          .signatures {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 10px;
+              margin-top: 10px;
+              margin-bottom: 10px;
+          }
+          
+          .signature-box {
+              border: 1px solid var(--medium-gray);
+              padding: 5px 8px;
+              height: 60px;
+          }
+          
+          .signature-title {
+              font-weight: 600;
+              margin-bottom: 2px;
+              font-size: 9px;
+              color: var(--primary);
+          }
+          
+          .signature-notice {
+              font-size: 8px;
+              color: var(--secondary);
+              margin-bottom: 10px;
+          }
+          
+          .date-section {
+              margin-top: 10px;
+              display: flex;
+              gap: 15px;
+          }
+          
+          .date-item {
+              display: flex;
+              align-items: center;
+          }
+          
+          .date-label {
+              font-weight: 600;
+              margin-right: 5px;
+              color: var(--secondary);
+              font-size: 10px;
+          }
+          
+          .date-value {
+              padding: 2px 5px;
+              background-color: var(--light-gray);
+              font-size: 10px;
+          }
+          
+          .footnote {
+              margin-top: 5px;
+              font-size: 8px;
+              color: var(--secondary);
+              font-style: italic;
+          }
+          
+.page-number {
+              text-align: right;
+              margin-top: 5px;
+              color: var(--secondary);
+              font-size: 8px;
+          }
+          
+          .mission-tag {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 5px;
+              font-size: 9px;
+              font-weight: 500;
+          }
+          
+          .price-tag {
+              background-color: var(--light-gray);
+              padding: 2px 5px;
+              font-weight: 600;
+              color: var(--primary);
+              font-size: 10px;
+          }
+          
+          .highlight {
+              background-color: var(--light-gray);
+              padding: 1px 3px;
+              font-size: 10px;
+          }
+          
+          @media print {
+              body {
+                  background-color: white;
+                  padding: 0;
+              }
+              
+              .container {
+                  box-shadow: none;
+                  max-width: none;
+                  width: 100%;
+                  border: none;
+                  padding: 10px;
+              }
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <div class="logo-container">
+                  <div class="logo">ATLANTIS dfdfdfd</div>
+                  <div class="company-info">
+                      221 RUE DE LAFAYETTE 75010 PARIS<br>
+                      CONTACTATLANTIS75@GMAIL.COM<br>
+                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                  </div>
+              </div>
+              <div class="document-notice">
+                  Contrat de prestation - Exemplaire client
+              </div>
+          </div>
+
+          <div class="title-section">
+              <div class="title">CONTRAT DE PRESTATION</div>
+              <div class="subtitle">Du {{startDate}} Au {{endDate}}</div>
+              <div class="document-number">N° {{reference}}</div>
+          </div>
+
+          <div class="grid">
+              <div class="card">
+                  <div class="card-header">PRESTATAIRE</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">RAISON SOCIALE</div>
+                          <div class="data-value bold">ATLANTIS</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">SIRET</div>
+                          <div class="data-value">948 396 973 R.C.S. PARIS</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">ADRESSE</div>
+                          <div class="data-value">
+                              221 RUE DE LAFAYETTE<br>
+                              75010 PARIS
+                          </div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">CONTACT</div>
+                          <div class="data-value">CONTACTATLANTIS75@GMAIL.COM</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">CLIENT</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">RAISON SOCIALE</div>
+                          <div class="data-value bold">{{client.companyName}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">SIRET</div>
+                          <div class="data-value">{{client.siret}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">ADRESSE</div>
+                          <div class="data-value">
+                              {{client.address}}<br>
+                              {{client.postalCode}} {{client.city}}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card full-width">
+                  <div class="card-header">OBJET DE LA PRESTATION</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">MISSION</div>
+                          <div class="data-value">MISE À DISPOSITION D'UN CONSULTANT</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">QUALIFICATION</div>
+                          <div class="data-value">
+                              <div class="mission-tag">{{employee.skills}}</div>
+                          </div>
+                      </div>
+                      <div class="checkbox-group">
+                          <div class="checkbox-container">
+                              <div class="checkbox {{#if motifs.accroissementActivite}}checked{{/if}}"></div>
+                              <span>ACCROISSEMENT TEMP. D'ACTIVITÉ</span>
+                          </div>
+                          <div class="checkbox-container">
+                              <div class="checkbox {{#if motifs.renforcementPersonnel}}checked{{/if}}"></div>
+                              <span>RENFORT DE PERSONNEL</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">DÉTAILS DE LA PRESTATION</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">PÉRIODE</div>
+                          <div class="data-value highlight">Du {{startDate}} Au {{endDate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">LIEU DE MISSION</div>
+                          <div class="data-value">{{client.location}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">HORAIRES</div>
+                      </div>
+                      <div class="schedule-box">
+                          {{#each workingHoursSlots}}
+                              <div class="time-slot">De {{this.start}} À {{this.end}}</div>
+                          {{/each}}
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">DURÉE HEBDO:</div>
+                          <div class="data-value bold">{{weeklyHours}} HEURES</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card">
+                  <div class="card-header">CONDITIONS FINANCIÈRES</div>
+                  <div class="card-body">
+                      <div class="data-row">
+                          <div class="data-label">TARIF H.T.</div>
+                          <div class="data-value price-tag">{{billingRate}}</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">FACTURATION</div>
+                          <div class="data-value">Mensuelle sur relevé d'activité</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">PAIEMENT</div>
+                          <div class="data-value">30 jours date de facture</div>
+                      </div>
+                      <div class="data-row">
+                          <div class="data-label">MODALITÉ</div>
+                          <div class="data-value">VIREMENT</div>
+                      </div>
+                  </div>
+              </div>
+
+              <div class="card full-width">
+                  <div class="card-header">LÉGISLATION</div>
+                  <div class="card-body">
+                      <div class="notice-box">
+                          ** Sous peine de sanctions pénales (L.1254-1 et s. CT). L'utilisateur déclare avoir pris connaissance des conditions générales au verso. Les jours fériés chômés et payés sont dûs aux salariés temporaires sans condition d'ancienneté et facturés. Les informations concernant le motif, la durée, la rémunération** et les caractéristiques du poste sont sous la responsabilité de l'utilisateur. L'utilisateur prend en charge les frais d'accès aux installations collectives (art L.251-24 CT).
+                      </div>
+                  </div>
+              </div>
+          </div>
+
+          <div class="signatures">
+              <div class="signature-box">
+                  <div class="signature-title">LE PRESTATAIRE</div>
+                  <div class="signature-notice">(Cachet et Signature)</div>
+              </div>
+              <div class="signature-box">
+                  <div class="signature-title">LE CLIENT</div>
+                  <div class="signature-notice">
+                      Représentant de l'entreprise qui certifie exactes les dispositions stipulées<br>
+                      (Cachet et Signature)
+                  </div>
+              </div>
+          </div>
+
+          <div class="date-section">
+              <div class="date-item">
+                  <div class="date-label">FAIT À</div>
+                  <div class="date-value">PARIS</div>
+              </div>
+              <div class="date-item">
+                  <div class="date-label">LE</div>
+                  <div class="date-value">{{generationDate}}</div>
+              </div>
+          </div>
+
+          <div class="footnote">
+              *Ce contrat est soumis aux conditions générales de prestation disponibles sur demande.
+          </div>
+
+          <div class="page-number">Page 1 sur 1</div>
+      </div>
+  </body>
+  </html>`;
+}
+
+// Ajoutez ou remplacez le template du certificat existant
 function getCertificateTemplate() {
   return `
   <!DOCTYPE html>
-  <html>
+  <html lang="fr">
   <head>
-    <meta charset="UTF-8">
-    <title>Certificat de Réalisation de Mission</title>
-    <style>
-      /* Styles globaux */
-      body {
-        font-family: 'Helvetica Neue', Arial, sans-serif;
-        line-height: 1.6;
-        color: #333;
-        margin: 0;
-        padding: 0;
-        font-size: 11pt;
-      }
-      .container {
-        padding: 40px;
-        max-width: 210mm; /* A4 width */
-      }
-      /* En-tête */
-      .header {
-        text-align: center;
-        margin-bottom: 40px;
-      }
-      .logo-placeholder {
-        width: 180px;
-        height: 60px;
-        border: 1px dashed #ccc;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 20px auto;
-        color: #999;
-        font-size: 14px;
-      }
-      .document-title {
-        color: #1a73e8;
-        font-weight: 600;
-        font-size: 24px;
-        margin: 20px 0;
-      }
-      /* Contenu */
-      .content {
-        margin-bottom: 30px;
-      }
-      .attestation {
-        font-size: 14pt;
-        margin-bottom: 20px;
-        text-align: center;
-      }
-      .info-section {
-        background: #f7f9fc;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      }
-      .info-label {
-        font-weight: 600;
-        color: #1a73e8;
-        margin-bottom: 5px;
-      }
-      h2 {
-        color: #1a73e8;
-        font-size: 14pt;
-        border-bottom: 1px solid #e0e0e0;
-        padding-bottom: 8px;
-        margin-top: 30px;
-        font-weight: 600;
-      }
-      /* Signature */
-      .signature-section {
-        margin-top: 60px;
-        page-break-inside: avoid;
-      }
-      .signature-date {
-        text-align: right;
-        margin-bottom: 10px;
-      }
-      .signature-box {
-        width: 50%;
-        margin-left: auto;
-        border-top: 1px solid #e0e0e0;
-        padding-top: 10px;
-        text-align: center;
-      }
-      /* Footer */
-      .footer {
-        margin-top: 60px;
-        text-align: center;
-        color: #999;
-        font-size: 9pt;
-        page-break-inside: avoid;
-      }
-      .watermark {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 100px;
-        color: rgba(200, 200, 200, 0.1);
-        font-weight: bold;
-        z-index: -1;
-        pointer-events: none;
-      }
-    </style>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Attestation de mission - {{employee.fullName}}</title>
+      <style>
+          :root {
+              --primary: #333333;
+              --secondary: #666666;
+              --light-gray: #e5e5e5;
+              --medium-gray: #cccccc;
+              --dark-gray: #444444;
+              --text: #222222;
+              --white: #ffffff;
+              --divider: #dddddd;
+          }
+          
+          * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+          }
+          
+          body {
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              line-height: 1.5;
+              color: var(--text);
+              background-color: var(--white);
+              padding: 0;
+          }
+          
+          .container {
+              width: 100%;
+              max-width: 210mm;
+              margin: 0 auto;
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              padding: 25px;
+              position: relative;
+          }
+          
+          .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid var(--divider);
+          }
+          
+          .logo-container {
+              display: flex;
+              flex-direction: column;
+          }
+          
+          .logo {
+              font-weight: 700;
+              font-size: 22px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .company-info {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .certificate-title {
+              text-align: center;
+              font-weight: 700;
+              font-size: 18px;
+              color: var(--primary);
+              margin: 30px 0 20px;
+              text-transform: uppercase;
+          }
+          
+          .certificate-content {
+              margin: 0 auto;
+              max-width: 90%;
+              text-align: justify;
+              font-size: 11px;
+              line-height: 1.5;
+          }
+          
+          .employee-name {
+              text-align: center;
+              font-weight: 700;
+              font-size: 16px;
+              color: var(--primary);
+              margin: 20px 0;
+              background-color: var(--light-gray);
+              padding: 5px;
+          }
+          
+          .mission-details {
+              margin: 20px auto;
+              border: 1px solid var(--medium-gray);
+              padding: 10px;
+          }
+          
+          .detail-row {
+              display: flex;
+              margin-bottom: 5px;
+              border-bottom: 1px dotted var(--light-gray);
+              padding-bottom: 5px;
+          }
+          
+          .detail-label {
+              font-weight: 600;
+              min-width: 120px;
+              color: var(--secondary);
+          }
+          
+          .signature-section {
+              margin-top: 40px;
+              text-align: right;
+              padding-right: 50px;
+          }
+          
+          .signature-box {
+              display: inline-block;
+              width: 200px;
+              text-align: center;
+          }
+          
+          .signature-line {
+              border-bottom: 1px solid var(--medium-gray);
+              margin-bottom: 5px;
+              height: 40px;
+          }
+          
+          .signature-name {
+              font-weight: 600;
+              margin-bottom: 2px;
+              font-size: 10px;
+          }
+          
+          .signature-title {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .date-location {
+              text-align: right;
+              margin: 15px 0;
+              font-size: 10px;
+          }
+          
+          .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 8px;
+              color: var(--secondary);
+              border-top: 1px solid var(--light-gray);
+              padding-top: 10px;
+          }
+          
+          .document-number {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 10px;
+              margin-top: 10px;
+              text-align: center;
+          }
+          
+          @media print {
+              body {
+                  background-color: white;
+                  padding: 0;
+              }
+              
+              .container {
+                  box-shadow: none;
+                  max-width: none;
+                  width: 100%;
+                  border: none;
+              }
+          }
+      </style>
   </head>
   <body>
-    <div class="container">
-      <!-- Watermark (optional) -->
-      <div class="watermark">CERTIFICAT</div>
-      
-      <!-- En-tête du document -->
-      <div class="header">
-        <div class="logo-placeholder">LOGO</div>
-        <h1 class="document-title">CERTIFICAT DE RÉALISATION DE MISSION</h1>
+      <div class="container">
+          <div class="header">
+              <div class="logo-container">
+                  <div class="logo">ATLANTIS</div>
+                  <div class="company-info">
+                      221 RUE DE LAFAYETTE 75010 PARIS<br>
+                      CONTACTATLANTIS75@GMAIL.COM<br>
+                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                  </div>
+              </div>
+          </div>
+          
+          <div class="certificate-title">Attestation de mission</div>
+          
+          <div class="certificate-content">
+              <p>Je soussigné, Directeur des Ressources Humaines de la société ATLANTIS, certifie que :</p>
+          </div>
+          
+          <div class="employee-name">{{employee.fullName}}</div>
+          
+          <div class="certificate-content">
+              <p>A effectué une mission au sein de la société {{client.companyName}}, conformément aux conditions stipulées dans le contrat de mise à disposition.</p>
+          </div>
+          
+          <div class="mission-details">
+              <div class="detail-row">
+                  <div class="detail-label">N° de contrat :</div>
+                  <div>{{reference}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Période :</div>
+                  <div>Du {{startDate}} au {{endDate}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Qualification :</div>
+                  <div>{{employee.skills}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Lieu de mission :</div>
+                  <div>{{client.location}}</div>
+              </div>
+          </div>
+          
+          <div class="certificate-content">
+              <p>Ce document est délivré pour faire valoir ce que de droit.</p>
+          </div>
+          
+          <div class="date-location">
+              <p>Fait à PARIS, le {{generationDate}}</p>
+          </div>
+          
+          <div class="signature-section">
+              <div class="signature-box">
+                  <div class="signature-line"></div>
+                  <div class="signature-name">Pour ATLANTIS</div>
+                  <div class="signature-title">Direction des Ressources Humaines</div>
+              </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 15px;">
+              <div class="document-number">N° {{reference}}</div>
+          </div>
+          
+          <div class="footer">
+              <p>ATLANTIS - 221 RUE DE LAFAYETTE 75010 PARIS - SIRET : 948 396 973 R.C.S. PARIS - APE : 7820Z</p>
+          </div>
       </div>
-
-      <!-- Contenu principal -->
-      <div class="content">
-        <p class="attestation">
-          Je soussigné(e), <strong>[Nom et fonction du signataire]</strong>, représentant la société <strong>{{client.companyName}}</strong>,
-          certifie par la présente que :
-        </p>
-        
-        <div class="info-section">
-          <div class="info-label">CONSULTANT</div>
-          <p><strong>{{employee.fullName}}</strong></p>
-        </div>
-        
-        <h2>A RÉALISÉ LA MISSION SUIVANTE</h2>
-        
-        <div class="info-section">
-          <p><span class="info-label">Intitulé :</span> {{title}}</p>
-          <p><span class="info-label">Description :</span> {{description}}</p>
-          <p><span class="info-label">Période :</span> Du {{startDate}} au {{endDate}}</p>
-          <p><span class="info-label">Durée :</span> {{duration}}</p>
-          <p><span class="info-label">Lieu :</span> {{location}}</p>
-        </div>
-        
-        <h2>COMPÉTENCES MISES EN ŒUVRE</h2>
-        
-        <div class="info-section">
-          <p>{{employee.skills}}</p>
-        </div>
-      </div>
-      
-      <!-- Signature -->
-      <div class="signature-section">
-        <p class="signature-date">Fait à ________________, le {{generationDate}}</p>
-        
-        <div class="signature-box">
-          <p><strong>Pour {{client.companyName}}</strong></p>
-          <p style="margin-top: 60px; font-style: italic;">Signature et cachet</p>
-        </div>
-      </div>
-      
-      <!-- Pied de page -->
-      <div class="footer">
-        <p>Document généré par Contrat Manager © {{year}}</p>
-      </div>
-    </div>
   </body>
   </html>`;
 }
