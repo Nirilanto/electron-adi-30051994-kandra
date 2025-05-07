@@ -7,9 +7,9 @@ import { formatDateToFrench, addMonths } from '../../utils/dateUtils';
 class ContractService {
   constructor() {
     this.db = DatabaseService;
-    this.contractsKey = 'contracts';
+    this.contractsKey = 'cm_contracts';
     this.settings = SettingsService;
-    this.lastContractNumberKey = 'last_contract_number';
+    this.lastContractNumberKey = 'cm_last_contract_number'; 
   }
 
   async getAllContracts() {
@@ -245,6 +245,178 @@ class ContractService {
     
     return duration;
   }
+  // Modifications à apporter à ContractService.js
+// Ajoutez ces fonctions à votre fichier ContractService.js existant
+
+// Génération du PDF pour l'entreprise cliente
+async generateClientContractPDF(contract) {
+  try {
+    // Récupérer les informations de l'entreprise
+    const companySettings = await this.settings.getCompanySettings();
+    
+    // Préparer les données pour le template
+    const data = {
+      // Informations sur le contrat
+      reference: `N° ${contract.contractNumber}`,
+      title: contract.title || "CONTRAT DE PRESTATION",
+      description: contract.description || "",
+      startDate: formatDateToFrench(new Date(contract.startDate)),
+      endDate: formatDateToFrench(new Date(contract.endDate)),
+      duration: this.calculateDuration(contract.startDate, contract.endDate),
+      location: contract.location || "",
+      
+      // Tarifs et conditions financières
+      hourlyRate: `${contract.billingRate || 0} €`,
+      totalEstimation: `${this.calculateTotalEstimation(contract)} €`,
+      paymentMethod: contract.paymentMethod || "Virement bancaire",
+      paymentTerms: "30 jours fin de mois",
+      
+      // Informations sur le client
+      client: {
+        companyName: contract.client?.companyName || "",
+        address: contract.client?.address || "",
+        zipCode: contract.client?.zipCode || "",
+        city: contract.client?.city || "",
+        siret: contract.client?.siret || "",
+        contactName: contract.client?.contactName || "",
+        contactEmail: contract.client?.contactEmail || "",
+        contactPhone: contract.client?.contactPhone || "",
+      },
+      
+      // Informations sur la société
+      company: {
+        name: companySettings.name || "VOTRE ENTREPRISE",
+        address: companySettings.address || "",
+        zipCode: companySettings.zipCode || "",
+        city: companySettings.city || "",
+        siret: companySettings.siret || "",
+        rcs: companySettings.rcs || "",
+        ape: companySettings.ape || "",
+        phone: companySettings.phone || "",
+        email: companySettings.email || "",
+        logo: companySettings.logo || null,
+      },
+      
+      // Autres informations
+      generationDate: formatDateToFrench(new Date()),
+      year: new Date().getFullYear(),
+      motif: contract.motif || "ACCROISSEMENT TEMP. D'ACTIVITE",
+      justificatif: contract.justificatif || "RENFORT DE PERSONNEL",
+    };
+
+    // Générer le PDF
+    const result = await window.electron.generatePDF(
+      'client_contract', // Type de document
+      data,             // Données pour le template
+      `Contrat_Client_${contract.contractNumber}.pdf` // Nom du fichier
+    );
+
+    return result;
+  } catch (error) {
+    console.error('Erreur lors de la génération du contrat client PDF:', error);
+    throw error;
+  }
+}
+
+// Méthode pour calculer une estimation totale du contrat
+calculateTotalEstimation(contract) {
+  if (!contract.startDate || !contract.endDate || !contract.billingRate) {
+    return 0;
+  }
+  
+  const start = new Date(contract.startDate);
+  const end = new Date(contract.endDate);
+  
+  // Calculer le nombre de jours ouvrés entre les deux dates
+  let workingDays = 0;
+  let current = new Date(start);
+  
+  while (current <= end) {
+    // Compter comme jour ouvré si ce n'est pas un samedi (6) ou un dimanche (0)
+    const dayOfWeek = current.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      workingDays++;
+    }
+    
+    // Passer au jour suivant
+    current.setDate(current.getDate() + 1);
+  }
+  
+  // Estimation basée sur 7 heures par jour et le taux horaire
+  const hoursPerDay = 7;
+  const totalHours = workingDays * hoursPerDay;
+  const totalEstimation = totalHours * contract.billingRate;
+  
+  return Math.round(totalEstimation * 100) / 100; // Arrondir à 2 décimales
+}
+
+// Vous pouvez ajouter cette fonction pour générer un certificat d'accomplissement 
+// pour l'employé à la fin de la mission
+async generateEmployeeCertificatePDF(contract) {
+  try {
+    // Récupérer les informations de l'entreprise
+    const companySettings = await this.settings.getCompanySettings();
+    
+    // Préparer les données pour le template
+    const data = {
+      // Informations sur le contrat
+      reference: `N° ${contract.contractNumber}`,
+      title: "CERTIFICAT DE RÉALISATION DE MISSION",
+      description: contract.description || "",
+      startDate: formatDateToFrench(new Date(contract.startDate)),
+      endDate: formatDateToFrench(new Date(contract.endDate)),
+      duration: this.calculateDuration(contract.startDate, contract.endDate),
+      location: contract.location || "",
+      
+      // Informations sur l'employé
+      employee: {
+        fullName: `${contract.employee?.firstName || ""} ${contract.employee?.lastName || ""}`.trim(),
+        address: contract.employee?.address || "",
+        email: contract.employee?.email || "",
+        phone: contract.employee?.phone || "",
+        skills: contract.employee?.skills || "",
+      },
+      
+      // Informations sur le client
+      client: {
+        companyName: contract.client?.companyName || "",
+        address: contract.client?.address || "",
+        siret: contract.client?.siret || "",
+        contactName: contract.client?.contactName || "",
+      },
+      
+      // Informations sur la société
+      company: {
+        name: companySettings.name || "VOTRE ENTREPRISE",
+        address: companySettings.address || "",
+        zipCode: companySettings.zipCode || "",
+        city: companySettings.city || "",
+        siret: companySettings.siret || "",
+        rcs: companySettings.rcs || "",
+        ape: companySettings.ape || "",
+        phone: companySettings.phone || "",
+        email: companySettings.email || "",
+        logo: companySettings.logo || null,
+      },
+      
+      // Autres informations
+      generationDate: formatDateToFrench(new Date()),
+      year: new Date().getFullYear(),
+    };
+
+    // Générer le PDF
+    const result = await window.electron.generatePDF(
+      'certificate', // Type de document
+      data,         // Données pour le template
+      `Certificat_${contract.contractNumber}.pdf` // Nom du fichier
+    );
+
+    return result;
+  } catch (error) {
+    console.error('Erreur lors de la génération du certificat PDF:', error);
+    throw error;
+  }
+}
 }
 
 export default new ContractService();

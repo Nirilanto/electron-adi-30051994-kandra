@@ -1,223 +1,202 @@
+// src/modules/contracts/ContractList.js
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import DatabaseService from "../../services/DatabaseService";
-import PDFGenerator from "./PDFGenerator";
-
-// Icônes
+import { Link, useNavigate } from "react-router-dom";
 import {
   PlusIcon,
-  PencilIcon,
-  TrashIcon,
   DocumentTextIcon,
-  DocumentArrowDownIcon,
-  MagnifyingGlassIcon,
+  PencilSquareIcon,
+  TrashIcon,
+  EyeIcon,
   FunnelIcon,
+  ArrowsUpDownIcon,
 } from "@heroicons/react/24/outline";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const ContractList = () => {
-  // État pour stocker la liste des contrats
+import ContractService from "./ContractService";
+import { formatDateToFrench } from "../../utils/dateUtils";
+
+function ContractList() {
+  const navigate = useNavigate();
   const [contracts, setContracts] = useState([]);
-  const [generatingPDF, setGeneratingPDF] = useState(null);
-  const [pdfExportModal, setPdfExportModal] = useState({
-    isOpen: false,
-    contractId: null,
-    fileName: "",
-    contract: null,
-  });
-
-  // État pour gérer le chargement
-  const [loading, setLoading] = useState(true);
-
-  // État pour la recherche et le filtrage
+  const [filteredContracts, setFilteredContracts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all', 'active', 'expired'
+  const [sortField, setSortField] = useState("contractNumber");
+  const [sortDirection, setSortDirection] = useState("desc");
 
-  // État pour la confirmation de suppression
-  const [contractToDelete, setContractToDelete] = useState(null);
-
-  // Charger la liste des contrats au montage du composant
+  // Chargement initial des contrats
   useEffect(() => {
     const loadContracts = async () => {
       try {
-        // Récupérer tous les contrats
-        const contractData = await DatabaseService.getContracts();
-        setContracts(contractData);
+        setIsLoading(true);
+        const contractsData = await ContractService.getAllContracts();
+        setContracts(contractsData);
+        setFilteredContracts(contractsData);
       } catch (error) {
         console.error("Erreur lors du chargement des contrats:", error);
+        toast.error("Erreur lors du chargement des contrats");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
     loadContracts();
   }, []);
 
-  // Fonction pour générer le PDF avec le nom personnalisé
-  const handleGeneratePDF = async () => {
-    try {
-      const { contractId, fileName } = pdfExportModal;
+  // Filtrer et trier les contrats chaque fois que les critères changent
+  useEffect(() => {
+    let result = [...contracts];
 
-      // Indiquer que la génération est en cours
-      setGeneratingPDF(contractId);
-
-      // Récupérer les données complètes nécessaires pour le PDF
-      const contract = await DatabaseService.getContractById(contractId);
-      const employee = await DatabaseService.getEmployeeById(
-        contract.employee_id
+    // Appliquer le filtre de recherche
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      result = result.filter(
+        (contract) =>
+          (contract.title &&
+            contract.title.toLowerCase().includes(searchLower)) ||
+          (contract.description &&
+            contract.description.toLowerCase().includes(searchLower)) ||
+          (contract.contractNumber &&
+            contract.contractNumber.toString().includes(searchLower)) ||
+          (contract.client &&
+            contract.client.companyName &&
+            contract.client.companyName.toLowerCase().includes(searchLower)) ||
+          (contract.employee &&
+            ((contract.employee.firstName &&
+              contract.employee.firstName
+                .toLowerCase()
+                .includes(searchLower)) ||
+              (contract.employee.lastName &&
+                contract.employee.lastName
+                  .toLowerCase()
+                  .includes(searchLower))))
       );
-      const client = await DatabaseService.getClientById(contract.client_id);
+    }
 
-      // Si nous sommes dans Electron, montrer une boîte de dialogue pour choisir l'emplacement
-      if (window.electron) {
-        // Importer PDFGenerator au début du fichier: import PDFGenerator from './PDFGenerator';
-        const result = await window.electron.dialog.showSaveDialog({
-          title: "Enregistrer le PDF",
-          defaultPath: fileName,
-          filters: [{ name: "PDF", extensions: ["pdf"] }],
+    // Appliquer le filtre de statut
+    if (filterStatus !== "all") {
+      const today = new Date();
+      if (filterStatus === "active") {
+        result = result.filter((contract) => {
+          const endDate = new Date(contract.endDate);
+          return endDate >= today;
         });
+      } else if (filterStatus === "expired") {
+        result = result.filter((contract) => {
+          const endDate = new Date(contract.endDate);
+          return endDate < today;
+        });
+      }
+    }
 
-        if (!result.canceled) {
-          const savePath = result.filePath;
-          // Générer le PDF à l'emplacement spécifié
-          const pdfResult = await PDFGenerator.generateContractPDF(
-            contract,
-            employee,
-            client,
-            savePath
-          );
+    // Appliquer le tri
+    result.sort((a, b) => {
+      let valueA, valueB;
 
-          if (pdfResult.success) {
-            alert(`PDF généré avec succès 2222 : ${savePath}`);
-          }
-        }
-      } else {
-        // En mode développement, utiliser l'emplacement par défaut
-        const result = await PDFGenerator.generateContractPDF(
-          contract,
-          employee,
-          client,
-          fileName
-        );
-        alert(`PDF généré avec succès: ${result.filePath}`);
+      // Déterminer les valeurs à comparer
+      switch (sortField) {
+        case "contractNumber":
+          valueA = a.contractNumber || 0;
+          valueB = b.contractNumber || 0;
+          break;
+        case "title":
+          valueA = a.title || "";
+          valueB = b.title || "";
+          break;
+        case "client":
+          valueA = a.client?.companyName || "";
+          valueB = b.client?.companyName || "";
+          break;
+        case "employee":
+          valueA = `${a.employee?.firstName || ""} ${
+            a.employee?.lastName || ""
+          }`.trim();
+          valueB = `${b.employee?.firstName || ""} ${
+            b.employee?.lastName || ""
+          }`.trim();
+          break;
+        case "startDate":
+          valueA = new Date(a.startDate || 0);
+          valueB = new Date(b.startDate || 0);
+          break;
+        case "endDate":
+          valueA = new Date(a.endDate || 0);
+          valueB = new Date(b.endDate || 0);
+          break;
+        default:
+          valueA = a[sortField] || "";
+          valueB = b[sortField] || "";
       }
 
-      // Fermer la modale
-      setPdfExportModal({
-        isOpen: false,
-        contractId: null,
-        fileName: "",
-        contract: null,
-      });
-    } catch (error) {
-      console.error("Erreur lors de la génération du PDF:", error);
-      alert("Erreur lors de la génération du PDF. Veuillez réessayer.");
-    } finally {
-      // Réinitialiser l'état
-      setGeneratingPDF(null);
-    }
-  };
-
-  const handleOpenPdfExportModal = (contract) => {
-    // Générer un nom de fichier par défaut
-    const defaultFileName = `contrat_${contract.reference || contract.id}_${
-      new Date().toISOString().split("T")[0]
-    }.pdf`;
-
-    setPdfExportModal({
-      isOpen: true,
-      contractId: contract.id,
-      fileName: defaultFileName,
-      contract: contract,
+      // Comparer les valeurs
+      if (typeof valueA === "string" && typeof valueB === "string") {
+        return sortDirection === "asc"
+          ? valueA.localeCompare(valueB)
+          : valueB.localeCompare(valueA);
+      } else {
+        return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
+      }
     });
-  };
 
-  // Fonction pour filtrer les contrats en fonction de la recherche et des filtres
-  const filteredContracts = contracts.filter((contract) => {
-    // Filtrer par recherche (titre, référence, employé, client)
-    const matchesSearch =
-      (contract.title &&
-        contract.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.reference &&
-        contract.reference.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (contract.employee_firstname &&
-        contract.employee_firstname
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())) ||
-      (contract.employee_lastname &&
-        contract.employee_lastname
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase())) ||
-      (contract.client_company &&
-        contract.client_company
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase()));
+    setFilteredContracts(result);
+  }, [contracts, searchTerm, filterStatus, sortField, sortDirection]);
 
-    // Filtrer par statut
-    const matchesStatus =
-      statusFilter === "all" || contract.status === statusFilter;
+  // Gestionnaire de suppression
+  const handleDelete = async (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
 
-    return matchesSearch && matchesStatus;
-  });
-
-  // Fonction pour supprimer un contrat
-  const handleDeleteContract = async (id) => {
-    try {
-      await DatabaseService.deleteContract(id);
-
-      // Mettre à jour la liste des contrats
-      setContracts(contracts.filter((contract) => contract.id !== id));
-
-      // Réinitialiser l'état de suppression
-      setContractToDelete(null);
-    } catch (error) {
-      console.error("Erreur lors de la suppression du contrat:", error);
+    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce contrat ?")) {
+      try {
+        await ContractService.deleteContract(id);
+        setContracts((prevContracts) =>
+          prevContracts.filter((contract) => contract.id !== id)
+        );
+        toast.success("Contrat supprimé avec succès");
+      } catch (error) {
+        console.error("Erreur lors de la suppression du contrat:", error);
+        toast.error("Erreur lors de la suppression du contrat");
+      }
     }
   };
 
-  // Formatter les dates
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
-
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
-
-  // Générer un badge de statut pour un contrat
-  const getStatusBadge = (status) => {
-    let classes =
-      "px-2 inline-flex text-xs leading-5 font-semibold rounded-full ";
-    let text = status;
-
-    switch (status) {
-      case "active":
-        classes += "bg-green-100 text-green-800";
-        text = "Actif";
-        break;
-      case "draft":
-        classes += "bg-gray-100 text-gray-800";
-        text = "Brouillon";
-        break;
-      case "completed":
-        classes += "bg-blue-100 text-blue-800";
-        text = "Terminé";
-        break;
-      case "canceled":
-        classes += "bg-red-100 text-red-800";
-        text = "Annulé";
-        break;
-      default:
-        classes += "bg-gray-100 text-gray-800";
+  // Gestionnaire de tri
+  const handleSort = (field) => {
+    if (sortField === field) {
+      // Inverser la direction si on clique sur le même champ
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // Nouveau champ de tri
+      setSortField(field);
+      setSortDirection("asc");
     }
-
-    return <span className={classes}>{text}</span>;
   };
 
-  // Afficher un indicateur de chargement pendant le chargement des données
-  if (loading) {
+  // Déterminer le statut du contrat
+  const getContractStatus = (endDate) => {
+    const today = new Date();
+    const end = new Date(endDate);
+
+    if (end < today) {
+      return { label: "Expiré", className: "bg-red-100 text-red-800" };
+    } else {
+      // Calculer le nombre de jours restants
+      const daysLeft = Math.ceil((end - today) / (1000 * 60 * 60 * 24));
+
+      if (daysLeft <= 7) {
+        return {
+          label: "Bientôt expiré",
+          className: "bg-orange-100 text-orange-800",
+        };
+      } else {
+        return { label: "Actif", className: "bg-green-100 text-green-800" };
+      }
+    }
+  };
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
@@ -229,322 +208,322 @@ const ContractList = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-800">
-          Gestion des contrats
-        </h1>
-        <Link to="/contracts/new" className="btn btn-primary flex items-center">
-          <PlusIcon className="w-5 h-5 mr-2" />
+    <div className="bg-white shadow rounded-lg p-6">
+      {/* En-tête */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Contrats</h1>
+        <button
+          onClick={() => navigate("/contracts/new")}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          <PlusIcon className="h-5 w-5 mr-1" />
           Nouveau contrat
-        </Link>
+        </button>
       </div>
 
-      {/* Barre de recherche et filtres */}
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="flex-1">
+      {/* Filtres et recherche */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label htmlFor="search" className="sr-only">
+            Rechercher
+          </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+              <svg
+                className="h-5 w-5 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
             </div>
             <input
+              id="search"
               type="text"
-              className="form-input pl-10"
               placeholder="Rechercher un contrat..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
         </div>
-        <div className="flex items-center">
-          <FunnelIcon className="h-5 w-5 text-gray-400 mr-2" />
-          <select
-            className="form-input"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+
+        <div>
+          <label htmlFor="status-filter" className="sr-only">
+            Filtrer par statut
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <FunnelIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <select
+              id="status-filter"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="active">Contrats actifs</option>
+              <option value="expired">Contrats expirés</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            onClick={() => {
+              setSearchTerm("");
+              setFilterStatus("all");
+              setSortField("contractNumber");
+              setSortDirection("desc");
+            }}
           >
-            <option value="all">Tous les statuts</option>
-            <option value="draft">Brouillons</option>
-            <option value="active">Actifs</option>
-            <option value="completed">Terminés</option>
-            <option value="canceled">Annulés</option>
-          </select>
+            Réinitialiser les filtres
+          </button>
         </div>
       </div>
 
-      {/* Liste des contrats */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {filteredContracts.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+      {/* Tableau des contrats */}
+      {filteredContracts.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200">
+            <thead>
+              <tr className="bg-gray-100 text-gray-700">
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("contractNumber")}
+                >
+                  <div className="flex items-center">
+                    <span>N°</span>
+                    {sortField === "contractNumber" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("title")}
+                >
+                  <div className="flex items-center">
+                    <span>Titre</span>
+                    {sortField === "title" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("client")}
+                >
+                  <div className="flex items-center">
+                    <span>Client</span>
+                    {sortField === "client" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("employee")}
+                >
+                  <div className="flex items-center">
+                    <span>Consultant</span>
+                    {sortField === "employee" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("startDate")}
+                >
+                  <div className="flex items-center">
+                    <span>Début</span>
+                    {sortField === "startDate" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th
+                  className="py-3 px-4 text-left cursor-pointer hover:bg-gray-200"
+                  onClick={() => handleSort("endDate")}
+                >
+                  <div className="flex items-center">
+                    <span>Fin</span>
+                    {sortField === "endDate" && (
+                      <ArrowsUpDownIcon
+                        className={`h-4 w-4 ml-1 ${
+                          sortDirection === "asc" ? "rotate-180" : ""
+                        }`}
+                      />
+                    )}
+                  </div>
+                </th>
+                <th className="py-3 px-4 text-left">Statut</th>
+                <th className="py-3 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredContracts.map((contract) => {
+                const status = getContractStatus(contract.endDate);
+
+                return (
+                  <tr
+                    key={contract.id}
+                    className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => navigate(`/contracts/${contract.id}`)}
                   >
-                    Référence / Titre
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Employé
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Client
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Période
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Statut
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredContracts.map((contract) => (
-                  <tr key={contract.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="py-3 px-4 border-b">
+                      {contract.contractNumber}
+                    </td>
+                    <td className="py-3 px-4 border-b">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
-                          <DocumentTextIcon className="h-5 w-5 text-primary-700" />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {contract.reference || `CONT-${contract.id}`}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {contract.title}
-                          </div>
-                        </div>
+                        <DocumentTextIcon className="h-5 w-5 text-gray-400 mr-2" />
+                        <span>{contract.title || "Sans titre"}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {contract.employee_firstname}{" "}
-                        {contract.employee_lastname}
-                      </div>
+                    <td className="py-3 px-4 border-b">
+                      {contract.client?.companyName || "Non spécifié"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {contract.client_company}
-                      </div>
+                    <td className="py-3 px-4 border-b">
+                      {contract.employee
+                        ? `${contract.employee.firstName || ""} ${
+                            contract.employee.lastName || ""
+                          }`.trim()
+                        : "Non spécifié"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {formatDate(contract.start_date)}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {contract.end_date
-                          ? `→ ${formatDate(contract.end_date)}`
-                          : "Non définie"}
-                      </div>
+                    <td className="py-3 px-4 border-b">
+                      {contract.startDate
+                        ? formatDateToFrench(new Date(contract.startDate))
+                        : "Non spécifiée"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(contract.status)}
+                    <td className="py-3 px-4 border-b">
+                      {contract.endDate
+                        ? formatDateToFrench(new Date(contract.endDate))
+                        : "Non spécifiée"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        to={`/contracts/${contract.id}`}
-                        className="text-primary-500 hover:text-primary-700 mx-1"
-                        title="Modifier"
+                    <td className="py-3 px-4 border-b">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${status.className}`}
                       >
-                        <PencilIcon className="h-5 w-5 inline" />
-                      </Link>
-                      <button
-                        onClick={() => setContractToDelete(contract)}
-                        className="text-red-500 hover:text-red-700 mx-1"
-                        title="Supprimer"
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 border-b text-center">
+                      <div
+                        className="flex justify-center space-x-1"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <TrashIcon className="h-5 w-5 inline" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleOpenPdfExportModal(contract);
-                        }}
-                        className="text-gray-500 hover:text-gray-700 mx-1"
-                        title="Télécharger le contrat PDF"
-                      >
-                        <DocumentArrowDownIcon className="h-5 w-5 inline" />
-                      </button>
+                        <Link
+                          to={`/contracts/${contract.id}`}
+                          className="text-blue-600 hover:text-blue-800 p-1"
+                          title="Voir les détails"
+                        >
+                          <EyeIcon className="h-5 w-5" />
+                        </Link>
+                        <Link
+                          to={`/contracts/${contract.id}/edit`}
+                          className="text-yellow-600 hover:text-yellow-800 p-1"
+                          title="Modifier"
+                        >
+                          <PencilSquareIcon className="h-5 w-5" />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(contract.id, e)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Supprimer"
+                        >
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-6 text-center text-gray-500">
-            Aucun contrat trouvé.{" "}
-            {searchTerm || statusFilter !== "all"
-              ? "Essayez de modifier vos filtres."
-              : ""}
-          </div>
-        )}
-      </div>
-
-      {/* Modal de confirmation de suppression */}
-      {contractToDelete && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Confirmer la suppression
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Êtes-vous sûr de vouloir supprimer le contrat{" "}
-              <span className="font-medium">
-                {contractToDelete.reference || `CONT-${contractToDelete.id}`}
-              </span>{" "}
-              ? Cette action est irréversible.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setContractToDelete(null)}
-                className="btn btn-outline"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => handleDeleteContract(contractToDelete.id)}
-                className="btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500"
-              >
-                Supprimer
-              </button>
-            </div>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            Aucun contrat trouvé
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {searchTerm || filterStatus !== "all"
+              ? "Essayez de modifier vos critères de recherche ou de filtrage."
+              : "Commencez par créer un nouveau contrat."}
+          </p>
+          <div className="mt-6">
+            <button
+              type="button"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              onClick={() => navigate("/contracts/new")}
+            >
+              <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+              Nouveau contrat
+            </button>
           </div>
         </div>
       )}
-      {/* Modale d'exportation PDF */}
-      {pdfExportModal.isOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Exporter le contrat en PDF
-            </h3>
 
-            <div className="mb-4">
-              <label
-                htmlFor="pdf-filename"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Nom du fichier
-              </label>
-              <input
-                type="text"
-                id="pdf-filename"
-                className="form-input w-full"
-                value={pdfExportModal.fileName}
-                onChange={(e) =>
-                  setPdfExportModal({
-                    ...pdfExportModal,
-                    fileName: e.target.value,
-                  })
-                }
-              />
-            </div>
+      {/* Pagination (option future) */}
+      {/* <div className="mt-6 flex justify-between items-center">
+        <p className="text-sm text-gray-700">
+          Affichage de <span className="font-medium">1</span> à <span className="font-medium">{filteredContracts.length}</span> sur <span className="font-medium">{contracts.length}</span> résultats
+        </p>
+        <nav className="relative z-0 inline-flex shadow-sm -space-x-px" aria-label="Pagination">
+          <button
+            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <span className="sr-only">Précédent</span>
+            &laquo;
+          </button>
+          <button
+            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            1
+          </button>
+          <button
+            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
+          >
+            <span className="sr-only">Suivant</span>
+            &raquo;
+          </button>
+        </nav>
+      </div> */}
 
-            {pdfExportModal.contract && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-md">
-                <p className="text-sm text-gray-600">
-                  <strong>Contrat :</strong> {pdfExportModal.contract.title}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Référence :</strong>{" "}
-                  {pdfExportModal.contract.reference ||
-                    `CONT-${pdfExportModal.contract.id}`}
-                </p>
-                {pdfExportModal.contract.employee_firstname && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Employé :</strong>{" "}
-                    {pdfExportModal.contract.employee_firstname}{" "}
-                    {pdfExportModal.contract.employee_lastname}
-                  </p>
-                )}
-                {pdfExportModal.contract.client_company && (
-                  <p className="text-sm text-gray-600">
-                    <strong>Client :</strong>{" "}
-                    {pdfExportModal.contract.client_company}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <p className="text-sm text-gray-500 mb-4">
-              {window.electron
-                ? "Choisissez un nom pour le fichier. Vous pourrez ensuite sélectionner l'emplacement de sauvegarde."
-                : "Choisissez un nom pour le fichier. Il sera enregistré dans le dossier par défaut de l'application."}
-            </p>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() =>
-                  setPdfExportModal({
-                    isOpen: false,
-                    contractId: null,
-                    fileName: "",
-                    contract: null,
-                  })
-                }
-                className="btn btn-outline"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={handleGeneratePDF}
-                className="btn btn-primary"
-                disabled={generatingPDF === pdfExportModal.contractId}
-              >
-                {generatingPDF === pdfExportModal.contractId ? (
-                  <>
-                    <svg
-                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Génération...
-                  </>
-                ) : (
-                  "Générer le PDF"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ToastContainer position="bottom-right" />
     </div>
   );
-};
+}
 
 export default ContractList;

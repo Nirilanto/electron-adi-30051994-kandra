@@ -30,7 +30,7 @@ const EmployeeList = () => {
     const loadEmployees = async () => {
       try {
         // Récupérer tous les employés
-        const employeeData = await DatabaseService.getEmployees();
+        const employeeData = await DatabaseService.getEmployees();        
         setEmployees(employeeData);
       } catch (error) {
         console.error('Erreur lors du chargement des employés:', error);
@@ -160,12 +160,12 @@ const EmployeeList = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
                           <span className="text-gray-500 font-medium">
-                            {employee.firstname?.[0]}{employee.lastname?.[0]}
+                            {employee.firstName?.[0]}{employee.lastName?.[0]}
                           </span>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {employee.firstname} {employee.lastname}
+                            {employee.firstName} {employee.lastName}
                           </div>
                           <div className="text-sm text-gray-500">
                             {employee.skills || 'Aucune compétence spécifiée'}
@@ -179,8 +179,8 @@ const EmployeeList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {employee.hourly_rate 
-                          ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(employee.hourly_rate) 
+                        {employee.hourlyRate 
+                          ? new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(employee.hourlyRate) 
                           : '-'
                         }
                       </div>

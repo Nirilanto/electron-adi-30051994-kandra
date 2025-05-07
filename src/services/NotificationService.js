@@ -6,7 +6,7 @@ import { addMonths } from '../utils/dateUtils';
 class NotificationService {
   constructor() {
     this.db = DatabaseService;
-    this.notificationsKey = 'notifications';
+    this.notificationsKey = 'cm_notifications'; 
   }
 
   /**

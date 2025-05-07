@@ -47,7 +47,7 @@ const ClientList = () => {
     // Filtrer par recherche (nom de l'entreprise, contact, email)
     const matchesSearch = 
       (client.company_name && client.company_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (client.contact_name && client.contact_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (client.contactName && client.contactName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (client.siret && client.siret.includes(searchTerm));
     
@@ -164,20 +164,20 @@ const ClientList = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-secondary-100 flex items-center justify-center">
                           <span className="text-secondary-700 font-medium">
-                            {client.company_name ? client.company_name[0].toUpperCase() : 'C'}
+                            {client.companyName ? client.companyName[0].toUpperCase() : 'C'}
                           </span>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {client.company_name}
+                            {client.companyName}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{client.contact_name || '-'}</div>
-                      <div className="text-sm text-gray-500">{client.email || '-'}</div>
-                      <div className="text-sm text-gray-500">{client.phone || '-'}</div>
+                      <div className="text-sm text-gray-900">{client.contactName || '-'}</div>
+                      {client.email &&<div className="text-sm text-gray-500">{client.email || '-'}</div>}
+                      {client.phone && <div className="text-sm text-gray-500">{client.phone || '-'}</div>}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
@@ -231,7 +231,7 @@ const ClientList = () => {
           <div className="bg-white rounded-lg p-6 max-w-md mx-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Confirmer la suppression</h3>
             <p className="text-gray-600 mb-4">
-              Êtes-vous sûr de vouloir supprimer le client <span className="font-medium">{clientToDelete.company_name}</span> ?
+              Êtes-vous sûr de vouloir supprimer le client <span className="font-medium">{clientToDelete.companyName}</span> ?
               Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
