@@ -354,7 +354,7 @@ function getEmployeeContractTemplate() {
   <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Contrat de mise à disposition - Atlantis</title>
+      <title>Contrat de mise à disposition - {{company.name}}</title>
       <style>
           :root {
               --primary: #333333;
@@ -681,11 +681,11 @@ function getEmployeeContractTemplate() {
       <div class="container">
           <div class="header">
               <div class="logo-container">
-                  <div class="logo">ATLANTIS main</div>
+                  <div class="logo">{{company.name}}</div>
                   <div class="company-info">
-                      221 RUE DE LAFAYETTE 75010 PARIS<br>
-                      CONTACTATLANTIS75@GMAIL.COM<br>
-                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                      {{company.address}} {{company.zipCode}} {{company.city}}<br>
+                      {{company.email}}<br>
+                      {{company.siret}} - APE : {{company.ape}}
                   </div>
               </div>
               <div class="document-notice">
@@ -1205,11 +1205,11 @@ function getClientContractTemplate() {
       <div class="container">
           <div class="header">
               <div class="logo-container">
-                  <div class="logo">ATLANTIS dfdfdfd</div>
+                  <div class="logo">{{company.name}}</div>
                   <div class="company-info">
-                      221 RUE DE LAFAYETTE 75010 PARIS<br>
-                      CONTACTATLANTIS75@GMAIL.COM<br>
-                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                      {{company.address}} {{company.zipCode}} {{company.city}}<br>
+                      {{company.email}}<br>
+                      {{company.siret}} - APE : {{company.ape}}
                   </div>
               </div>
               <div class="document-notice">
@@ -1229,22 +1229,22 @@ function getClientContractTemplate() {
                   <div class="card-body">
                       <div class="data-row">
                           <div class="data-label">RAISON SOCIALE</div>
-                          <div class="data-value bold">ATLANTIS</div>
+                          <div class="data-value bold">{{company.name}}</div>
                       </div>
                       <div class="data-row">
                           <div class="data-label">SIRET</div>
-                          <div class="data-value">948 396 973 R.C.S. PARIS</div>
+                          <div class="data-value">{{company.siret}}</div>
                       </div>
                       <div class="data-row">
                           <div class="data-label">ADRESSE</div>
                           <div class="data-value">
-                              221 RUE DE LAFAYETTE<br>
-                              75010 PARIS
+                              {{company.address}}<br>
+                              {{company.zipCode}} {{company.city}}
                           </div>
                       </div>
                       <div class="data-row">
                           <div class="data-label">CONTACT</div>
-                          <div class="data-value">CONTACTATLANTIS75@GMAIL.COM</div>
+                          <div class="data-value">{{company.email}}</div>
                       </div>
                   </div>
               </div>
@@ -1582,11 +1582,11 @@ function getCertificateTemplate() {
       <div class="container">
           <div class="header">
               <div class="logo-container">
-                  <div class="logo">ATLANTIS</div>
+                  <div class="logo">{{company.name}}</div>
                   <div class="company-info">
-                      221 RUE DE LAFAYETTE 75010 PARIS<br>
-                      CONTACTATLANTIS75@GMAIL.COM<br>
-                      948 396 973 R.C.S. PARIS - APE : 7820Z
+                      {{company.address}} {{company.zipCode}} {{company.city}}<br>
+                      {{company.email}}<br>
+                      {{company.siret}} - APE : {{company.ape}}
                   </div>
               </div>
           </div>
@@ -1594,7 +1594,7 @@ function getCertificateTemplate() {
           <div class="certificate-title">Attestation de mission</div>
           
           <div class="certificate-content">
-              <p>Je soussigné, Directeur des Ressources Humaines de la société ATLANTIS, certifie que :</p>
+              <p>Je soussigné, Directeur des Ressources Humaines de la société {{company.name}}, certifie que :</p>
           </div>
           
           <div class="employee-name">{{employee.fullName}}</div>
@@ -1633,7 +1633,7 @@ function getCertificateTemplate() {
           <div class="signature-section">
               <div class="signature-box">
                   <div class="signature-line"></div>
-                  <div class="signature-name">Pour ATLANTIS</div>
+                  <div class="signature-name">Pour {{company.name}}</div>
                   <div class="signature-title">Direction des Ressources Humaines</div>
               </div>
           </div>
@@ -1643,7 +1643,7 @@ function getCertificateTemplate() {
           </div>
           
           <div class="footer">
-              <p>ATLANTIS - 221 RUE DE LAFAYETTE 75010 PARIS - SIRET : 948 396 973 R.C.S. PARIS - APE : 7820Z</p>
+              <p>{{company.name}} - {{company.address}} {{company.zipCode}} {{company.city}} - SIRET : {{company.siret}} - APE : {{company.ape}}</p>
           </div>
       </div>
   </body>

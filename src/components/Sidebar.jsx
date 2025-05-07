@@ -57,15 +57,15 @@ const Sidebar = () => {
       {/* Logo et titre */}
       <div className="flex items-center justify-between px-4 py-5 border-b border-gray-200">
         <div className="flex items-center">
-          <img 
+          {/* <img 
             src="/logo.png" 
             alt="Contrat Manager" 
             className="h-8 w-8 mr-2" 
-          />
-          <h1 className="text-xl font-semibold text-gray-800">Contrat Manager</h1>
+          /> */}
+          <h1 className="text-xl font-semibold text-gray-800">ADI Manager</h1>
         </div>
         {/* Icône de notification */}
-        <div className="relative">
+        {/* <div className="relative">
           <Link to="/notifications" className="p-1 rounded-full hover:bg-gray-100">
             <BellIcon className="h-6 w-6 text-gray-600" />
             {notificationCount > 0 && (
@@ -74,7 +74,7 @@ const Sidebar = () => {
               </span>
             )}
           </Link>
-        </div>
+        </div> */}
       </div>
       
       {/* Navigation */}
