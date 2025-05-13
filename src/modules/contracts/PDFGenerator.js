@@ -272,6 +272,7 @@ class PDFGenerator {
       motif: contract.motif,
       justificatif: contract.justificatif,
       mission: contract.mission,
+      paymentMethod: contract.paymentMethod,
       securityMeasures: [
         "SECURITE A ASSURER PAR LE CLIENT",
         "RESPECT DES CONSIGNES DE SECURITE",

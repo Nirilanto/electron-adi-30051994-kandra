@@ -40,7 +40,11 @@ function ContractForm() {
     clientId: '',
     motifId: '',
     justificatifId: '',
-    transportId: ''
+    transportId: '',
+    additionalMotif: '', // Nouveau champ motif optionnel
+    nonWorkingPeriods: '', // Nouveau champ périodes non travaillées
+    paymentMethodId: '', // Référence au mode de paiement
+    accessMethodId: ''  // Référence au moyen d'accès
   });
 
   // État pour le statut de sauvegarde
@@ -52,6 +56,8 @@ function ContractForm() {
   const [motifs, setMotifs] = useState([]);
   const [justificatifs, setJustificatifs] = useState([]);
   const [transports, setTransports] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState([]); // Modes de paiement
+  const [accessMethods, setAccessMethods] = useState([]); // Moyens d'accès
 
   // État pour le chargement
   const [isLoading, setIsLoading] = useState(true);
@@ -84,6 +90,14 @@ function ContractForm() {
         
         const transportsList = await SettingsService.getTransportModes();
         setTransports(transportsList);
+        
+        // Charger les modes de paiement
+        const paymentMethodsList = await SettingsService.getPaymentMethods();
+        setPaymentMethods(paymentMethodsList);
+        
+        // Charger les moyens d'accès
+        const accessMethodsList = await SettingsService.getAccessMethods();
+        setAccessMethods(accessMethodsList);
         
         // Si on est en mode édition, charger le contrat
         if (isEdit) {
@@ -155,7 +169,9 @@ function ContractForm() {
         client: contract.clientId ? clients.find(c => c.id === contract.clientId) : null,
         motif: contract.motifId ? motifs.find(m => m.id === parseInt(contract.motifId))?.title : null,
         justificatif: contract.justificatifId ? justificatifs.find(j => j.id === parseInt(contract.justificatifId))?.title : null,
-        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null
+        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null,
+        paymentMethod: contract.paymentMethodId ? paymentMethods.find(p => p.id === parseInt(contract.paymentMethodId))?.title : null,
+        accessMethod: contract.accessMethodId ? accessMethods.find(a => a.id === parseInt(contract.accessMethodId))?.title : null
       };
       
       // Enregistrer le contrat
@@ -204,7 +220,9 @@ function ContractForm() {
         client: contract.clientId ? clients.find(c => c.id === contract.clientId) : null,
         motif: contract.motifId ? motifs.find(m => m.id === parseInt(contract.motifId))?.title : null,
         justificatif: contract.justificatifId ? justificatifs.find(j => j.id === parseInt(contract.justificatifId))?.title : null,
-        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null
+        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null,
+        paymentMethod: contract.paymentMethodId ? paymentMethods.find(p => p.id === parseInt(contract.paymentMethodId))?.title : null,
+        accessMethod: contract.accessMethodId ? accessMethods.find(a => a.id === parseInt(contract.accessMethodId))?.title : null
       };
       
       const result = await ContractService.generateClientContractPDF(contractData);
@@ -248,7 +266,9 @@ function ContractForm() {
         client: contract.clientId ? clients.find(c => c.id === contract.clientId) : null,
         motif: contract.motifId ? motifs.find(m => m.id === parseInt(contract.motifId))?.title : null,
         justificatif: contract.justificatifId ? justificatifs.find(j => j.id === parseInt(contract.justificatifId))?.title : null,
-        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null
+        transport: contract.transportId ? transports.find(t => t.id === parseInt(contract.transportId))?.title : null,
+        paymentMethod: contract.paymentMethodId ? paymentMethods.find(p => p.id === parseInt(contract.paymentMethodId))?.title : null,
+        accessMethod: contract.accessMethodId ? accessMethods.find(a => a.id === parseInt(contract.accessMethodId))?.title : null
       };
       
       const result = await ContractService.generateEmployeeContractPDF(contractData);
@@ -440,6 +460,21 @@ function ContractForm() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            <div className="md:col-span-3">
+              <label htmlFor="nonWorkingPeriods" className="block text-sm font-medium text-gray-700 mb-1">
+                Période(s) non travaillée(s): terme précis ou durée minimale
+              </label>
+              <textarea
+                id="nonWorkingPeriods"
+                name="nonWorkingPeriods"
+                rows="2"
+                value={contract.nonWorkingPeriods}
+                onChange={handleChange}
+                placeholder="ex: 24/12/2025 au 05/01/2026, deux semaines en août 2025"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              ></textarea>
+            </div>
           </div>
         </div>
         
@@ -449,7 +484,7 @@ function ContractForm() {
             <BanknotesIcon className="h-5 w-5 mr-2 text-blue-500" />
             Tarification
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="hourlyRate" className="block text-sm font-medium text-gray-700 mb-1">
                 Taux horaire consultant (€)
@@ -480,6 +515,26 @@ function ContractForm() {
                 step="0.01"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+            </div>
+            
+            <div>
+              <label htmlFor="paymentMethodId" className="block text-sm font-medium text-gray-700 mb-1">
+                Mode de paiement
+              </label>
+              <select
+                id="paymentMethodId"
+                name="paymentMethodId"
+                value={contract.paymentMethodId}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Sélectionner...</option>
+                {paymentMethods.map(method => (
+                  <option key={method.id} value={method.id}>
+                    {method.title}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -567,6 +622,21 @@ function ContractForm() {
                 ))}
               </select>
             </div>
+
+            <div>
+              <label htmlFor="additionalMotif" className="block text-sm font-medium text-gray-700 mb-1">
+                Motif additionnel (optionnel)
+              </label>
+              <input
+                type="text"
+                id="additionalMotif"
+                name="additionalMotif"
+                value={contract.additionalMotif}
+                onChange={handleChange}
+                placeholder="Précisions sur le motif"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
             
             <div>
               <label htmlFor="justificatifId" className="block text-sm font-medium text-gray-700 mb-1">
@@ -603,6 +673,26 @@ function ContractForm() {
                 {transports.map(transport => (
                   <option key={transport.id} value={transport.id}>
                     {transport.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="accessMethodId" className="block text-sm font-medium text-gray-700 mb-1">
+                Moyen d'accès
+              </label>
+              <select
+                id="accessMethodId"
+                name="accessMethodId"
+                value={contract.accessMethodId}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Sélectionner...</option>
+                {accessMethods.map(access => (
+                  <option key={access.id} value={access.id}>
+                    {access.title}
                   </option>
                 ))}
               </select>

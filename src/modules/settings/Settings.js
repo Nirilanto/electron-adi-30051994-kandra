@@ -11,6 +11,8 @@ import TransportModesSettings from './components/TransportModesSettings';
 import QualificationsSettings from './components/QualificationsSettings';
 import MotifTypesSettings from './components/MotifTypesSettings';
 import JustificatifTypesSettings from './components/JustificatifTypesSettings';
+import AccessMethodsSettings from './components/AccessMethodsSettings';
+import SecurityMeasuresSettings from './components/SecurityMeasuresSettings';
 
 // Importer les composants Tab personnalisés au lieu de @headlessui/react
 import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '../../components/common/Tabs';
@@ -25,6 +27,8 @@ function Settings() {
   const [qualifications, setQualifications] = useState([]);
   const [motifTypes, setMotifTypes] = useState([]);
   const [justificatifTypes, setJustificatifTypes] = useState([]);
+  const [accessMethods, setAccessMethods] = useState([]); // Nouveau
+  const [securityMeasures, setSecurityMeasures] = useState([]); // Nouveau
 
   // Chargement initial des données
   useEffect(() => {
@@ -54,6 +58,13 @@ function Settings() {
         
         const justificatifs = await SettingsService.getJustificatifTypes();
         setJustificatifTypes(justificatifs);
+        
+        // Nouveaux chargements
+        const access = await SettingsService.getAccessMethods();
+        setAccessMethods(access);
+        
+        const security = await SettingsService.getSecurityMeasures();
+        setSecurityMeasures(security);
       } catch (error) {
         console.error('Erreur lors du chargement des paramètres :', error);
         toast.error('Erreur lors du chargement des paramètres');
@@ -245,6 +256,56 @@ function Settings() {
     }
   };
 
+  // Nouveaux gestionnaires pour les moyens d'accès
+  const handleSaveAccessMethod = async (method) => {
+    try {
+      await SettingsService.saveAccessMethod(method);
+      const updated = await SettingsService.getAccessMethods();
+      setAccessMethods(updated);
+      toast.success('Moyen d\'accès enregistré');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du moyen d\'accès :', error);
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const handleDeleteAccessMethod = async (id) => {
+    try {
+      await SettingsService.deleteAccessMethod(id);
+      const updated = await SettingsService.getAccessMethods();
+      setAccessMethods(updated);
+      toast.success('Moyen d\'accès supprimé');
+    } catch (error) {
+      console.error('Erreur lors de la suppression du moyen d\'accès :', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Nouveaux gestionnaires pour les mesures de sécurité
+  const handleSaveSecurityMeasure = async (measure) => {
+    try {
+      await SettingsService.saveSecurityMeasure(measure);
+      const updated = await SettingsService.getSecurityMeasures();
+      setSecurityMeasures(updated);
+      toast.success('Mesure de sécurité enregistrée');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la mesure de sécurité :', error);
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const handleDeleteSecurityMeasure = async (id) => {
+    try {
+      await SettingsService.deleteSecurityMeasure(id);
+      const updated = await SettingsService.getSecurityMeasures();
+      setSecurityMeasures(updated);
+      toast.success('Mesure de sécurité supprimée');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la mesure de sécurité :', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -271,6 +332,8 @@ function Settings() {
             <Tab>Qualifications</Tab>
             <Tab>Motifs</Tab>
             <Tab>Justificatifs</Tab>
+            <Tab>Accès</Tab>
+            <Tab>Sécurité</Tab>
           </TabList>
           <TabPanels>
             <TabPanel>
@@ -326,6 +389,20 @@ function Settings() {
                 justificatifTypes={justificatifTypes} 
                 onSave={handleSaveJustificatifType} 
                 onDelete={handleDeleteJustificatifType} 
+              />
+            </TabPanel>
+            <TabPanel>
+              <AccessMethodsSettings 
+                accessMethods={accessMethods} 
+                onSave={handleSaveAccessMethod} 
+                onDelete={handleDeleteAccessMethod} 
+              />
+            </TabPanel>
+            <TabPanel>
+              <SecurityMeasuresSettings 
+                securityMeasures={securityMeasures} 
+                onSave={handleSaveSecurityMeasure} 
+                onDelete={handleDeleteSecurityMeasure} 
               />
             </TabPanel>
           </TabPanels>

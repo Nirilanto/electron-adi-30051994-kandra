@@ -928,9 +928,8 @@ function getEmployeeContractTemplate() {
   </html>`;
 }
 
-
 function getClientContractTemplate() {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
   <html lang="fr">
   <head>
       <meta charset="UTF-8">
@@ -1433,13 +1432,17 @@ function getClientContractTemplate() {
                       <div class="colonne-droite">
                           <div>
                               <div class="champ">
-                                  <div class="label">Durée Hebdomadaire</div>
+                                  <div class="label">Durée Hebdomadaire de la mission</div>
                                   <div class="valeur valeur-importante">{{weeklyHours}} HEURES</div>
+                              </div>
+                                <div class="champ">
+                                  <div class="label">Durée collective moyenne hebdomadaire</div>
+                                  <div class="valeur valeur-importante">{{weeklyHoursMoyenne}} HEURES</div>
                               </div>
                               
                               <div class="champ">
                                   <div class="label">Durée Collective Hebdomadaire</div>
-                                  <div class="valeur">{{collectiveHours}} HEURES</div>
+                                  <div class="valeur valeur-importante">{{collectiveHours}} HEURES</div>
                               </div>
                               
                               <div class="champ">
@@ -1453,22 +1456,22 @@ function getClientContractTemplate() {
                               
                               <div class="champ">
                                   <div class="label">Salaire de Référence /H</div>
-                                  <div class="valeur valeur-importante">{{hourlyRate}} EUR</div>
+                                  <div class="valeur valeur-importante">{{hourlyRate}}</div>
                               </div>
                               
                               <div class="champ">
                                   <div class="label">Tarif Horaire H.T.</div>
-                                  <div class="valeur valeur-importante">{{billingRate}} EUR</div>
+                                  <div class="valeur valeur-importante">{{billingRate}}</div>
                               </div>
                               
                               <div class="champ">
                                   <div class="label">Mode de Paiement</div>
-                                  <div class="valeur">{{paymentMethod}}</div>
+                                  <div class="valeur valeur-importante">{{paymentMethod}}</div>
                               </div>
                               
                               <div class="champ">
                                   <div class="label">Moyen d'Accès</div>
-                                  <div class="valeur">{{accessMeans}}</div>
+                                  <div class="valeur valeur-importante">{{transport}}</div>
                               </div>
                           </div>
                       </div>
@@ -1543,7 +1546,7 @@ function getClientContractTemplate() {
       </div>
   </body>
   </html>`;
-  }
+}
 
 // Ajoutez ou remplacez le template du certificat existant
 function getCertificateTemplate() {

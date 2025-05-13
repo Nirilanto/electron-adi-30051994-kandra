@@ -13,6 +13,8 @@ class SettingsService {
     this.qualificationsKey = 'settings_qualifications';
     this.motifTypesKey = 'settings_motif_types';
     this.justificatifTypesKey = 'settings_justificatif_types';
+    this.accessMethodsKey = 'settings_access_methods'; // Nouveau pour les moyens d'accès
+    this.securityMeasuresKey = 'settings_security_measures'; // Nouveau pour les mesures de sécurité
   }
 
   // Paramètres de l'entreprise
@@ -301,6 +303,83 @@ class SettingsService {
     const justificatifs = await this.getJustificatifTypes();
     const filteredJustificatifs = justificatifs.filter(j => j.id !== id);
     return this.db.set(this.justificatifTypesKey, filteredJustificatifs);
+  }
+
+  // Moyens d'accès - Nouveau
+  async getAccessMethods() {
+    const accessMethods = await this.db.get(this.accessMethodsKey);
+    if (!accessMethods || accessMethods.length === 0) {
+      const defaultAccessMethods = [
+        { id: 1, title: 'BADGE', label: 'BADGE D\'ACCÈS' },
+        { id: 2, title: 'CODE', label: 'CODE D\'ACCÈS' },
+        { id: 3, title: 'ACCUEIL', label: 'PRÉSENTATION À L\'ACCUEIL' },
+        { id: 4, title: 'CONTACT', label: 'CONTACTER RESPONSABLE SUR PLACE' }
+      ];
+      await this.db.set(this.accessMethodsKey, defaultAccessMethods);
+      return defaultAccessMethods;
+    }
+    return accessMethods;
+  }
+
+  async saveAccessMethod(method) {
+    const methods = await this.getAccessMethods();
+    if (method.id) {
+      // Mise à jour d'une méthode existante
+      const index = methods.findIndex(m => m.id === method.id);
+      if (index !== -1) {
+        methods[index] = method;
+      }
+    } else {
+      // Nouvelle méthode
+      const newId = Math.max(...methods.map(m => m.id), 0) + 1;
+      methods.push({ ...method, id: newId });
+    }
+    return this.db.set(this.accessMethodsKey, methods);
+  }
+
+  async deleteAccessMethod(id) {
+    const methods = await this.getAccessMethods();
+    const filteredMethods = methods.filter(m => m.id !== id);
+    return this.db.set(this.accessMethodsKey, filteredMethods);
+  }
+
+  // Mesures de sécurité - Nouveau
+  async getSecurityMeasures() {
+    const measures = await this.db.get(this.securityMeasuresKey);
+    if (!measures || measures.length === 0) {
+      const defaultMeasures = [
+        { id: 1, title: 'CASQUE', label: 'PORT DU CASQUE OBLIGATOIRE' },
+        { id: 2, title: 'CHAUSSURES', label: 'CHAUSSURES DE SÉCURITÉ OBLIGATOIRES' },
+        { id: 3, title: 'GANTS', label: 'PORT DES GANTS DE PROTECTION' },
+        { id: 4, title: 'GILET', label: 'GILET HAUTE VISIBILITÉ' },
+        { id: 5, title: 'HARNAIS', label: 'HARNAIS DE SÉCURITÉ OBLIGATOIRE' }
+      ];
+      await this.db.set(this.securityMeasuresKey, defaultMeasures);
+      return defaultMeasures;
+    }
+    return measures;
+  }
+
+  async saveSecurityMeasure(measure) {
+    const measures = await this.getSecurityMeasures();
+    if (measure.id) {
+      // Mise à jour d'une mesure existante
+      const index = measures.findIndex(m => m.id === measure.id);
+      if (index !== -1) {
+        measures[index] = measure;
+      }
+    } else {
+      // Nouvelle mesure
+      const newId = Math.max(...measures.map(m => m.id), 0) + 1;
+      measures.push({ ...measure, id: newId });
+    }
+    return this.db.set(this.securityMeasuresKey, measures);
+  }
+
+  async deleteSecurityMeasure(id) {
+    const measures = await this.getSecurityMeasures();
+    const filteredMeasures = measures.filter(m => m.id !== id);
+    return this.db.set(this.securityMeasuresKey, filteredMeasures);
   }
 }
 
