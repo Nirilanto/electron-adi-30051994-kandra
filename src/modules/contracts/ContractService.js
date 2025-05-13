@@ -124,11 +124,23 @@ class ContractService {
       const client =
         contract.client || (await this.db.getClientById(contract.clientId));
 
+      // Récupérer les données de signature et tampon si elles existent
+      const signature = contract.signature || null;
+      const stamp = contract.stamp || null;
+
+      // Récupérer les mesures de sécurité
+      const securityMeasures = contract.securityMeasuresList || [];
+
       // Utiliser le générateur PDF
       const result = await PDFGenerator.generateEmployeeContractPDF(
         contract,
         employee,
-        client
+        client,
+        {
+          signature: signature ? signature.imageData : null,
+          stamp: stamp ? stamp.imageData : null,
+          securityMeasures: securityMeasures,
+        }
       );
       return { success: result.success };
     } catch (error) {
@@ -154,6 +166,13 @@ class ContractService {
       const client =
         contract.client || (await this.db.getClientById(contract.clientId));
 
+      // Récupérer les mesures de sécurité
+      const securityMeasures = contract.securityMeasuresList || [];
+
+      // Récupérer les données de signature et tampon si elles existent
+      const signature = contract.signature || null;
+      const stamp = contract.stamp || null;
+
       // Utiliser le générateur PDF
       const result = await PDFGenerator.generateClientContractPDF(
         contract,
@@ -170,6 +189,9 @@ class ContractService {
           phone: companySettings.phone || "",
           email: companySettings.email || "",
           logo: companySettings.logo || null,
+          signature: signature ? signature.imageData : null,
+          stamp: stamp ? stamp.imageData : null,
+          securityMeasures: securityMeasures,
         }
       );
       return { success: result.success };

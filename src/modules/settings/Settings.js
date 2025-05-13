@@ -13,12 +13,11 @@ import MotifTypesSettings from './components/MotifTypesSettings';
 import JustificatifTypesSettings from './components/JustificatifTypesSettings';
 import AccessMethodsSettings from './components/AccessMethodsSettings';
 import SecurityMeasuresSettings from './components/SecurityMeasuresSettings';
-
-// Importer les composants Tab personnalisés au lieu de @headlessui/react
-import { TabGroup, TabList, Tab, TabPanels, TabPanel } from '../../components/common/Tabs';
+import SignaturesSettings from './components/SignaturesSettings';
 
 function Settings() {
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0); // État pour suivre l'onglet actif
   const [companySettings, setCompanySettings] = useState(null);
   const [taxRates, setTaxRates] = useState([]);
   const [hourTypes, setHourTypes] = useState([]);
@@ -27,8 +26,24 @@ function Settings() {
   const [qualifications, setQualifications] = useState([]);
   const [motifTypes, setMotifTypes] = useState([]);
   const [justificatifTypes, setJustificatifTypes] = useState([]);
-  const [accessMethods, setAccessMethods] = useState([]); // Nouveau
-  const [securityMeasures, setSecurityMeasures] = useState([]); // Nouveau
+  const [accessMethods, setAccessMethods] = useState([]);
+  const [securityMeasures, setSecurityMeasures] = useState([]);
+  const [signatures, setSignatures] = useState([]); // Nouveau state pour les signatures et tampons
+
+  // Liste des onglets
+  const tabs = [
+    { id: 0, title: 'Entreprise' },
+    { id: 1, title: 'TVA' },
+    { id: 2, title: 'Heures' },
+    { id: 3, title: 'Paiements' },
+    { id: 4, title: 'Transport' },
+    { id: 5, title: 'Qualifications' },
+    { id: 6, title: 'Motifs' },
+    { id: 7, title: 'Justificatifs' },
+    { id: 8, title: 'Accès' },
+    { id: 9, title: 'Sécurité' },
+    { id: 10, title: 'Signatures' } // Nouvel onglet pour les signatures
+  ];
 
   // Chargement initial des données
   useEffect(() => {
@@ -59,12 +74,15 @@ function Settings() {
         const justificatifs = await SettingsService.getJustificatifTypes();
         setJustificatifTypes(justificatifs);
         
-        // Nouveaux chargements
         const access = await SettingsService.getAccessMethods();
         setAccessMethods(access);
         
         const security = await SettingsService.getSecurityMeasures();
         setSecurityMeasures(security);
+        
+        // Chargement des signatures et tampons
+        const sigs = await SettingsService.getSignatures();
+        setSignatures(sigs);
       } catch (error) {
         console.error('Erreur lors du chargement des paramètres :', error);
         toast.error('Erreur lors du chargement des paramètres');
@@ -256,7 +274,6 @@ function Settings() {
     }
   };
 
-  // Nouveaux gestionnaires pour les moyens d'accès
   const handleSaveAccessMethod = async (method) => {
     try {
       await SettingsService.saveAccessMethod(method);
@@ -281,7 +298,6 @@ function Settings() {
     }
   };
 
-  // Nouveaux gestionnaires pour les mesures de sécurité
   const handleSaveSecurityMeasure = async (measure) => {
     try {
       await SettingsService.saveSecurityMeasure(measure);
@@ -306,6 +322,31 @@ function Settings() {
     }
   };
 
+  // Nouveaux gestionnaires pour les signatures et tampons
+  const handleSaveSignature = async (signature) => {
+    try {
+      await SettingsService.saveSignature(signature);
+      const updated = await SettingsService.getSignatures();
+      setSignatures(updated);
+      toast.success('Signature/tampon enregistré');
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement de la signature :', error);
+      toast.error('Erreur lors de l\'enregistrement');
+    }
+  };
+
+  const handleDeleteSignature = async (id) => {
+    try {
+      await SettingsService.deleteSignature(id);
+      const updated = await SettingsService.getSignatures();
+      setSignatures(updated);
+      toast.success('Signature/tampon supprimé');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la signature :', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -322,91 +363,125 @@ function Settings() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Paramètres</h1>
       
       <div className="mb-6">
-        <TabGroup defaultIndex={0}>
-          <TabList>
-            <Tab>Entreprise</Tab>
-            <Tab>TVA</Tab>
-            <Tab>Heures</Tab>
-            <Tab>Paiements</Tab>
-            <Tab>Transport</Tab>
-            <Tab>Qualifications</Tab>
-            <Tab>Motifs</Tab>
-            <Tab>Justificatifs</Tab>
-            <Tab>Accès</Tab>
-            <Tab>Sécurité</Tab>
-          </TabList>
-          <TabPanels>
-            <TabPanel>
-              <CompanySettings 
-                settings={companySettings} 
-                onSave={handleSaveCompanySettings} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <TaxRatesSettings 
-                taxRates={taxRates} 
-                onSave={handleSaveTaxRate} 
-                onDelete={handleDeleteTaxRate} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <HourTypesSettings 
-                hourTypes={hourTypes} 
-                onSave={handleSaveHourType} 
-                onDelete={handleDeleteHourType} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <PaymentMethodsSettings 
-                paymentMethods={paymentMethods} 
-                onSave={handleSavePaymentMethod} 
-                onDelete={handleDeletePaymentMethod} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <TransportModesSettings 
-                transportModes={transportModes} 
-                onSave={handleSaveTransportMode} 
-                onDelete={handleDeleteTransportMode} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <QualificationsSettings 
-                qualifications={qualifications} 
-                onSave={handleSaveQualification} 
-                onDelete={handleDeleteQualification} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <MotifTypesSettings 
-                motifTypes={motifTypes} 
-                onSave={handleSaveMotifType} 
-                onDelete={handleDeleteMotifType} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <JustificatifTypesSettings 
-                justificatifTypes={justificatifTypes} 
-                onSave={handleSaveJustificatifType} 
-                onDelete={handleDeleteJustificatifType} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <AccessMethodsSettings 
-                accessMethods={accessMethods} 
-                onSave={handleSaveAccessMethod} 
-                onDelete={handleDeleteAccessMethod} 
-              />
-            </TabPanel>
-            <TabPanel>
-              <SecurityMeasuresSettings 
-                securityMeasures={securityMeasures} 
-                onSave={handleSaveSecurityMeasure} 
-                onDelete={handleDeleteSecurityMeasure} 
-              />
-            </TabPanel>
-          </TabPanels>
-        </TabGroup>
+        {/* Système d'onglets personnalisé */}
+        <div className="border-b border-gray-200">
+          <div className="flex overflow-x-auto">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`px-4 py-2 font-medium text-sm border-b-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Contenu des onglets */}
+        <div className="py-4">
+          {/* Entreprise */}
+          {activeTab === 0 && (
+            <CompanySettings 
+              settings={companySettings} 
+              onSave={handleSaveCompanySettings} 
+            />
+          )}
+          
+          {/* TVA */}
+          {activeTab === 1 && (
+            <TaxRatesSettings 
+              taxRates={taxRates} 
+              onSave={handleSaveTaxRate} 
+              onDelete={handleDeleteTaxRate} 
+            />
+          )}
+          
+          {/* Heures */}
+          {activeTab === 2 && (
+            <HourTypesSettings 
+              hourTypes={hourTypes} 
+              onSave={handleSaveHourType} 
+              onDelete={handleDeleteHourType} 
+            />
+          )}
+          
+          {/* Paiements */}
+          {activeTab === 3 && (
+            <PaymentMethodsSettings 
+              paymentMethods={paymentMethods} 
+              onSave={handleSavePaymentMethod} 
+              onDelete={handleDeletePaymentMethod} 
+            />
+          )}
+          
+          {/* Transport */}
+          {activeTab === 4 && (
+            <TransportModesSettings 
+              transportModes={transportModes} 
+              onSave={handleSaveTransportMode} 
+              onDelete={handleDeleteTransportMode} 
+            />
+          )}
+          
+          {/* Qualifications */}
+          {activeTab === 5 && (
+            <QualificationsSettings 
+              qualifications={qualifications} 
+              onSave={handleSaveQualification} 
+              onDelete={handleDeleteQualification} 
+            />
+          )}
+          
+          {/* Motifs */}
+          {activeTab === 6 && (
+            <MotifTypesSettings 
+              motifTypes={motifTypes} 
+              onSave={handleSaveMotifType} 
+              onDelete={handleDeleteMotifType} 
+            />
+          )}
+          
+          {/* Justificatifs */}
+          {activeTab === 7 && (
+            <JustificatifTypesSettings 
+              justificatifTypes={justificatifTypes} 
+              onSave={handleSaveJustificatifType} 
+              onDelete={handleDeleteJustificatifType} 
+            />
+          )}
+          
+          {/* Accès */}
+          {activeTab === 8 && (
+            <AccessMethodsSettings 
+              accessMethods={accessMethods} 
+              onSave={handleSaveAccessMethod} 
+              onDelete={handleDeleteAccessMethod} 
+            />
+          )}
+          
+          {/* Sécurité */}
+          {activeTab === 9 && (
+            <SecurityMeasuresSettings 
+              securityMeasures={securityMeasures} 
+              onSave={handleSaveSecurityMeasure} 
+              onDelete={handleDeleteSecurityMeasure} 
+            />
+          )}
+          
+          {/* Signatures et tampons */}
+          {activeTab === 10 && (
+            <SignaturesSettings 
+              signatures={signatures} 
+              onSave={handleSaveSignature} 
+              onDelete={handleDeleteSignature} 
+            />
+          )}
+        </div>
       </div>
 
       <ToastContainer position="bottom-right" />
