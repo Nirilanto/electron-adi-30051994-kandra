@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditions Générales de Prestations</title>
+    <style>
+        /* Réinitialisation et styles de base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-size: 7px;
+            line-height: 1.2;
+            color: #333;
+            background-color: #f5f5f5;
+            font-weight: 300;
+        }
+        
+        /* Définition format A4 */
+        .page {
+            width: 210mm;
+            height: 297mm;
+            padding: 10mm;
+            margin: 0 auto;
+            background-color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* En-tête */
+        .entete {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: 1px;
+        }
+        
+        .titre-page {
+            font-weight: 600;
+            font-size: 10px;
+            color: #1a1a1a;
+            text-align: center;
+        }
+        
+        /* Contenu principal */
+        .contenu {
+            column-count: 2;
+            column-gap: 15px;
+            text-align: justify;
+            font-size: 7px;
+            line-height: 1.25;
+            color: #444;
+        }
+        
+        /* Style des sections */
+        .section {
+            break-inside: avoid-column;
+            margin-bottom: 6px;
+        }
+        
+        .titre-section {
+            font-weight: 700;
+            font-size: 8px;
+            color: #1a1a1a;
+            margin-bottom: 3px;
+        }
+        
+        .paragraphe {
+            margin-bottom: 4px;
+            text-align: justify;
+        }
+        
+        /* Listes */
+        .liste {
+            padding-left: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .liste-item {
+            position: relative;
+            margin-bottom: 2px;
+            padding-left: 6px;
+        }
+        
+        .liste-item:before {
+            content: "·";
+            position: absolute;
+            left: 0;
+            top: -1px;
+        }
+        
+        /* Colonne spécifique */
+        .colonne-droite-force {
+            break-before: column;
+        }
+        
+        /* Pied de page */
+        .page-number {
+            position: absolute;
+            bottom: 10mm;
+            right: 10mm;
+            font-size: 7px;
+            color: #999;
+            font-weight: 300;
+        }
+        
+        /* Impression */
+        @media print {
+            body {
+                background: none;
+            }
+            .page {
+                margin: 0;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- En-tête -->
+        <div class="entete">
+            <div class="logo">ATLANTIS</div>
+            <div class="titre-page">Conditions générales de prestations</div>
+        </div>
+        
+        <!-- Contenu principal -->
+        <div class="contenu">
+            <div class="section">
+                <div class="titre-section">1 - CONTRATS</div>
+                <div class="paragraphe">
+                    Cette prestation fait l'objet d'un contrat écrit entre l'utilisateur et l'entreprise de travail temporaire (ETT).
+                    L'objet exclusif de ce contrat est l'exécution d'une tâche précise et temporaire dénommée « mission » par la 
+                    mise à la disposition de l'utilisateur d'un salarié.
+                </div>
+                <div class="paragraphe">
+                    Pour permettre l'établissement du contrat, la demande de prestation écrite devra obligatoirement préciser :
+                </div>
+                <div class="paragraphe">
+                    a) Le motif pour lequel il est recouru au salarié intérimaire, cette mention devant être assortie de justifications précises :
+                </div>
+                <div class="liste">
+                    <div class="liste-item">1) Remplacement d'un salarié ou du chef d'entreprise (art. L. 1251-6 1°, 4° et 5° CT).</div>
+                    <div class="liste-item">2) Accroissement temporaire d'activité (art. L. 1251-6 2° CT).</div>
+                    <div class="liste-item">3) Travaux temporaires par nature (art. L. 1251-6 3° CT) : Emplois à caractère saisonnier, Emplois pour lesquels il est d'usage constant de ne pas recourir au contrat à durée indéterminée.</div>
+                    <div class="liste-item">4) Lorsque la mission de travail temporaire vise, en application de dispositions législatives ou réglementaires, ou d'un accord de branche étendu, à faciliter l'embauche de personnes sans emploi rencontrant des difficultés sociales et professionnelles particulières (art. L. 1251-7 1° CT).</div>
+                    <div class="liste-item">5) Lorsque l'ETT et l'utilisateur s'engagent, pour une durée et dans des conditions fixées par décret ou par accord de branche étendu, à assurer un complément de formation professionnelle au salarié (art. L. 1251-7 2° CT).</div>
+                </div>
+                <div class="paragraphe">
+                    Par ailleurs, l'utilisateur déclare que : le salarié intérimaire concerné ne sera pas affecté à des travaux interdits figurant sur la liste prévue à l'article L. 4154-1 CT ou qu'il a obtenu une dérogation de la DIRECCTE; le salarié intérimaire concerné ne remplace pas un salarié dont le contrat est suspendu par suite d'un conflit collectif de travail chez l'utilisateur; le salarié intérimaire concerné ne remplace pas un médecin du travail; le salarié intérimaire concerné ne sera pas affecté sur un poste où il a été procédé à un licenciement pour motif économique, dans les 6 mois qui suivent ce licenciement, si le motif de recours est un accroissement temporaire de l'activité. Cette interdiction ne s'applique pas lorsque la durée du contrat, non susceptible de renouvellement, n'excède pas 3 mois (art. L. 1251-9 CT).
+                </div>
+                <div class="paragraphe">
+                    Si une première mission ou un contrat à durée déterminée ont déjà été effectués sur le poste de travail pour lequel le salarié intérimaire est demandé, il ne peut être recouru pour pourvoir ce poste à un contrat de travail temporaire ou à un contrat à durée déterminée avant l'expiration d'un délai de carence calculé de la manière suivante (art. L. 1251-36 CT) : contrat de mission < à 14 jours => la moitié de la durée calendaire du contrat; contrat > ou = à 14 jours => le tiers de la durée calendaire du contrat.
+                </div>
+                <div class="paragraphe">
+                    Pour l'application du délai devant séparer les deux contrats, il est fait référence aux jours d'ouverture de l'entreprise ou de l'établissement concerné.
+                </div>
+                <div class="paragraphe">
+                    b) La qualification professionnelle exigée, le lieu, l'horaire, les caractéristiques particulières du poste de travail et notamment si ce poste figure sur la liste des postes à risques prévue à l'article L. 4154-2 CT et/ou s'il est soumis à surveillance médicale renforcée.
+                </div>
+                <div class="paragraphe">
+                    Dans l'hypothèse où le salarié intérimaire est affecté sur un poste de travail présentant des risques particuliers pour sa santé ou sa sécurité, l'utilisateur s'engage à effectuer la formation à la sécurité renforcée prévue à l'article L. 4154-2 CT. Ces indications permettront d'effectuer une meilleure adéquation au poste et d'améliorer la prévention des accidents du travail et des maladies professionnelles.
+                </div>
+                <div class="paragraphe">
+                    c) La nature des équipements de protection individuelle (EPI) que le salarié doit utiliser, en précisant, le cas échéant, s'ils sont fournis par l'ETT (casque et chaussures uniquement).
+                </div>
+                <div class="paragraphe">
+                    d) Date de début et de fin de mission. Le non-respect de l'engagement de la durée prévue au contrat de prestation donne lieu à facturation normale jusqu'au terme du contrat initialement prévu.
+                </div>
+                <div class="paragraphe">
+                    Pour les motifs de : « remplacement d'un salarié absent », « attente de l'entrée en service effective du salarié recruté par un CDI », « emplois à caractère saisonnier » et « emplois pour lesquels il est d'usage constant de ne pas recourir au CDI », le contrat de travail temporaire peut ne pas comporter de terme précis lors de sa conclusion. Il est alors conclu pour une durée minimale et a pour terme la fin de l'absence du salarié ou la réalisation de l'objet pour lequel il est conclu. En cas de recours au travail temporaire pour d'autres motifs, lorsque la mission comporte un terme fixé avec précision dès sa conclusion, le contrat peut être renouvelé une fois pour une durée déterminée qui, ajoutée à la durée du contrat initial, ne peut excéder par principe 18 mois. Mais, par dérogation, la durée totale du contrat, renouvellement compris, ne peut excéder les durées maximales suivantes : 24 mois pour le motif survenance dans l'entreprise d'une commande exceptionnelle à l'exportation (dans ce cas, la durée ne peut être inférieure à 6 mois) ou dans les cas de départ définitif d'un salarié précédant la suppression de son poste de travail ou lorsque la mission est exécutée à l'étranger; 9 mois pour les motifs d'attente de l'entrée en service effective d'un salarié recruté par contrat à durée indéterminée ou travaux urgents nécessités par des mesures de sécurité.
+                </div>
+                <div class="paragraphe">
+                    Les conditions de renouvellement sont précisées dans le contrat initial ou par avenant soumis à l'accord du salarié avant le terme prévu au contrat initial.
+                </div>
+                <div class="paragraphe">
+                    Le terme de la mission prévu au contrat ou fixé par avenant peut être avancé ou reporté à raison de 1 jour pour 5 jours travaillés. Cet aménagement du terme de la mission ne peut avoir pour effet ni de réduire la mission initialement prévue de plus de 10 jours travaillés, ni de conduire à un dépassement des durées maximales visées plus haut. Pour les missions inférieures à 10 jours de travail, ce terme peut être avancé ou reporté de 2 jours.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="paragraphe">
+                    e) La période d'essai éventuellement prévue, dont la durée ne peut excéder, sauf disposition différente émanant d'une convention ou d'un accord professionnel de branche étendu ou de convention ou d'accord d'entreprise ou d'établissement : 2 jours si le contrat est conclu pour une durée ≤ à 1 mois; 3 jours si le contrat est conclu pour une durée > à 1 mois et ≤ à 2 mois; 5 jours si le contrat est conclu pour une durée > à 2 mois. La facturation afférente à cette période ne pouvant en aucun cas être diminuée.
+                </div>
+                <div class="paragraphe">
+                    f) La rémunération que percevait après période d'essai un salarié de qualification équivalente occupant le même poste de travail, avec ses différentes composantes y compris, s'il en existe, les primes et accessoires de salaire.
+                </div>
+                <div class="paragraphe">
+                    En cas d'augmentation de la rémunération en cours de mission, la facturation sera proportionnellement modifiée. De même, en cas de rappel de la rémunération due au salarié à la suite d'une indication erronée sur son montant, le remboursement devra être effectué à quelque moment que se situe le versement du rappel.
+                </div>
+                <div class="paragraphe">
+                    L'ensemble de ces éléments est fourni sous la responsabilité de l'utilisateur, lequel s'exposerait, en cas d'omission d'un des éléments composant le salaire de référence, tel que défini ci-dessus, aux sanctions pénales de l'article L. 1254-10 CT.
+                </div>
+                <div class="paragraphe">
+                    Les jours fériés chômés chez l'utilisateur sont payés au salarié intérimaire sans condition d'ancienneté. Ils seront intégralement facturés à l'utilisateur ainsi que toute journée supplémentaire éventuellement non travaillée que l'ETT devrait payer au salarié intérimaire du fait de l'utilisateur. Le travail de nuit, des jours fériés et du dimanche est payé selon les règles en vigueur chez l'utilisateur.
+                </div>
+                <div class="paragraphe">
+                    La facturation est établie au vu du relevé d'heures signé par le représentant de l'utilisateur, aux conditions suivantes : 1) Semaine complète : les majorations pour heures supplémentaires sont calculées sur la base légale ou conventionnelle applicable chez l'utilisateur, si celle-ci est plus favorable, auxquelles s'ajoute éventuellement la rémunération au titre du repos compensateur non pris. 2) Semaine incomplète (moins de 5 jours travaillés) : les heures supplémentaires sont décomptées à la journée.
+                </div>
+            </div>
+
+            <!-- Contenu déplacé vers la droite -->
+            <div class="colonne-droite-force">
+                <div class="paragraphe">
+                    Un supplément pour indemnités ou primes diverses résultant de l'application des lois, décrets, arrêtés ou conventions ayant des incidences directes ou indirectes sur les coûts salariaux peut être prévu.
+                </div>
+                <div class="paragraphe">
+                    Ce contrat est établi en double exemplaire, dont l'un doit être impérativement retourné dûment signé à l'ETT dans les deux jours ouvrables suivant la mise à disposition, sous peine des sanctions prévues à l'article L. 1254-10 CT (amende de 3 750 € et en cas de récidive, amende de 7 500 € et emprisonnement de 6 mois).
+                </div>
+                <div class="paragraphe">
+                    La signature de l'utilisateur confirme l'exactitude des mentions légales reprises au recto et implique son accord sur les présentes conditions générales de prestations ainsi que sa responsabilité sur l'exactitude de l'ensemble des éléments de rémunération composant le salaire de référence. Toute demande de modification portant sur les conditions d'exécution du détachement telles que prévues initialement au contrat, doivent être adressées par l'utilisateur à l'ETT. Elles ne pourront être mises en application qu'après accord formel et écrit.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">2 - RELEVE D'HEURES</div>
+                <div class="paragraphe">
+                    Le contrôle des heures de travail est effectué au moyen du relevé d'heures établi sur une base hebdomadaire. Ce relevé doit mentionner le nombre d'heures effectuées chaque jour, ainsi que le total hebdomadaire. La signature et le cachet de l'utilisateur apposés sur le relevé d'heures certifient l'exactitude des éléments qui y sont consignés et l'exécution satisfaisante du travail confié aux salariés intérimaires détachés. Les modalités de rémunération de la prestation de services sont précisées au recto du présent contrat conformément à la loi.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">3 - REGLEMENT – PENALITES DE RETARD</div>
+                <div class="paragraphe">
+                    Les factures émises par l'ETT sont payables au comptant, sauf accord contraire précisé sur la facture. Au tarif horaire hors taxes figurant au présent contrat, s'ajoute la TVA. Toute facture impayée pourra entraîner la suspension des prestations en cours, sans qu'il soit nécessaire de procéder à une mise en demeure.
+                </div>
+                <div class="paragraphe">
+                    De convention expresse, le non-respect des conditions de règlement entraîne, sans préjudice de toute autre voie d'action, l'application de plein droit de pénalités de retard d'un montant égal au taux de refinancement de la Banque centrale européenne, majoré de 10 points, conformément à l'article L. 441-6 du code de commerce, prenant effet au lendemain de la date de paiement figurant sur la facture.
+                </div>
+                <div class="paragraphe">
+                    Le taux de refinancement applicable pendant le 1er semestre de l'année en cours est le taux en vigueur au 1er janvier de cette même année. Pour le 2nd semestre, le taux en vigueur au 1er juillet s'applique. Les pénalités de retard sont exigibles sans qu'un rappel soit nécessaire. Conformément aux dispositions des articles L. 441-6 et D. 441-5 du code de commerce, tout professionnel en situation de retard de paiement est de plein droit débiteur d'une indemnité forfaitaire pour frais de recouvrement de 40 €.
+                </div>
+                <div class="paragraphe">
+                    Lorsque le crédit de l'utilisateur se détériore, l'ETT se réserve le droit, même après le début d'exécution d'une commande, d'exiger de l'utilisateur les garanties qu'elle juge convenables en vue de la bonne exécution des engagements pris. Le refus d'y satisfaire lui donne le droit d'annuler tout ou partie de la commande.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">4 - QUALIFICATION ET EMPLOI DU PERSONNEL</div>
+                <div class="paragraphe">
+                    Les salariés intérimaires détachés chez l'utilisateur ne peuvent être affectés qu'à des tâches correspondant au niveau de leur qualification, et qu'aux seules caractéristiques particulières de travail spécifiées dans le contrat de prestation. En particulier, le personnel spécialisé « transport » ne peut conduire que la catégorie de véhicules relevant de la qualification prévue dans le présent contrat. Les salariés intérimaires ne peuvent effectuer aucun transport de fonds, manipulation d'argent ou autres valeurs sans un accord écrit de l'ETT.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">5 - CONDITIONS D'EXECUTION DU TRAVAIL</div>
+                <div class="paragraphe">
+                    Conformément à l'article L. 1251-21 CT, pendant la durée de la mission, l'utilisateur est responsable des conditions d'exécution du travail telles qu'elles sont déterminées par celles des mesures législatives réglementaires et conventionnelles qui sont applicables au lieu du travail.
+                </div>
+                <div class="paragraphe">
+                    Pour l'application de l'alinéa précédent, les conditions d'exécution du travail comprennent limitativement ce qui a trait à la durée de travail, au travail de nuit, au repos hebdomadaire et des jours fériés, à la santé et la sécurité au travail, au travail des femmes, des enfants et des jeunes travailleurs.
+                </div>
+                <div class="paragraphe">
+                    Les EPI sont fournis par l'utilisateur. Toutefois, certains EPI personnalisés, définis par convention ou accord collectif peuvent être fournis par l'ETT (casque et chaussures de sécurité uniquement). Dans cette hypothèse, les équipements sont fournis par l'ETT sous la responsabilité de l'utilisateur, qui doit s'assurer de leur conformité aux règles de sécurité applicables sur le lieu de travail, et de leur utilisation effective par les salariés intérimaires. Les salariés intérimaires ne doivent pas supporter la charge financière des équipements de protection individuelle (art. L. 1251-23 CT).
+                </div>
+                <div class="paragraphe">
+                    Aux termes de l'article L. 2313-4 CT, les salariés intérimaires peuvent faire présenter leurs revendications par les délégués du personnel de l'utilisateur concernant la rémunération (art. L. 1251-18 CT), les conditions d'exécution du travail (art. L. 1251-21 à 23 CT) et l'accès aux installations collectives (art. L. 1251-24 CT).
+                </div>
+                <div class="paragraphe">
+                    Les salariés intérimaires détachés doivent figurer sur le registre unique du personnel de l'établissement de l'utilisateur (art. D. 1221-23 10° CT). En cas d'accident du travail survenu aux salariés intérimaires détachés, l'utilisateur doit informer l'ETT dans les 24 heures par lettre recommandée en même temps que l'inspecteur du travail et le service de prévention de la CARSAT.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">6 - MEDECINE DU TRAVAIL</div>
+                <div class="paragraphe">
+                    Lorsque l'activité exercée par le salarié intérimaire nécessite une surveillance médicale renforcée au sens de la réglementation relative à la santé au travail, celle-ci est à la charge de l'utilisateur (art. L. 1251-22 CT).
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">7 - RESPONSABILITE CIVILE</div>
+                <div class="paragraphe">
+                    L'utilisateur est civilement responsable, en tant que commettant des salariés intérimaires placés sous sa direction exclusive, de tous les dommages causés à des tiers sur les lieux ou à l'occasion du travail. L'ETT est dégagée de toute responsabilité quant aux dommages de quelque nature qu'ils soient, de caractère professionnel ou non, causés par les salariés intérimaires et résultant, entre autres, d'une absence ou d'une insuffisance de contrôle ou d'encadrement comme de l'inobservation des règlements.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">8 - COMPÉTENCE</div>
+                <div class="paragraphe">
+                    De convention expresse et en cas de contestation, le tribunal du lieu du siège social de l'ETT est seul compétent pour connaître les différends d'interprétation et d'exécution pouvant découler des présentes prestations.
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="titre-section">9 - LUTTE CONTRE LE TRAVAIL DISSIMULE</div>
+                <div class="paragraphe">
+                    L'ETT atteste sur l'honneur que les salariés intérimaires qu'elle détache sont employés régulièrement au regard des articles L. 3243-2 CT (remise d'un bulletin de paie), R. 3243-1 CT (mentions du bulletin de paie), L. 1221-10 CT (déclaration préalable à l'embauche), L. 1221-13 CT (registre unique du personnel), R. 5221-41 CT (vérification du titre de travail des étrangers) et D. 8254-5 CT (communication de la liste nominative des étrangers).
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-number">Page 2 sur 2</div>
+    </div>
+</body>
+</html>

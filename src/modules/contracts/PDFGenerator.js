@@ -5,255 +5,339 @@
  * Compatible avec Electron et le mode web
  */
 class PDFGenerator {
-    /**
-     * Génère un PDF de contrat pour l'employé/consultant
-     * @param {Object} contract - Les données du contrat
-     * @param {Object} employee - Les données de l'employé
-     * @param {Object} client - Les données du client
-     * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
-     * @returns {Promise<Object>} Résultat de la génération
-     */
-    static async generateEmployeeContractPDF(contract, employee, client, customPath = null) {
-      try {
-        // Vérifier que les données sont présentes
-        if (!contract || !employee || !client) {
-          throw new Error('Données manquantes pour générer le PDF du contrat employé');
-        }
-        
-        console.log('Préparation du PDF pour le contrat employé:', contract.id);
-        
-        // Préparer les données du contrat pour le PDF
-        const contractData = this.prepareContractData(contract, employee, client);
-        
-        // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
-        const defaultFileName = `contrat_consultant_${contract.contractNumber || contract.id}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.pdf`;
-        
-        // Si nous sommes dans Electron, utiliser l'API Electron
-        if (window.electron) {
-          return await window.electron.generatePDF('employee_contract', contractData, customPath || defaultFileName);
-        } else {
-          // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-          return this.openEmployeeContractPreview(contractData);
-        }
-      } catch (error) {
-        console.error('Erreur lors de la génération du PDF du contrat employé:', error);
-        throw error;
+  /**
+   * Génère un PDF de contrat pour l'employé/consultant
+   * @param {Object} contract - Les données du contrat
+   * @param {Object} employee - Les données de l'employé
+   * @param {Object} client - Les données du client
+   * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
+   * @returns {Promise<Object>} Résultat de la génération
+   */
+  static async generateEmployeeContractPDF(
+    contract,
+    employee,
+    client,
+    customPath = null
+  ) {
+    try {
+      // Vérifier que les données sont présentes
+      if (!contract || !employee || !client) {
+        throw new Error(
+          "Données manquantes pour générer le PDF du contrat employé"
+        );
       }
-    }
-  
-    /**
-     * Génère un PDF de contrat pour le client
-     * @param {Object} contract - Les données du contrat
-     * @param {Object} employee - Les données de l'employé
-     * @param {Object} client - Les données du client
-     * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
-     * @returns {Promise<Object>} Résultat de la génération
-     */
-    static async generateClientContractPDF(contract, employee, client, customPath = null) {
-      try {
-        // Vérifier que les données sont présentes
-        if (!contract || !client) {
-          throw new Error('Données manquantes pour générer le PDF du contrat client');
-        }
-        
-        console.log('Préparation du PDF pour le contrat client:', contract.id);
-        
-        // Préparer les données du contrat pour le PDF
-        const contractData = this.prepareContractData(contract, employee, client);
-        
-        // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
-        const defaultFileName = `contrat_client_${contract.contractNumber || contract.id}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.pdf`;
-        
-        // Si nous sommes dans Electron, utiliser l'API Electron
-        if (window.electron) {
-          return await window.electron.generatePDF('client_contract', contractData, customPath || defaultFileName);
-        } else {
-          // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-          return this.openClientContractPreview(contractData);
-        }
-      } catch (error) {
-        console.error('Erreur lors de la génération du PDF du contrat client:', error);
-        throw error;
+
+      console.log("Préparation du PDF pour le contrat employé:", contract.id);
+
+      // Préparer les données du contrat pour le PDF
+      const contractData = this.prepareContractData(contract, employee, client);
+
+      // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
+      const defaultFileName = `contrat_consultant_${
+        contract.contractNumber || contract.id
+      }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
+
+      // Si nous sommes dans Electron, utiliser l'API Electron
+      if (window.electron) {
+        return await window.electron.generatePDF(
+          "employee_contract",
+          contractData,
+          customPath || defaultFileName
+        );
+      } else {
+        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
+        return this.openEmployeeContractPreview(contractData);
       }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la génération du PDF du contrat employé:",
+        error
+      );
+      throw error;
     }
-    
-    /**
-     * Ouvre une prévisualisation du contrat employé dans une nouvelle fenêtre (mode web)
-     */
-    static openEmployeeContractPreview(data) {
-      try {
-        const htmlContent = this.generateEmployeeContractHTML(data);
-        
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(htmlContent);
-          newWindow.document.close();
-          return { success: true, previewOpened: true };
-        } else {
-          throw new Error('Impossible d\'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups.');
-        }
-      } catch (error) {
-        console.error('Erreur lors de l\'ouverture de la prévisualisation:', error);
-        throw error;
+  }
+
+  /**
+   * Génère un PDF de contrat pour le client
+   * @param {Object} contract - Les données du contrat
+   * @param {Object} employee - Les données de l'employé
+   * @param {Object} client - Les données du client
+   * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
+   * @returns {Promise<Object>} Résultat de la génération
+   */
+  static async generateClientContractPDF(
+    contract,
+    employee,
+    client,
+    company,
+    customPath = null
+  ) {
+    try {
+      // Vérifier que les données sont présentes
+      if (!contract || !client) {
+        throw new Error(
+          "Données manquantes pour générer le PDF du contrat client"
+        );
       }
-    }
-    
-    /**
-     * Ouvre une prévisualisation du contrat client dans une nouvelle fenêtre (mode web)
-     */
-    static openClientContractPreview(data) {
-      try {
-        const htmlContent = this.generateClientContractHTML(data);
-        
-        const newWindow = window.open('', '_blank');
-        if (newWindow) {
-          newWindow.document.write(htmlContent);
-          newWindow.document.close();
-          return { success: true, previewOpened: true };
-        } else {
-          throw new Error('Impossible d\'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups.');
-        }
-      } catch (error) {
-        console.error('Erreur lors de l\'ouverture de la prévisualisation:', error);
-        throw error;
+
+      console.log("Préparation du PDF pour le contrat client:", contract.id);
+
+      // Préparer les données du contrat pour le PDF
+      const contractData = this.prepareContractData(
+        contract,
+        employee,
+        client,
+        company
+      );
+
+      // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
+      const defaultFileName = `contrat_client_${
+        contract.contractNumber || contract.id
+      }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
+
+      // Si nous sommes dans Electron, utiliser l'API Electron
+      if (window.electron) {
+        return await window.electron.generatePDF(
+          "client_contract",
+          contractData,
+          customPath || defaultFileName
+        );
+      } else {
+        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
+        return this.openClientContractPreview(contractData);
       }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la génération du PDF du contrat client:",
+        error
+      );
+      throw error;
     }
-    
-    /**
-     * Prépare les données du contrat pour le PDF
-     */
-    static prepareContractData(contract, employee, client) {
-      // Formatage des dates
-      const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toLocaleDateString('fr-FR', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric'
-        });
-      };
-      
-      // Formatage des montants
-      const formatCurrency = (amount) => {
-        if (!amount) return '0,00 EUR';
-        return new Intl.NumberFormat('fr-FR', {
-          style: 'currency',
-          currency: 'EUR',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(amount).replace('€', 'EUR').replace(' ', ' ');
-      };
-      
-      // Calculer la durée du contrat
-      let duration = '';
-      if (contract.startDate && contract.endDate) {
-        const startDate = new Date(contract.startDate);
-        const endDate = new Date(contract.endDate);
-        const diffTime = Math.abs(endDate - startDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        const months = Math.floor(diffDays / 30);
-        const days = diffDays % 30;
-        
-        if (months > 0) {
-          duration += `${months} mois`;
-          if (days > 0) {
-            duration += ` et ${days} jours`;
-          }
-        } else {
-          duration = `${days} jours`;
+  }
+
+  /**
+   * Ouvre une prévisualisation du contrat employé dans une nouvelle fenêtre (mode web)
+   */
+  static openEmployeeContractPreview(data) {
+    try {
+      const htmlContent = this.generateEmployeeContractHTML(data);
+
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(htmlContent);
+        newWindow.document.close();
+        return { success: true, previewOpened: true };
+      } else {
+        throw new Error(
+          "Impossible d'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'ouverture de la prévisualisation:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Ouvre une prévisualisation du contrat client dans une nouvelle fenêtre (mode web)
+   */
+  static openClientContractPreview(data) {
+    try {
+      const htmlContent = this.generateClientContractHTML(data);
+
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(htmlContent);
+        newWindow.document.close();
+        return { success: true, previewOpened: true };
+      } else {
+        throw new Error(
+          "Impossible d'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'ouverture de la prévisualisation:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Prépare les données du contrat pour le PDF
+   */
+  static prepareContractData(contract, employee, client, company) {
+    // Formatage des dates
+    const formatDate = (dateString) => {
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      return date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    };
+
+    // Formatage des montants
+    const formatCurrency = (amount) => {
+      if (!amount) return "0,00 EUR";
+      return new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+        .format(amount)
+        .replace("€", "EUR")
+        .replace(" ", " ");
+    };
+
+    // Calculer la durée du contrat
+    let duration = "";
+    if (contract.startDate && contract.endDate) {
+      const startDate = new Date(contract.startDate);
+      const endDate = new Date(contract.endDate);
+      const diffTime = Math.abs(endDate - startDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const months = Math.floor(diffDays / 30);
+      const days = diffDays % 30;
+
+      if (months > 0) {
+        duration += `${months} mois`;
+        if (days > 0) {
+          duration += ` et ${days} jours`;
         }
       } else {
-        duration = 'Durée indéterminée';
+        duration = `${days} jours`;
       }
-      
-      // Traiter les horaires de travail
-      const parseWorkingHours = (workingHoursStr) => {
-        if (!workingHoursStr) {
-          return [{start: '08:00', end: '12:00'}, {start: '13:00', end: '17:00'}];
-        }
-        
-        // Exemple format attendu: "08:00 - 12:00, 13:00 - 17:00"
-        const slots = workingHoursStr.split(',').map(slot => slot.trim());
-        return slots.map(slot => {
-          const [start, end] = slot.split('-').map(time => time.trim());
-          return { start, end };
-        });
-      };
-      
-      const workingHoursSlots = parseWorkingHours(contract.workingHours || contract.working_hours);
-      
-      // Extraire les noms d'employé correctement, quelle que soit la structure
-      const employeeFirstName = employee ? (employee.firstName || employee.firstname || '') : '';
-      const employeeLastName = employee ? (employee.lastName || employee.lastname || '') : '';
-      const employeeFullName = `${employeeLastName.toUpperCase()} ${employeeFirstName.toUpperCase()}`;
-      
-      // Détecter si les motifs sont actifs
-      const isAccroissementActivite = (contract.motif || '').toUpperCase().includes('ACCROISSEMENT');
-      const isRenforcementPersonnel = (contract.motif || '').toUpperCase().includes('RENFORT');
-      
-      // Retourner les données structurées pour le PDF
-      return {
-        // Informations de base du contrat
-        reference: contract.contractNumber || contract.id,
-        title: "CONTRAT DE MISE À DISPOSITION",
-        subtitle: `Du ${formatDate(contract.startDate)} Au ${formatDate(contract.endDate)}`,
-        startDate: formatDate(contract.startDate),
-        endDate: formatDate(contract.endDate),
-        duration: duration,
-        description: contract.description || "",
-        
-        // Informations sur l'employé
-        employee: {
-          fullName: employeeFullName,
-          firstName: employeeFirstName,
-          lastName: employeeLastName,
-          nationality: "FRANÇAISE",
-          address: employee?.address || '',
-          postalCode: employee?.postalCode || employee?.postal_code || '',
-          city: employee?.city || '',
-          email: employee?.email || '',
-          phone: employee?.phone || '',
-          skills: (employee?.skills || 'CONSULTANT').toUpperCase()
-        },
-        
-        // Informations sur le client
-        client: {
-          companyName: (client?.companyName || client?.company_name || '').toUpperCase(),
-          siret: client?.siret || '',
-          address: client?.address || '',
-          postalCode: client?.postalCode || client?.postal_code || '',
-          city: client?.city || '',
-          contactName: client?.contactName || client?.contact_name || '',
-          location: contract.location || "IDF"
-        },
-        
-        // Informations sur le contrat
-        motifs: {
-          accroissementActivite: isAccroissementActivite,
-          renforcementPersonnel: isRenforcementPersonnel
-        },
-        
-        // Horaires et tarification
-        workingHours: contract.workingHours || contract.working_hours || "08:00 - 12:00, 13:00 - 17:00",
-        workingHoursSlots: workingHoursSlots,
-        hourlyRate: formatCurrency(contract.hourlyRate || contract.hourly_rate),
-        billingRate: formatCurrency(contract.billingRate || contract.billing_rate),
-        weeklyHours: "35",
-        transport: contract.transport || "SELON MOYENS",
-        
-        // Métadonnées
-        generationDate: formatDate(new Date())
-      };
+    } else {
+      duration = "Durée indéterminée";
     }
-    
-    /**
-     * Génère le HTML pour la prévisualisation du contrat employé
-     * Reproduction fidèle du template Atlantis
-     */
-    static generateEmployeeContractHTML(data) {
-      return `
+
+    // Traiter les horaires de travail
+    const parseWorkingHours = (workingHoursStr) => {
+      if (!workingHoursStr) {
+        return [
+          { start: "08:00", end: "12:00" },
+          { start: "13:00", end: "17:00" },
+        ];
+      }
+
+      // Exemple format attendu: "08:00 - 12:00, 13:00 - 17:00"
+      const slots = workingHoursStr.split(",").map((slot) => slot.trim());
+      return slots.map((slot) => {
+        const [start, end] = slot.split("-").map((time) => time.trim());
+        return { start, end };
+      });
+    };
+
+    const workingHoursSlots = parseWorkingHours(
+      contract.workingHours || contract.working_hours
+    );
+
+    // Extraire les noms d'employé correctement, quelle que soit la structure
+    const employeeFirstName = employee
+      ? employee.firstName || employee.firstname || ""
+      : "";
+    const employeeLastName = employee
+      ? employee.lastName || employee.lastname || ""
+      : "";
+    const employeeFullName = `${employeeLastName.toUpperCase()} ${employeeFirstName.toUpperCase()}`;
+
+    // Détecter si les motifs sont actifs
+    const isAccroissementActivite = (contract.motif || "")
+      .toUpperCase()
+      .includes("ACCROISSEMENT");
+    const isRenforcementPersonnel = (contract.motif || "")
+      .toUpperCase()
+      .includes("RENFORT");
+
+    // Retourner les données structurées pour le PDF
+    return {
+      // Informations de base du contrat
+      reference: contract.contractNumber || contract.id,
+      title: "CONTRAT DE MISE À DISPOSITION",
+      subtitle: `Du ${formatDate(contract.startDate)} Au ${formatDate(
+        contract.endDate
+      )}`,
+      startDate: formatDate(contract.startDate),
+      endDate: formatDate(contract.endDate),
+      duration: duration,
+      description: contract.description || "",
+      motif: contract.motif,
+      justificatif: contract.justificatif,
+      mission: contract.mission,
+      securityMeasures: [
+        "SECURITE A ASSURER PAR LE CLIENT",
+        "RESPECT DES CONSIGNES DE SECURITE",
+        "PORT DE CHAUSSURE DE SECURITE ET DU CASQUE OBLIGATOIRE",
+      ],
+
+      // Informations sur l'employé
+      employee: {
+        fullName: employeeFullName,
+        firstName: employeeFirstName,
+        lastName: employeeLastName,
+        nationality: "FRANÇAISE",
+        address: employee?.address || "",
+        postalCode: employee?.postalCode || employee?.postal_code || "",
+        city: employee?.city || "",
+        email: employee?.email || "",
+        phone: employee?.phone || "",
+        skills: (employee?.skills || "CONSULTANT").toUpperCase(),
+      },
+
+      // Informations sur le client
+      client: {
+        companyName: (
+          client?.companyName ||
+          client?.company_name ||
+          ""
+        ).toUpperCase(),
+        siret: client?.siret || "",
+        address: client?.address || "",
+        postalCode: client?.postalCode || client?.postal_code || "",
+        city: client?.city || "",
+        contactName: client?.contactName || client?.contact_name || "",
+        location: contract.location || "IDF",
+      },
+      company,
+
+      // Informations sur le contrat
+      motifs: {
+        accroissementActivite: isAccroissementActivite,
+        renforcementPersonnel: isRenforcementPersonnel,
+      },
+
+      // Horaires et tarification
+      workingHours:
+        contract.workingHours ||
+        contract.working_hours ||
+        "08:00 - 12:00, 13:00 - 17:00",
+      workingHoursSlots: workingHoursSlots,
+      hourlyRate: formatCurrency(contract.hourlyRate || contract.hourly_rate),
+      billingRate: formatCurrency(
+        contract.billingRate || contract.billing_rate
+      ),
+      weeklyHours: "35",
+      transport: contract.transport || "SELON MOYENS",
+
+      // Métadonnées
+      generationDate: formatDate(new Date()),
+    };
+  }
+
+  /**
+   * Génère le HTML pour la prévisualisation du contrat employé
+   * Reproduction fidèle du template Atlantis
+   */
+  static generateEmployeeContractHTML(data) {
+    return `
       <!DOCTYPE html>
       <html lang="fr">
       <head>
@@ -600,7 +684,9 @@ class PDFGenerator {
   
               <div class="title-section">
                   <div class="title">CONTRAT DE MISE À DISPOSITION</div>
-                  <div class="subtitle">Du ${data.startDate} Au ${data.endDate}</div>
+                  <div class="subtitle">Du ${data.startDate} Au ${
+      data.endDate
+    }</div>
                   <div class="document-number">N° ${data.reference}</div>
               </div>
   
@@ -610,11 +696,15 @@ class PDFGenerator {
                       <div class="card-body">
                           <div class="data-row">
                               <div class="data-label">NOM, PRÉNOM</div>
-                              <div class="data-value bold">${data.employee.fullName}</div>
+                              <div class="data-value bold">${
+                                data.employee.fullName
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">NATIONALITÉ</div>
-                              <div class="data-value">${data.employee.nationality}</div>
+                              <div class="data-value">${
+                                data.employee.nationality
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">TITRE SÉJOUR</div>
@@ -623,7 +713,9 @@ class PDFGenerator {
                           <div class="data-row">
                               <div class="data-label">QUALIFICATION</div>
                               <div class="data-value">
-                                  <div class="mission-tag">${data.employee.skills}</div>
+                                  <div class="mission-tag">${
+                                    data.employee.skills
+                                  }</div>
                               </div>
                           </div>
                       </div>
@@ -634,7 +726,9 @@ class PDFGenerator {
                       <div class="card-body">
                           <div class="data-row">
                               <div class="data-label">RAISON SOCIALE</div>
-                              <div class="data-value bold">${data.client.companyName}</div>
+                              <div class="data-value bold">${
+                                data.client.companyName
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">SIRET</div>
@@ -649,7 +743,9 @@ class PDFGenerator {
                           </div>
                           <div class="data-row">
                               <div class="data-label">LIEU DE MISSION</div>
-                              <div class="data-value">${data.client.location}</div>
+                              <div class="data-value">${
+                                data.client.location
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">MOYEN D'ACCÈS</div>
@@ -663,11 +759,19 @@ class PDFGenerator {
                       <div class="card-body">
                           <div class="checkbox-group">
                               <div class="checkbox-container">
-                                  <div class="checkbox ${data.motifs.accroissementActivite ? 'checked' : ''}"></div>
+                                  <div class="checkbox ${
+                                    data.motifs.accroissementActivite
+                                      ? "checked"
+                                      : ""
+                                  }"></div>
                                   <span>ACCROISSEMENT TEMP. D'ACTIVITÉ</span>
                               </div>
                               <div class="checkbox-container">
-                                  <div class="checkbox ${data.motifs.renforcementPersonnel ? 'checked' : ''}"></div>
+                                  <div class="checkbox ${
+                                    data.motifs.renforcementPersonnel
+                                      ? "checked"
+                                      : ""
+                                  }"></div>
                                   <span>RENFORT DE PERSONNEL</span>
                               </div>
                           </div>
@@ -679,7 +783,9 @@ class PDFGenerator {
                       <div class="card-body">
                           <div class="data-row">
                               <div class="data-label">Durée mission</div>
-                              <div class="data-value highlight">Du ${data.startDate} Au ${data.endDate}</div>
+                              <div class="data-value highlight">Du ${
+                                data.startDate
+                              } Au ${data.endDate}</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">TERME PRÉCIS</div>
@@ -690,21 +796,31 @@ class PDFGenerator {
                               <div class="data-value"></div>
                           </div>
                           <div class="schedule-box">
-                              ${data.workingHoursSlots.map(slot => `
+                              ${data.workingHoursSlots
+                                .map(
+                                  (slot) => `
                                   <div class="time-slot">De ${slot.start} À ${slot.end}</div>
-                              `).join('')}
+                              `
+                                )
+                                .join("")}
                           </div>
                           <div class="data-row">
                               <div class="data-label">DURÉE HEBDO:</div>
-                              <div class="data-value bold">${data.weeklyHours} HEURES</div>
+                              <div class="data-value bold">${
+                                data.weeklyHours
+                              } HEURES</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">SALAIRE REF/H:</div>
-                              <div class="data-value price-tag">${data.hourlyRate}</div>
+                              <div class="data-value price-tag">${
+                                data.hourlyRate
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">TARIF H.T.</div>
-                              <div class="data-value price-tag">${data.billingRate}</div>
+                              <div class="data-value price-tag">${
+                                data.billingRate
+                              }</div>
                           </div>
                           <div class="data-row">
                               <div class="data-label">PAIEMENT</div>
@@ -790,14 +906,14 @@ class PDFGenerator {
           </div>
       </body>
       </html>`;
-    }
-    
-    /**
-     * Génère le HTML pour la prévisualisation du contrat client
-     * Adaptation du template Atlantis pour la version client
-     */
-    static generateClientContractHTML(data) {
-        return `
+  }
+
+  /**
+   * Génère le HTML pour la prévisualisation du contrat client
+   * Adaptation du template Atlantis pour la version client
+   */
+  static generateClientContractHTML(data) {
+    return `
         <!DOCTYPE html>
         <html lang="fr">
         <head>
@@ -1128,7 +1244,9 @@ class PDFGenerator {
     
                 <div class="title-section">
                     <div class="title">CONTRAT DE PRESTATION</div>
-                    <div class="subtitle">Du ${data.startDate} Au ${data.endDate}</div>
+                    <div class="subtitle">Du ${data.startDate} Au ${
+      data.endDate
+    }</div>
                     <div class="document-number">N° ${data.reference}</div>
                 </div>
     
@@ -1163,17 +1281,23 @@ class PDFGenerator {
                         <div class="card-body">
                             <div class="data-row">
                                 <div class="data-label">RAISON SOCIALE</div>
-                                <div class="data-value bold">${data.client.companyName}</div>
+                                <div class="data-value bold">${
+                                  data.client.companyName
+                                }</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">SIRET</div>
-                                <div class="data-value">${data.client.siret}</div>
+                                <div class="data-value">${
+                                  data.client.siret
+                                }</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">ADRESSE</div>
                                 <div class="data-value">
                                     ${data.client.address}<br>
-                                    ${data.client.postalCode} ${data.client.city}
+                                    ${data.client.postalCode} ${
+      data.client.city
+    }
                                 </div>
                             </div>
                         </div>
@@ -1189,16 +1313,26 @@ class PDFGenerator {
                             <div class="data-row">
                                 <div class="data-label">QUALIFICATION</div>
                                 <div class="data-value">
-                                    <div class="mission-tag">${data.employee.skills}</div>
+                                    <div class="mission-tag">${
+                                      data.employee.skills
+                                    }</div>
                                 </div>
                             </div>
                             <div class="checkbox-group">
                                 <div class="checkbox-container">
-                                    <div class="checkbox ${data.motifs.accroissementActivite ? 'checked' : ''}"></div>
+                                    <div class="checkbox ${
+                                      data.motifs.accroissementActivite
+                                        ? "checked"
+                                        : ""
+                                    }"></div>
                                     <span>ACCROISSEMENT TEMP. D'ACTIVITÉ</span>
                                 </div>
                                 <div class="checkbox-container">
-                                    <div class="checkbox ${data.motifs.renforcementPersonnel ? 'checked' : ''}"></div>
+                                    <div class="checkbox ${
+                                      data.motifs.renforcementPersonnel
+                                        ? "checked"
+                                        : ""
+                                    }"></div>
                                     <span>RENFORT DE PERSONNEL</span>
                                 </div>
                             </div>
@@ -1210,23 +1344,33 @@ class PDFGenerator {
                         <div class="card-body">
                             <div class="data-row">
                                 <div class="data-label">PÉRIODE</div>
-                                <div class="data-value highlight">Du ${data.startDate} Au ${data.endDate}</div>
+                                <div class="data-value highlight">Du ${
+                                  data.startDate
+                                } Au ${data.endDate}</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">LIEU DE MISSION</div>
-                                <div class="data-value">${data.client.location}</div>
+                                <div class="data-value">${
+                                  data.client.location
+                                }</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">HORAIRES</div>
                             </div>
                             <div class="schedule-box">
-                                ${data.workingHoursSlots.map(slot => `
+                                ${data.workingHoursSlots
+                                  .map(
+                                    (slot) => `
                                     <div class="time-slot">De ${slot.start} À ${slot.end}</div>
-                                `).join('')}
+                                `
+                                  )
+                                  .join("")}
                             </div>
                             <div class="data-row">
                                 <div class="data-label">DURÉE HEBDO:</div>
-                                <div class="data-value bold">${data.weeklyHours} HEURES</div>
+                                <div class="data-value bold">${
+                                  data.weeklyHours
+                                } HEURES</div>
                             </div>
                         </div>
                     </div>
@@ -1236,7 +1380,9 @@ class PDFGenerator {
                         <div class="card-body">
                             <div class="data-row">
                                 <div class="data-label">TARIF H.T.</div>
-                                <div class="data-value price-tag">${data.billingRate}</div>
+                                <div class="data-value price-tag">${
+                                  data.billingRate
+                                }</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">FACTURATION</div>
@@ -1296,71 +1442,90 @@ class PDFGenerator {
             </div>
         </body>
         </html>`;
+  }
+
+  /**
+   * Génère un PDF de certificat d'accomplissement pour l'employé
+   * @param {Object} contract - Les données du contrat
+   * @param {Object} employee - Les données de l'employé
+   * @param {Object} client - Les données du client
+   * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
+   * @returns {Promise<Object>} Résultat de la génération
+   */
+  static async generateEmployeeCertificatePDF(
+    contract,
+    employee,
+    client,
+    customPath = null
+  ) {
+    try {
+      // Vérifier que les données sont présentes
+      if (!contract || !employee || !client) {
+        throw new Error("Données manquantes pour générer le PDF du certificat");
       }
-      
-      /**
-       * Génère un PDF de certificat d'accomplissement pour l'employé
-       * @param {Object} contract - Les données du contrat
-       * @param {Object} employee - Les données de l'employé
-       * @param {Object} client - Les données du client
-       * @param {String} customPath - Chemin personnalisé pour enregistrer le PDF (optionnel)
-       * @returns {Promise<Object>} Résultat de la génération
-       */
-      static async generateEmployeeCertificatePDF(contract, employee, client, customPath = null) {
-        try {
-          // Vérifier que les données sont présentes
-          if (!contract || !employee || !client) {
-            throw new Error('Données manquantes pour générer le PDF du certificat');
-          }
-          
-          console.log('Préparation du PDF pour le certificat:', contract.id);
-          
-          // Préparer les données du contrat pour le PDF
-          const contractData = this.prepareContractData(contract, employee, client);
-          
-          // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
-          const defaultFileName = `certificat_${contract.contractNumber || contract.id}_${new Date().toISOString().split('T')[0].replace(/-/g, '')}.pdf`;
-          
-          // Si nous sommes dans Electron, utiliser l'API Electron
-          if (window.electron) {
-            return await window.electron.generatePDF('certificate', contractData, customPath || defaultFileName);
-          } else {
-            // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-            return this.openCertificatePreview(contractData);
-          }
-        } catch (error) {
-          console.error('Erreur lors de la génération du PDF du certificat:', error);
-          throw error;
-        }
+
+      console.log("Préparation du PDF pour le certificat:", contract.id);
+
+      // Préparer les données du contrat pour le PDF
+      const contractData = this.prepareContractData(contract, employee, client);
+
+      // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
+      const defaultFileName = `certificat_${
+        contract.contractNumber || contract.id
+      }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
+
+      // Si nous sommes dans Electron, utiliser l'API Electron
+      if (window.electron) {
+        return await window.electron.generatePDF(
+          "certificate",
+          contractData,
+          customPath || defaultFileName
+        );
+      } else {
+        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
+        return this.openCertificatePreview(contractData);
       }
-      
-      /**
-       * Ouvre une prévisualisation du certificat dans une nouvelle fenêtre (mode web)
-       */
-      static openCertificatePreview(data) {
-        try {
-          const htmlContent = this.generateCertificateHTML(data);
-          
-          const newWindow = window.open('', '_blank');
-          if (newWindow) {
-            newWindow.document.write(htmlContent);
-            newWindow.document.close();
-            return { success: true, previewOpened: true };
-          } else {
-            throw new Error('Impossible d\'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups.');
-          }
-        } catch (error) {
-          console.error('Erreur lors de l\'ouverture de la prévisualisation:', error);
-          throw error;
-        }
+    } catch (error) {
+      console.error(
+        "Erreur lors de la génération du PDF du certificat:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Ouvre une prévisualisation du certificat dans une nouvelle fenêtre (mode web)
+   */
+  static openCertificatePreview(data) {
+    try {
+      const htmlContent = this.generateCertificateHTML(data);
+
+      const newWindow = window.open("", "_blank");
+      if (newWindow) {
+        newWindow.document.write(htmlContent);
+        newWindow.document.close();
+        return { success: true, previewOpened: true };
+      } else {
+        throw new Error(
+          "Impossible d'ouvrir la prévisualisation. Vérifiez les bloqueurs de popups."
+        );
       }
-      
-      /**
-       * Génère le HTML pour la prévisualisation du certificat
-       * Style Atlantis
-       */
-      static generateCertificateHTML(data) {
-        return `
+    } catch (error) {
+      console.error(
+        "Erreur lors de l'ouverture de la prévisualisation:",
+        error
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Génère le HTML pour la prévisualisation du certificat
+   * Style Atlantis
+   */
+  static generateCertificateHTML(data) {
+    return `
         <!DOCTYPE html>
         <html lang="fr">
         <head>
@@ -1617,7 +1782,7 @@ class PDFGenerator {
             </div>
         </body>
         </html>`;
-      }
-    }
-    
-    export default PDFGenerator;
+  }
+}
+
+export default PDFGenerator;
