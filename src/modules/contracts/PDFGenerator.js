@@ -278,6 +278,15 @@ class PDFGenerator {
         "RESPECT DES CONSIGNES DE SECURITE",
         "PORT DE CHAUSSURE DE SECURITE ET DU CASQUE OBLIGATOIRE",
       ],
+      // Signature et tampon - S'assurer qu'ils sont bien au format base64
+      signature:
+      contract.signature?.imageData && typeof contract.signature.imageData === "string"
+          ? contract.signature?.imageData
+          : null,
+      stamp:
+      contract.stamp?.imageData && typeof contract.stamp === "string"
+          ? companyData.stamp.imageData
+          : null,
 
       // Informations sur l'employé
       employee: {
