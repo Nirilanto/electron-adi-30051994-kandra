@@ -1332,7 +1332,7 @@ function getClientContractTemplate() {
                     <div class="infos-societe">{{company.email}} - Tél: {{company.phone}}</div>
                 </div>
                 <div class="entete-droite">
-                    <div class="titre-contrat">CONTRAT DE MISE À DISPOSITION HIHIHIHIHIHIHIHIHIHIHIHIH !!!!! 044</div>
+                    <div class="titre-contrat">CONTRAT DE MISE À DISPOSITION</div>
                     <div class="contrat-dates">
                         <div class="date-item">Du: {{startDate}}</div>
                         <div class="date-item">Au: {{endDate}}</div>

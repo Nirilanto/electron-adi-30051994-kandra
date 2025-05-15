@@ -224,7 +224,7 @@ function ContractForm() {
                 const measure = securityMeasures.find(
                   (m) => m.id === parseInt(id)
                 );
-                return measure ? measure.title : null;
+                return measure ? measure.label : null;
               })
               .filter(Boolean)
           : [],

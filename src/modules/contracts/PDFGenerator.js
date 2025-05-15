@@ -273,18 +273,21 @@ class PDFGenerator {
       justificatif: contract.justificatif,
       mission: contract.mission,
       paymentMethod: contract.paymentMethod,
-      securityMeasures: [
-        "SECURITE A ASSURER PAR LE CLIENT",
-        "RESPECT DES CONSIGNES DE SECURITE",
-        "PORT DE CHAUSSURE DE SECURITE ET DU CASQUE OBLIGATOIRE",
-      ],
+      weeklyCollectiveAvgDuration: contract.weeklyCollectiveAvgDuration,
+      weeklyCollectiveDuration: contract.weeklyCollectiveAvgDuration,
+      nonWorkingPeriods: contract.nonWorkingPeriods,
+      weeklyMissionDuration: contract.weeklyMissionDuration,
+      transport: contract.transport,
+      location: contract.location,
+      securityMeasures: contract.securityMeasuresList,
       // Signature et tampon - S'assurer qu'ils sont bien au format base64
       signature:
-      contract.signature?.imageData && typeof contract.signature.imageData === "string"
+        contract.signature?.imageData &&
+        typeof contract.signature.imageData === "string"
           ? contract.signature?.imageData
           : null,
       stamp:
-      contract.stamp?.imageData && typeof contract.stamp === "string"
+        contract.stamp?.imageData && typeof contract.stamp === "string"
           ? companyData.stamp.imageData
           : null,
 
