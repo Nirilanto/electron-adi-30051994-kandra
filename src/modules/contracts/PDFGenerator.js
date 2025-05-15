@@ -318,6 +318,7 @@ class PDFGenerator {
         city: client?.city || "",
         contactName: client?.contactName || client?.contact_name || "",
         location: contract.location || "IDF",
+        nafCode: client?.nafCode
       },
       company,
 

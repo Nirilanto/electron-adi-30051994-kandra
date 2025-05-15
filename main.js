@@ -218,140 +218,154 @@ ipcMain.handle("shell-open-path", async (_, path) => {
 // Amélioration de la fonction generate-pdf dans main.js
 
 ipcMain.handle("generate-pdf", async (_, args) => {
-    try {
-      const { type, data, filename } = args;
-  
-      // Obtenir le chemin complet du fichier
-      let outputPath = filename;
-  
-      // Si le chemin n'est pas absolu, demander où enregistrer le fichier
-      if (!path.isAbsolute(filename)) {
-        const result = await dialog.showSaveDialog({
-          title: "Enregistrer le PDF",
-          defaultPath: path.join(app.getPath("documents"), filename),
-          filters: [{ name: "PDF", extensions: ["pdf"] }],
-        });
-  
-        if (result.canceled) {
-          return { success: false, reason: "canceled" };
-        }
-  
-        outputPath = result.filePath;
+  try {
+    const { type, data, filename } = args;
+
+    // Obtenir le chemin complet du fichier
+    let outputPath = filename;
+
+    // Si le chemin n'est pas absolu, demander où enregistrer le fichier
+    if (!path.isAbsolute(filename)) {
+      const result = await dialog.showSaveDialog({
+        title: "Enregistrer le PDF",
+        defaultPath: path.join(app.getPath("documents"), filename),
+        filters: [{ name: "PDF", extensions: ["pdf"] }],
+      });
+
+      if (result.canceled) {
+        return { success: false, reason: "canceled" };
       }
-  
-      // Déterminer le template à utiliser
-      let template;
-      if (type === "certificate") {
-        template = getCertificateTemplate();
-      } else if (type === "employee_contract") {
-        template = getEmployeeContractTemplate();
-      } else if (type === "client_contract") {
-        template = getClientContractTemplate();
-      } else {
-        template = getClientContractTemplate(); // Par défaut
-      }
-  
-      // Ajouter la date actuelle et l'année aux données
-      const now = new Date();
-      const formattedDate = `${now.getDate().toString().padStart(2, "0")}/${(
-        now.getMonth() + 1
-      )
-        .toString()
-        .padStart(2, "0")}/${now.getFullYear()}`;
-      
-      // Traiter les signatures et tampons en base64
-      let enhancedData = {
-        ...data,
-        generationDate: data.generationDate || formattedDate,
-        year: data.year || now.getFullYear(),
-      };
-  
-      // Vérifier si les images sont bien formatées et présentes
-      console.log("Signature:", enhancedData.signature ? enhancedData.signature.substring(0, 30) + "..." : "Aucune");
-      console.log("Tampon:", enhancedData.stamp ? enhancedData.stamp.substring(0, 30) + "..." : "Aucun");
-  
-      // Enregistrer d'helpers Handlebars personnalisés
-      handlebars.registerHelper('hasImage', function(value) {
-        return typeof value === 'string' && value.startsWith('data:image');
-      });
-  
-      // Compiler le template avec Handlebars
-      const compiledTemplate = handlebars.compile(template);
-      const html = compiledTemplate(enhancedData);
-  
-      // Créer un fichier HTML temporaire pour faciliter le débogage
-      const tempHtmlPath = path.join(app.getPath("temp"), `temp_${Date.now()}.html`);
-      fs.writeFileSync(tempHtmlPath, html, 'utf8');
-      console.log(`Fichier HTML temporaire créé: ${tempHtmlPath}`);
-  
-      // Lancer Puppeteer pour générer le PDF
-      const browser = await puppeteer.launch({
-        headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-  
-      const page = await browser.newPage();
-      
-      // Désactiver la limitation CSP et autoriser les images base64
-      await page.setBypassCSP(true);
-      
-      // Charger le HTML à partir du fichier temporaire - meilleure approche pour les images base64
-      await page.goto(`file://${tempHtmlPath}`, { 
-        waitUntil: "networkidle0",
-        timeout: 30000 
-      });
-  
-      // Vérifier si les images sont présentes et chargées
-      const imagesCheck = await page.evaluate(() => {
-        const images = Array.from(document.querySelectorAll('img'));
-        return images.map(img => ({
-          src: img.src.substring(0, 30) + "...",
-          complete: img.complete,
-          naturalWidth: img.naturalWidth,
-          class: img.className
-        }));
-      });
-      console.log("Images détectées:", imagesCheck);
-  
-      // Générer le PDF avec les options appropriées
-      await page.pdf({
-        path: outputPath,
-        format: "A4",
-        printBackground: true,
-        margin: {
-          top: "10mm",
-          right: "10mm",
-          bottom: "10mm",
-          left: "10mm",
-        }
-      });
-  
-      await browser.close();
-  
-      // Supprimer le fichier HTML temporaire après utilisation
-      try {
-        fs.unlinkSync(tempHtmlPath);
-      } catch (error) {
-        console.error("Erreur lors de la suppression du fichier temporaire:", error);
-      }
-  
-      // Ouvrir le PDF automatiquement après la génération
-      const { shell } = require("electron");
-      shell.openPath(outputPath);
-  
-      return {
-        success: true,
-        filePath: outputPath,
-        fileName: path.basename(outputPath),
-      };
-    } catch (error) {
-      console.error("Erreur lors de la génération du PDF:", error);
-      return {
-        success: false,
-        error: error.message,
-      };
+
+      outputPath = result.filePath;
     }
-  });
+
+    // Déterminer le template à utiliser
+    let template;
+    if (type === "certificate") {
+      template = getCertificateTemplate();
+    } else if (type === "employee_contract") {
+      template = getEmployeeContractTemplate();
+    } else if (type === "client_contract") {
+      template = getClientContractTemplate();
+    } else {
+      template = getClientContractTemplate(); // Par défaut
+    }
+
+    // Ajouter la date actuelle et l'année aux données
+    const now = new Date();
+    const formattedDate = `${now.getDate().toString().padStart(2, "0")}/${(
+      now.getMonth() + 1
+    )
+      .toString()
+      .padStart(2, "0")}/${now.getFullYear()}`;
+
+    // Traiter les signatures et tampons en base64
+    let enhancedData = {
+      ...data,
+      generationDate: data.generationDate || formattedDate,
+      year: data.year || now.getFullYear(),
+    };
+
+    // Vérifier si les images sont bien formatées et présentes
+    console.log(
+      "Signature:",
+      enhancedData.signature
+        ? enhancedData.signature.substring(0, 30) + "..."
+        : "Aucune"
+    );
+    console.log(
+      "Tampon:",
+      enhancedData.stamp ? enhancedData.stamp.substring(0, 30) + "..." : "Aucun"
+    );
+
+    // Enregistrer d'helpers Handlebars personnalisés
+    handlebars.registerHelper("hasImage", function (value) {
+      return typeof value === "string" && value.startsWith("data:image");
+    });
+
+    // Compiler le template avec Handlebars
+    const compiledTemplate = handlebars.compile(template);
+    const html = compiledTemplate(enhancedData);
+
+    // Créer un fichier HTML temporaire pour faciliter le débogage
+    const tempHtmlPath = path.join(
+      app.getPath("temp"),
+      `temp_${Date.now()}.html`
+    );
+    fs.writeFileSync(tempHtmlPath, html, "utf8");
+    console.log(`Fichier HTML temporaire créé: ${tempHtmlPath}`);
+
+    // Lancer Puppeteer pour générer le PDF
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+
+    const page = await browser.newPage();
+
+    // Désactiver la limitation CSP et autoriser les images base64
+    await page.setBypassCSP(true);
+
+    // Charger le HTML à partir du fichier temporaire - meilleure approche pour les images base64
+    await page.goto(`file://${tempHtmlPath}`, {
+      waitUntil: "networkidle0",
+      timeout: 30000,
+    });
+
+    // Vérifier si les images sont présentes et chargées
+    const imagesCheck = await page.evaluate(() => {
+      const images = Array.from(document.querySelectorAll("img"));
+      return images.map((img) => ({
+        src: img.src.substring(0, 30) + "...",
+        complete: img.complete,
+        naturalWidth: img.naturalWidth,
+        class: img.className,
+      }));
+    });
+    console.log("Images détectées:", imagesCheck);
+
+    // Générer le PDF avec les options appropriées
+    await page.pdf({
+      path: outputPath,
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "10mm",
+        right: "10mm",
+        bottom: "10mm",
+        left: "10mm",
+      },
+    });
+
+    await browser.close();
+
+    // Supprimer le fichier HTML temporaire après utilisation
+    try {
+      fs.unlinkSync(tempHtmlPath);
+    } catch (error) {
+      console.error(
+        "Erreur lors de la suppression du fichier temporaire:",
+        error
+      );
+    }
+
+    // Ouvrir le PDF automatiquement après la génération
+    const { shell } = require("electron");
+    shell.openPath(outputPath);
+
+    return {
+      success: true,
+      filePath: outputPath,
+      fileName: path.basename(outputPath),
+    };
+  } catch (error) {
+    console.error("Erreur lors de la génération du PDF:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+});
 
 // Ajoutez ces nouvelles fonctions pour obtenir les templates HTML des PDFs
 function getEmployeeContractTemplate() {
@@ -1400,7 +1414,7 @@ function getClientContractTemplate() {
                         <div>
                             <div class="champ">
                                 <div class="label">NAF</div>
-                                <div class="valeur">{{client.naf}}</div>
+                                <div class="valeur">{{client.nafCode}}</div>
                             </div>
                             <div class="champ">
                                 <div class="label">Adresse</div>

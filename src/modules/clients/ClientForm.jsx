@@ -8,7 +8,10 @@ import {
   MapPinIcon,
   ArrowLeftIcon,
   PaperAirplaneIcon,
-  IdentificationIcon
+  IdentificationIcon,
+  PhoneIcon,
+  CalendarIcon,
+  CurrencyEuroIcon
 } from '@heroicons/react/24/outline';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -26,13 +29,24 @@ function ClientForm() {
     contactName: '',
     email: '',
     phone: '',
+    mobile: '',
     address: '',
+    addressNumber: '',
+    addressComplement: '',
     postalCode: '',
     city: '',
     country: 'France',
     siret: '',
     notes: '',
-    status: 'active'
+    status: 'active',
+    clientNumber: '',
+    billingAddress: '',
+    mainContact: '',
+    mainContactPhone: '',
+    creationDate: '',
+    basketFees: '',
+    travelFees: '',
+    nafCode: ''
   });
 
   // État pour le chargement
@@ -188,6 +202,29 @@ function ClientForm() {
       </div>
       
       <form onSubmit={handleSubmit}>
+        {/* Numéro Client */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <IdentificationIcon className="h-5 w-5 mr-2 text-blue-500" />
+            Identification client
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="clientNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                N° client
+              </label>
+              <input
+                type="text"
+                id="clientNumber"
+                name="clientNumber"
+                value={client.clientNumber}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+      
         {/* Informations de l'entreprise */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -197,7 +234,7 @@ function ClientForm() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
-                Nom de l'entreprise <span className="text-red-500">*</span>
+                Raison sociale <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -217,7 +254,7 @@ function ClientForm() {
             
             <div>
               <label htmlFor="siret" className="block text-sm font-medium text-gray-700 mb-1">
-                Numéro SIRET
+                SIRET
               </label>
               <input
                 type="text"
@@ -236,7 +273,21 @@ function ClientForm() {
               <p className="mt-1 text-xs text-gray-500">Format : 14 chiffres</p>
             </div>
             
-            <div className="md:col-span-2">
+            <div>
+              <label htmlFor="nafCode" className="block text-sm font-medium text-gray-700 mb-1">
+                Code NAF
+              </label>
+              <input
+                type="text"
+                id="nafCode"
+                name="nafCode"
+                value={client.nafCode}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
               <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
                 Statut
               </label>
@@ -251,6 +302,20 @@ function ClientForm() {
                 <option value="inactive">Inactif</option>
               </select>
             </div>
+            
+            <div>
+              <label htmlFor="creationDate" className="block text-sm font-medium text-gray-700 mb-1">
+                Date de création
+              </label>
+              <input
+                type="date"
+                id="creationDate"
+                name="creationDate"
+                value={client.creationDate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
           </div>
         </div>
         
@@ -262,14 +327,56 @@ function ClientForm() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-1">
-                Nom du contact
+              <label htmlFor="mainContact" className="block text-sm font-medium text-gray-700 mb-1">
+                Contact principal
               </label>
               <input
                 type="text"
-                id="contactName"
-                name="contactName"
-                value={client.contactName}
+                id="mainContact"
+                name="mainContact"
+                value={client.mainContact}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="mainContactPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                Tél contact principal
+              </label>
+              <input
+                type="tel"
+                id="mainContactPhone"
+                name="mainContactPhone"
+                value={client.mainContactPhone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                Téléphone
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={client.phone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
+                Mobile
+              </label>
+              <input
+                type="tel"
+                id="mobile"
+                name="mobile"
+                value={client.mobile}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -293,20 +400,6 @@ function ClientForm() {
                 <p className="mt-1 text-sm text-red-500">{errors.email}</p>
               )}
             </div>
-            
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                Téléphone
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={client.phone}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
         </div>
         
@@ -317,15 +410,43 @@ function ClientForm() {
             Adresse
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-3">
+            <div>
+              <label htmlFor="addressNumber" className="block text-sm font-medium text-gray-700 mb-1">
+                Adresse numéro voie
+              </label>
+              <input
+                type="text"
+                id="addressNumber"
+                name="addressNumber"
+                value={client.addressNumber}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div className="md:col-span-2">
               <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                Adresse
+                Rue
               </label>
               <input
                 type="text"
                 id="address"
                 name="address"
                 value={client.address}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div className="md:col-span-3">
+              <label htmlFor="addressComplement" className="block text-sm font-medium text-gray-700 mb-1">
+                Complément Adr.
+              </label>
+              <input
+                type="text"
+                id="addressComplement"
+                name="addressComplement"
+                value={client.addressComplement}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -368,6 +489,59 @@ function ClientForm() {
                 id="country"
                 name="country"
                 value={client.country}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="md:col-span-3">
+              <label htmlFor="billingAddress" className="block text-sm font-medium text-gray-700 mb-1">
+                Adresse facturation
+              </label>
+              <input
+                type="text"
+                id="billingAddress"
+                name="billingAddress"
+                value={client.billingAddress}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+        </div>
+        
+        {/* Tarifs */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <CurrencyEuroIcon className="h-5 w-5 mr-2 text-blue-500" />
+            Tarifs
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="basketFees" className="block text-sm font-medium text-gray-700 mb-1">
+                Frais de panier/j
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                id="basketFees"
+                name="basketFees"
+                value={client.basketFees}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="travelFees" className="block text-sm font-medium text-gray-700 mb-1">
+                Frais déplacement/j
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                id="travelFees"
+                name="travelFees"
+                value={client.travelFees}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
