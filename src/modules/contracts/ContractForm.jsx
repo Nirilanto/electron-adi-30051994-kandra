@@ -1053,7 +1053,7 @@ function ContractForm() {
               )}
             </div>
 
-            <div>
+            {/* <div>
               <label
                 htmlFor="stampId"
                 className="block text-sm font-medium text-gray-700 mb-1"
@@ -1090,7 +1090,7 @@ function ContractForm() {
                   />
                 </div>
               )}
-            </div>
+            </div> */}
           </div>
         </div>
         {/* Boutons d'action */}

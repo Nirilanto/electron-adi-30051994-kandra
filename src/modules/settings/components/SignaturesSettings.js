@@ -140,7 +140,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                 required
               >
                 <option value="signature">Signature</option>
-                <option value="stamp">Tampon</option>
+                {/* <option value="stamp">Tampon</option> */}
               </select>
             </div>
           </div>
