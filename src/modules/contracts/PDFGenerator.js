@@ -17,6 +17,7 @@ class PDFGenerator {
     contract,
     employee,
     client,
+    company,
     customPath = null
   ) {
     try {
@@ -30,7 +31,12 @@ class PDFGenerator {
       console.log("Préparation du PDF pour le contrat employé:", contract.id);
 
       // Préparer les données du contrat pour le PDF
-      const contractData = this.prepareContractData(contract, employee, client);
+      const contractData = this.prepareContractData(
+        contract,
+        employee,
+        client,
+        company
+      );
 
       // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
       const defaultFileName = `contrat_consultant_${
@@ -236,8 +242,12 @@ class PDFGenerator {
       });
     };
 
-    const idCardExpiryDateVal =  employee?.idCardExpiryDate ? formatDate(employee?.idCardExpiryDate ) :'';
-    const idCardIssueDateVal =  employee?.idCardIssueDate ? formatDate(employee?.idCardIssueDate ) :'';
+    const idCardExpiryDateVal = employee?.idCardExpiryDate
+      ? formatDate(employee?.idCardExpiryDate)
+      : "";
+    const idCardIssueDateVal = employee?.idCardIssueDate
+      ? formatDate(employee?.idCardIssueDate)
+      : "";
 
     const workingHoursSlots = parseWorkingHours(
       contract.workingHours || contract.working_hours
@@ -328,7 +338,7 @@ class PDFGenerator {
         city: client?.city || "",
         contactName: client?.contactName || client?.contact_name || "",
         location: contract.location || "IDF",
-        nafCode: client?.nafCode
+        nafCode: client?.nafCode,
       },
       company,
 
@@ -1480,6 +1490,7 @@ class PDFGenerator {
     contract,
     employee,
     client,
+    company,
     customPath = null
   ) {
     try {
@@ -1491,7 +1502,12 @@ class PDFGenerator {
       console.log("Préparation du PDF pour le certificat:", contract.id);
 
       // Préparer les données du contrat pour le PDF
-      const contractData = this.prepareContractData(contract, employee, client);
+      const contractData = this.prepareContractData(
+        contract,
+        employee,
+        client,
+        company
+      );
 
       // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
       const defaultFileName = `certificat_${

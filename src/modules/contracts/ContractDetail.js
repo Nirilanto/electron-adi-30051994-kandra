@@ -74,6 +74,11 @@ function ContractDetail() {
   const handleGenerateEmployeePDF = async () => {
     try {
       setIsPdfGenerating(prev => ({ ...prev, employee: true }));
+          // S'assurer que toutes les données nécessaires sont disponibles
+    if (!contract.employee || !contract.client) {
+      toast.warning('Données d\'employé ou de client manquantes pour générer le PDF');
+      return;
+    }
       const result = await ContractService.generateEmployeeContractPDF(contract);
       
       if (result.success) {

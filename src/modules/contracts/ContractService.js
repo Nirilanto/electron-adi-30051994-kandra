@@ -118,6 +118,7 @@ class ContractService {
     try {
       // Obtenir les données complètes
       const contract = contractData;
+      const companySettings = await this.settings.getCompanySettings();
       const employee =
         contract.employee ||
         (await this.db.getEmployeeById(contract.employeeId));
@@ -137,6 +138,16 @@ class ContractService {
         employee,
         client,
         {
+          name: companySettings.name || "VOTRE ENTREPRISE",
+          address: companySettings.address || "",
+          zipCode: companySettings.zipCode || "",
+          city: companySettings.city || "",
+          siret: companySettings.siret || "",
+          rcs: companySettings.rcs || "",
+          ape: companySettings.ape || "",
+          phone: companySettings.phone || "",
+          email: companySettings.email || "",
+          logo: companySettings.logo || null,
           signature: signature ? signature.imageData : null,
           stamp: stamp ? stamp.imageData : null,
           securityMeasures: securityMeasures,
