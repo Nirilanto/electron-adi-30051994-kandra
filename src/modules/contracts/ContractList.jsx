@@ -55,6 +55,7 @@ function ContractList() {
       const searchLower = searchTerm.toLowerCase();
       result = result.filter(
         (contract) =>
+          searchLower === "" ||
           (contract.title &&
             contract.title.toLowerCase().includes(searchLower)) ||
           (contract.description &&
@@ -171,7 +172,7 @@ function ContractList() {
     try {
       // Récupérer le contrat à dupliquer
       const contractToDuplicate = await ContractService.getContractById(id);
-      
+
       if (!contractToDuplicate) {
         toast.error("Contrat introuvable");
         return;
@@ -189,13 +190,15 @@ function ContractList() {
       };
 
       // Sauvegarder le contrat dupliqué
-      const savedContract = await ContractService.saveContract(duplicatedContract);
-      
+      const savedContract = await ContractService.saveContract(
+        duplicatedContract
+      );
+
       // Mettre à jour la liste des contrats
       setContracts((prevContracts) => [...prevContracts, savedContract]);
-      
+
       toast.success("Contrat dupliqué avec succès");
-      
+
       // Option: Rediriger vers le nouveau contrat
       // navigate(`/contracts/${savedContract.id}`);
     } catch (error) {

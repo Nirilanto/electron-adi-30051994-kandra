@@ -844,7 +844,7 @@ function ContractForm() {
                 <option value="">Sélectionner...</option>
                 {motifs.map((motif) => (
                   <option key={motif.id} value={motif.id}>
-                    {motif.title}
+                    {motif.label}
                   </option>
                 ))}
               </select>
@@ -908,7 +908,7 @@ function ContractForm() {
                 <option value="">Sélectionner...</option>
                 {transports.map((transport) => (
                   <option key={transport.id} value={transport.id}>
-                    {transport.title}
+                    {transport.label}
                   </option>
                 ))}
               </select>
@@ -931,7 +931,7 @@ function ContractForm() {
                 <option value="">Sélectionner...</option>
                 {accessMethods.map((access) => (
                   <option key={access.id} value={access.id}>
-                    {access.title}
+                    {access.label}
                   </option>
                 ))}
               </select>
