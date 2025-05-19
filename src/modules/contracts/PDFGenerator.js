@@ -236,6 +236,9 @@ class PDFGenerator {
       });
     };
 
+    const idCardExpiryDateVal =  employee?.idCardExpiryDate ? formatDate(employee?.idCardExpiryDate ) :'';
+    const idCardIssueDateVal =  employee?.idCardIssueDate ? formatDate(employee?.idCardIssueDate ) :'';
+
     const workingHoursSlots = parseWorkingHours(
       contract.workingHours || contract.working_hours
     );
@@ -267,6 +270,7 @@ class PDFGenerator {
       )}`,
       startDate: formatDate(contract.startDate),
       endDate: formatDate(contract.endDate),
+      transport: contract.transport,
       duration: duration,
       description: contract.description || "",
       motif: contract.motif,
@@ -277,7 +281,6 @@ class PDFGenerator {
       weeklyCollectiveDuration: contract.weeklyCollectiveAvgDuration,
       nonWorkingPeriods: contract.nonWorkingPeriods,
       weeklyMissionDuration: contract.weeklyMissionDuration,
-      transport: contract.transport,
       location: contract.location,
       securityMeasures: contract.securityMeasuresList,
       // Signature et tampon - S'assurer qu'ils sont bien au format base64
@@ -295,6 +298,12 @@ class PDFGenerator {
       employee: {
         fullName: employeeFullName,
         firstName: employeeFirstName,
+        idCardIssueDate: idCardIssueDateVal,
+        idCardExpiryDate: idCardExpiryDateVal,
+        socialSecurityNumber: employee?.socialSecurityNumber || "",
+        skills: employee?.skills || "",
+        idCardType: employee?.idCardType,
+        idCardNumber: employee?.idCardNumber,
         lastName: employeeLastName,
         nationality: "FRANÇAISE",
         address: employee?.address || "",

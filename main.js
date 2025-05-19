@@ -917,7 +917,6 @@ function getEmployeeContractTemplate() {
           <div class="signatures">
           zezezez
    <div class="signature-box">
-   zaeaea
         <div class="label" style="color: #1a1a1a; font-weight: 700; font-size: 9px;">L'ENTREPRISE DE TRAVAIL TEMPORAIRE</div>
         <div class="zone-signature">
           {{#if (hasImage signature)}}
@@ -950,7 +949,7 @@ function getEmployeeContractTemplate() {
               </div>
               <div class="date-item">
                   <div class="date-label">LE</div>
-                  <div class="date-value">{{generationDate}}</div>
+                  <div class="date-value">{{startDate}}</div>
               </div>
           </div>
 
@@ -1385,11 +1384,11 @@ function getClientContractTemplate() {
                             </div>
                             <div class="champ">
                                 <div class="label">Qualification</div>
-                                <div class="valeur valeur-importante">{{employee.qualification}}</div>
+                                <div class="valeur valeur-importante">{{employee.skills}}</div>
                             </div>
                             <div class="champ">
                                 <div class="label">Nature et N° du Titre Séjour</div>
-                                <div class="valeur">{{employee.idType}} {{employee.idNumber}} {{employee.idIssueDate}} {{employee.idExpiryDate}}</div>
+                                <div class="valeur">{{employee.idCardType}} {{employee.idCardNumber}} {{employee.idCardIssueDate}} {{employee.idCardExpiryDate}}</div>
                             </div>
                         </div>
                     </div>
@@ -1519,7 +1518,7 @@ function getClientContractTemplate() {
                                 
                                 <div class="champ">
                                     <div class="label">Moyen d'Accès</div>
-                                    <div class="valeur valeur-importante">{{accessMethod}}</div>
+                                    <div class="valeur valeur-importante">{{transport}}</div>
                                 </div>
                             </div>
                         </div>
@@ -1573,15 +1572,15 @@ function getClientContractTemplate() {
                 </div>
             </div>
             <!-- Date et lieu centrés -->
-            <div class="fait-a">FAIT A {{location}} LE {{generationDate}}</div>
+            <div class="fait-a">FAIT A {{location}} LE {{startDate}}</div>
     
             <!-- Signatures avec images si disponibles -->
             <div class="signature-section">
                 <div class="signature-box">
                     <div class="label" style="color: #1a1a1a; font-weight: 700; font-size: 9px;">L'ENTREPRISE DE TRAVAIL TEMPORAIRE</div>
-                    <div class="zone-signature">
+                    <div class="">
                     {{#if (hasImage signature)}}
-                        <img src="{{signature}}" alt="Signature ETT" class="signature-image" style="max-width: 100%; max-height: 50px; display: block; margin: 5px auto;">
+                        <img src="{{signature}}" alt="Signature ETT" class="signature-image" style="max-width: 100%; max-height: 160px; display: block; margin: 5px auto;">
                     {{/if}}
                     </div>
                 </div>
@@ -1592,7 +1591,7 @@ function getClientContractTemplate() {
                     </div>
                     <div class="zone-signature">
                     {{#if (hasImage stamp)}}
-                        <img src="{{stamp}}" alt="Tampon Client" class="stamp-image" style="max-width: 70%; max-height: 50px; display: block; margin: 5px auto; opacity: 0.8;">
+                        <img src="{{stamp}}" alt="Tampon Client" class="stamp-image" style="max-width: 100%; max-height: 200px; display: block; margin: 5px auto; opacity: 0.8;">
                     {{/if}}
                     </div>
                 </div>
