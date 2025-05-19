@@ -9,6 +9,7 @@ import {
   EyeIcon,
   FunnelIcon,
   ArrowsUpDownIcon,
+  DocumentDuplicateIcon, // Ajout de l'icône pour dupliquer
 } from "@heroicons/react/24/outline";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -159,6 +160,47 @@ function ContractList() {
         console.error("Erreur lors de la suppression du contrat:", error);
         toast.error("Erreur lors de la suppression du contrat");
       }
+    }
+  };
+
+  // Gestionnaire de duplication
+  const handleDuplicate = async (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      // Récupérer le contrat à dupliquer
+      const contractToDuplicate = await ContractService.getContractById(id);
+      
+      if (!contractToDuplicate) {
+        toast.error("Contrat introuvable");
+        return;
+      }
+
+      // Créer une copie du contrat sans l'id pour qu'un nouvel id soit généré
+      // et sans le numéro de contrat pour qu'un nouveau numéro soit généré
+      const duplicatedContract = {
+        ...contractToDuplicate,
+        id: null, // Un nouvel ID sera généré lors de la sauvegarde
+        contractNumber: null, // Un nouveau numéro sera généré
+        title: `${contractToDuplicate.title || "Sans titre"} (copie)`,
+        createdAt: null,
+        updatedAt: null,
+      };
+
+      // Sauvegarder le contrat dupliqué
+      const savedContract = await ContractService.saveContract(duplicatedContract);
+      
+      // Mettre à jour la liste des contrats
+      setContracts((prevContracts) => [...prevContracts, savedContract]);
+      
+      toast.success("Contrat dupliqué avec succès");
+      
+      // Option: Rediriger vers le nouveau contrat
+      // navigate(`/contracts/${savedContract.id}`);
+    } catch (error) {
+      console.error("Erreur lors de la duplication du contrat:", error);
+      toast.error("Erreur lors de la duplication du contrat");
     }
   };
 
@@ -457,6 +499,14 @@ function ContractList() {
                         </Link> */}
                         <button
                           type="button"
+                          onClick={(e) => handleDuplicate(contract.id, e)}
+                          className="text-green-600 hover:text-green-800 p-1"
+                          title="Dupliquer"
+                        >
+                          <DocumentDuplicateIcon className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={(e) => handleDelete(contract.id, e)}
                           className="text-red-600 hover:text-red-800 p-1"
                           title="Supprimer"
@@ -494,32 +544,6 @@ function ContractList() {
           </div>
         </div>
       )}
-
-      {/* Pagination (option future) */}
-      {/* <div className="mt-6 flex justify-between items-center">
-        <p className="text-sm text-gray-700">
-          Affichage de <span className="font-medium">1</span> à <span className="font-medium">{filteredContracts.length}</span> sur <span className="font-medium">{contracts.length}</span> résultats
-        </p>
-        <nav className="relative z-0 inline-flex shadow-sm -space-x-px" aria-label="Pagination">
-          <button
-            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-          >
-            <span className="sr-only">Précédent</span>
-            &laquo;
-          </button>
-          <button
-            className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            1
-          </button>
-          <button
-            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-          >
-            <span className="sr-only">Suivant</span>
-            &raquo;
-          </button>
-        </nav>
-      </div> */}
 
       <ToastContainer position="bottom-right" />
     </div>
