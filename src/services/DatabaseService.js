@@ -316,7 +316,7 @@ class DatabaseService {
       }
 
       const storeKey = `${this.storePrefix}${entity}`;
-      let items = JSON.parse(localStorage.getItem(storeKey) || "[]");
+      let items = await JSON.parse(localStorage.getItem(storeKey) || "[]");
 
       // Appliquer les filtres
       if (Object.keys(filters).length > 0) {
