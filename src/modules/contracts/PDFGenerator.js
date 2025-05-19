@@ -300,6 +300,7 @@ class PDFGenerator {
         firstName: employeeFirstName,
         idCardIssueDate: idCardIssueDateVal,
         idCardExpiryDate: idCardExpiryDateVal,
+        addressComplement: employee?.addressComplement || "",
         socialSecurityNumber: employee?.socialSecurityNumber || "",
         skills: employee?.skills || "",
         idCardType: employee?.idCardType,
