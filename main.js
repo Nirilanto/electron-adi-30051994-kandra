@@ -28,7 +28,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    icon: path.join(__dirname, "assets", "icon.ico"),
+    icon: path.join(__dirname, "assets", "favicon.ico"),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -36,6 +36,8 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
     },
   });
+
+  mainWindow.setMenuBarVisibility(false);
 
   // Charger l'URL de l'app.
   mainWindow.loadURL(

@@ -114,9 +114,9 @@ const Sidebar = () => {
       </nav>
       
       {/* Version */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 text-center text-xs text-gray-500">
+      {/* <div className="absolute bottom-0 left-0 right-0 p-4 text-center text-xs text-gray-500">
         Version 1.0.0
-      </div>
+      </div> */}
     </div>
   );
 };
