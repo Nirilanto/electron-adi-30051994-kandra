@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contrat de Mission Temporaire</title>
+    <style>
+      /* Réinitialisation et styles de base */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Helvetica Neue", Arial, sans-serif;
+        font-size: 10px;
+        line-height: 1.3;
+        color: #333;
+        background-color: #f5f5f5;
+        font-weight: 300;
+      }
+
+      /* Définition format A4 avec espacement réduit en haut */
+      .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 3mm 8mm 8mm 8mm;
+        margin: 0 auto;
+        background-color: white;
+        position: relative;
+      }
+
+      /* Header restructuré selon demande */
+      .entete {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+      }
+
+      .entete-gauche {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .entete-droite {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+      }
+
+      .logo {
+        font-size: 26px;
+        font-weight: 700;
+        color: #1a1a1a;
+        letter-spacing: 1.5px;
+        margin-bottom: 4px;
+      }
+
+      .infos-societe {
+        font-size: 9px;
+        color: #777;
+        letter-spacing: 0.2px;
+        margin-bottom: 2px;
+      }
+
+      .titre-contrat {
+        font-weight: 800;
+        font-size: 13px;
+        color: #1a1a1a;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        text-align: right;
+      }
+
+      .contrat-dates {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        font-size: 10px;
+        color: #333;
+        margin-bottom: 5px;
+        font-weight: 600;
+      }
+
+      .date-item {
+        margin-left: 10px;
+      }
+
+      .numero-contrat {
+        font-weight: 800;
+        font-size: 13px;
+        color: #1a1a1a;
+        text-align: right;
+        border: 1px solid #1a1a1a;
+        padding: 2px 8px;
+        background-color: #f3f3f3;
+        border-radius: 2px;
+      }
+
+      /* Section - ajusté avec moins d'espacement */
+      .section {
+        margin-bottom: 5px;
+        border: 1px solid #e0e0e0;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .titre-section {
+        background-color: #f0f0f0;
+        padding: 4px 10px;
+        font-weight: 600;
+        font-size: 10px;
+        color: #333;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        border-bottom: 1px solid #cccccc;
+      }
+
+      .contenu-section {
+        padding: 5px 10px;
+        background-color: #ffffff;
+      }
+
+      /* Grilles et mise en page - espacement réduit */
+      .grille {
+        display: grid;
+        grid-template-columns: 50% 50%;
+        gap: 5px;
+      }
+
+      .grille-3-cols {
+        display: grid;
+        grid-template-columns: 33.3% 33.3% 33.3%;
+        gap: 5px;
+      }
+
+      .champ {
+        margin-bottom: 5px;
+      }
+
+      .label {
+        font-weight: 600;
+        font-size: 9px;
+        color: #777;
+        margin-bottom: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .label-petit {
+        font-weight: 400;
+        font-size: 9px;
+        color: #777;
+        font-style: italic;
+        margin-top: 2px;
+      }
+
+      .valeur {
+        font-size: 10px;
+        color: #333;
+        font-weight: 400;
+      }
+
+      .valeur-importante {
+        font-weight: 600;
+        color: #1a1a1a;
+      }
+
+      /* Format pour le titre de séjour */
+      .titre-sejour {
+        display: grid;
+        grid-template-columns: 50% 50%;
+        gap: 4px;
+        font-size: 10px;
+      }
+
+      .titre-sejour-ligne {
+        margin-bottom: 2px;
+      }
+
+      /* Style pour labels et valeurs sur la même ligne */
+      .label-inline {
+        display: inline-block;
+        margin-right: 5px;
+      }
+
+      .valeur-inline {
+        display: inline-block;
+      }
+
+      /* Horaires */
+      .horaires {
+        display: grid;
+        grid-template-columns: 10% 30% 10% 30%;
+        gap: 2px;
+        align-items: center;
+        margin-bottom: 4px;
+        background-color: #f7f7f7;
+        padding: 4px;
+        border-radius: 2px;
+      }
+
+      /* Checkbox moderne et minimaliste */
+      .checkbox {
+        width: 11px;
+        height: 11px;
+        border: 1px solid #999;
+        border-radius: 2px;
+        display: inline-block;
+        position: relative;
+        vertical-align: middle;
+        margin-right: 4px;
+        background-color: #f7f7f7;
+      }
+
+      .checkbox.checked {
+        background-color: #333;
+        border-color: #333;
+      }
+
+      .checkbox.checked:after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        width: 3px;
+        height: 6px;
+        border: solid white;
+        border-width: 0 2px 2px 0;
+        transform: rotate(45deg);
+      }
+
+      /* Style pour les options avec checkbox - sur la même ligne */
+      .options-container {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .option-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+      }
+
+      .option-label {
+        margin-left: 5px;
+        font-size: 10px;
+      }
+
+      /* Liste modernisée */
+      .liste-moderne {
+        list-style: none;
+      }
+
+      .liste-moderne li {
+        position: relative;
+        padding-left: 10px;
+        margin-bottom: 2px;
+        line-height: 1.4;
+      }
+
+      .liste-moderne li:before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 4px;
+        width: 4px;
+        height: 4px;
+        background-color: #555;
+        border-radius: 50%;
+      }
+
+      /* Signature - modifié pour alignement gauche/droite */
+      .signature-section {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 3px;
+        width: 100%;
+      }
+
+      .signature-box-left {
+        width: 38%;
+        padding: 3px 0;
+        text-align: left;
+      }
+
+      .signature-box-right {
+        width: 35%;
+        padding: 3px 0;
+        text-align: right;
+      }
+
+      .fait-a {
+        text-align: center;
+        font-weight: 500;
+        font-size: 11px;
+        margin: 25px 0 5px 0;
+      }
+
+      /* Company name plus compact */
+      .company-name-signature {
+        font-size: 12px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin: 2px 0;
+      }
+
+      /* Images de signature et tampon */
+      .signature-image {
+        max-width: 100%;
+        background-color: red;
+        max-height: 184px; /* Augmenté de 150px à 180px */
+        display: block;
+        margin: 5px 0;
+      }
+
+      .petit-texte {
+        font-size: 9px;
+        color: #242222;
+        line-height: 1.3;
+      }
+
+      /* Législation plus compacte */
+      .legislation {
+        font-size: 9px;
+        line-height: 1.3;
+        color: #1a1a1a;
+      }
+
+      .legislation-item {
+        position: relative;
+        padding-left: 10px;
+        margin-bottom: 2px;
+      }
+
+      .legislation-item:before {
+        content: "-";
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      /* Pied de page */
+      .page-number {
+        position: absolute;
+        bottom: 7mm;
+        right: 10mm;
+        font-size: 9px;
+        color: #999;
+        font-weight: 300;
+      }
+
+      /* Divider plus compact */
+      .divider {
+        height: 1px;
+        background-color: #e0e0e0;
+        margin: 3px 0;
+      }
+
+      .tag {
+        display: inline-block;
+        background-color: #f3f3f3;
+        color: #1a1a1a;
+        padding: 2px 6px;
+        border-radius: 2px;
+        font-size: 9px;
+        font-weight: 500;
+        margin-right: 3px;
+        border-left: 2px solid #777;
+      }
+
+      /* Notes de bas de section */
+      .note {
+        font-size: 9px;
+        color: #3b3939;
+        font-style: italic;
+        margin-top: 6px;
+        padding-top: 4px;
+        border-top: 1px dotted #e0e0e0;
+      }
+
+      /* Précision sur le poste - équilibrage des colonnes */
+      .colonne-gauche,
+      .colonne-droite {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 100%;
+      }
+
+      /* Styles pour la page 2 - Conditions Générales */
+      .page-2 {
+        width: 210mm;
+        height: 297mm;
+        padding: 10mm;
+        margin: 0 auto;
+        background-color: white;
+        position: relative;
+        overflow: hidden;
+        page-break-before: always;
+      }
+
+      .entete-page-2 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #e0e0e0;
+        padding-bottom: 5px;
+      }
+
+      .titre-page-2 {
+        font-weight: 600;
+        font-size: 10px;
+        color: #1a1a1a;
+        text-align: center;
+      }
+
+      .contenu-page-2 {
+        column-count: 2;
+        column-gap: 15px;
+        text-align: justify;
+        font-size: 7px;
+        line-height: 1.25;
+        color: #444;
+      }
+
+      .section-page-2 {
+        break-inside: avoid-column;
+        margin-bottom: 6px;
+      }
+
+      .titre-section-page-2 {
+        font-weight: 700;
+        font-size: 8px;
+        color: #1a1a1a;
+        margin-bottom: 3px;
+      }
+
+      .paragraphe {
+        margin-bottom: 4px;
+        text-align: justify;
+      }
+
+      .liste {
+        padding-left: 8px;
+        margin-bottom: 4px;
+      }
+
+      .liste-item {
+        position: relative;
+        margin-bottom: 2px;
+        padding-left: 6px;
+      }
+
+      .liste-item:before {
+        content: "·";
+        position: absolute;
+        left: 0;
+        top: -1px;
+      }
+
+      .colonne-droite-force {
+        break-before: column;
+      }
+
+      /* Impression */
+      @media print {
+        body {
+          background: none;
+        }
+        .page,
+        .page-2 {
+          margin: 0;
+          box-shadow: none;
+        }
+        .page {
+          page-break-after: always;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- En-tête restructuré selon demande -->
+      <div class="entete">
+        <div class="entete-gauche">
+          <div class="logo">{{company.name}}</div>
+          <div class="infos-societe">
+            {{company.address}} {{company.zipCode}} {{company.city}}
+          </div>
+          <div class="infos-societe">
+            SIRET: {{company.siret}} - APE: {{company.ape}}
+          </div>
+          <div class="infos-societe">
+            {{company.email}} - Tél: {{company.phone}}
+          </div>
+        </div>
+        <div class="entete-droite">
+          <div class="titre-contrat">CONTRAT DE MISSION TEMPORAIRE</div>
+          <div class="contrat-dates">
+            <div class="date-item">Du: {{startDate}}</div>
+            <div class="date-item">Au: {{endDate}}</div>
+          </div>
+          <div class="numero-contrat">N° {{reference}}</div>
+        </div>
+      </div>
+
+      <!-- ENTREPRISE UTILISATRICE -->
+      <div class="section">
+        <div class="titre-section">ENTREPRISE UTILISATRICE</div>
+        <div class="contenu-section">
+          <div class="grille">
+            <div>
+              <div class="champ">
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  RAISON SOCIALE:
+                </div>
+                <div
+                  class="valeur valeur-importante"
+                  style="display: inline-block"
+                >
+                  {{client.companyName}}
+                </div>
+              </div>
+              <div class="champ">
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  SIRET:
+                </div>
+                <div class="valeur" style="display: inline-block">
+                  {{client.siret}}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="champ">
+                <div class="label">Adresse</div>
+                <div class="valeur">
+                  {{client.address}}<br />
+                  {{client.postalCode}} {{client.city}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SALARIÉ TEMPORAIRE -->
+      <div class="section">
+        <div class="titre-section">SALARIÉ TEMPORAIRE</div>
+        <div class="contenu-section">
+          <div class="grille">
+            <div>
+              <div class="champ">
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  Nom, Prénom:
+                </div>
+                <div
+                  class="valeur valeur-importante"
+                  style="display: inline-block"
+                >
+                  {{employee.lastName}} {{employee.firstName}}
+                </div>
+              </div>
+              <div class="champ">
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  Né(e) le:
+                </div>
+                <div
+                  class="valeur"
+                  style="display: inline-block; margin-right: 8px"
+                >
+                  {{employee.birthDate}}
+                </div>
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  N° S.S.:
+                </div>
+                <div class="valeur" style="display: inline-block">
+                  {{employee.socialSecurityNumber}}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div class="champ">
+                <div
+                  class="label"
+                  style="display: inline-block; margin-right: 5px"
+                >
+                  Nationalité:
+                </div>
+                <div
+                  class="valeur valeur-importante"
+                  style="display: inline-block"
+                >
+                  {{employee.nationality}}
+                </div>
+              </div>
+              <div class="champ">
+                <div class="label">Adresse</div>
+                <div class="valeur">
+                  {{employee.address}}<br />
+                  {{employee.postalCode}} {{employee.city}}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="champ">
+            <div class="label">Nature et N° du Titre Séjour</div>
+            <div class="titre-sejour">
+              <div class="titre-sejour-ligne">
+                <strong>Nature:</strong> {{employee.idCardType}}
+              </div>
+              <div class="titre-sejour-ligne">
+                <strong>N°:</strong> {{employee.idCardNumber}}
+              </div>
+              <div class="titre-sejour-ligne">
+                <strong>Date délivrance:</strong> {{employee.idCardIssueDate}}
+              </div>
+              <div class="titre-sejour-ligne">
+                <strong>Date expiration:</strong> {{employee.idCardExpiryDate}}
+              </div>
+            </div>
+          </div>
+          <div class="champ">
+            <div class="label" style="display: inline-block; margin-right: 5px">
+              Nature et N° du Titre Professionnel
+            </div>
+            <div class="valeur valeur-importante" style="display: inline-block">
+              {{employee.qualification}}
+            </div>
+          </div>
+          <div class="champ">
+            <div class="label" style="display: inline-block; margin-right: 5px">
+              QUALIFICATION CONTRACTUELLE CONVENUE
+            </div>
+            <div class="valeur valeur-importante" style="display: inline-block">
+              {{employee.qualification}}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PRÉCISION SUR LE POSTE / FACTURATION -->
+      <div class="section">
+        <div
+          class="titre-section"
+          style="padding-top: 6px; padding-bottom: 6px"
+        >
+          PRÉCISION SUR LE POSTE / FACTURATION
+        </div>
+        <div class="contenu-section">
+          <div class="grille" style="align-items: stretch">
+            <div class="colonne-gauche">
+              <div>
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    DURÉE DE LA MISSION
+                  </div>
+                  <div
+                    class="valeur valeur-importante"
+                    style="display: inline-block"
+                  >
+                    Du {{startDate}} Au {{endDate}}
+                  </div>
+                </div>
+                <div class="champ">
+                  <div class="label">Période(s) Non Travaillée(s)</div>
+                  <div class="options-container">
+                    <div class="option-row">
+                      <div class="checkbox checked"></div>
+                      <div class="option-label">TERME PRECIS</div>
+                    </div>
+                    <div class="option-row">
+                      <div class="checkbox"></div>
+                      <div class="option-label">DUREE MINIMALE</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="divider"></div>
+
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    LIEU DE MISSION
+                  </div>
+                  <div
+                    class="valeur valeur-importante"
+                    style="display: inline-block"
+                  >
+                    {{location}}
+                  </div>
+                </div>
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    MOYEN D'ACCES
+                  </div>
+                  <div class="valeur" style="display: inline-block">
+                    {{transport}}
+                  </div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    SALAIRE DE REFERENCE /H:
+                  </div>
+                  <div
+                    class="valeur valeur-importante"
+                    style="display: inline-block"
+                  >
+                    {{hourlyRate}}
+                  </div>
+                </div>
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    Frais de panier /j :
+                  </div>
+                  <div class="valeur" style="display: inline-block">
+                    {{client.basketFees}} EUR
+                  </div>
+                </div>
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    Indemnité depl./j :
+                  </div>
+                  <div class="valeur" style="display: inline-block">
+                    {{client.travelFees}} EUR
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="colonne-droite">
+              <div>
+                <div class="champ">
+                  <div class="label">Horaire de la Mission</div>
+                  {{#each workingHoursSlots}}
+                  <div class="horaires">
+                    <div>De</div>
+                    <div>{{this.start}}</div>
+                    <div>À</div>
+                    <div>{{this.end}}</div>
+                  </div>
+                  {{/each}}
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    DUREE HEBDOMADAIRE DE LA MISSION
+                  </div>
+                  <div
+                    class="valeur valeur-importante"
+                    style="display: inline-block"
+                  >
+                    {{weeklyHours}} HEURES
+                  </div>
+                </div>
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    DUREE COLLECTIVE MOYENNE HEBDOMADAIRE
+                  </div>
+                  <div
+                    class="valeu valeur-importante"
+                    style="display: inline-block"
+                  >
+                    {{weeklyCollectiveAvgDuration}} HEURES
+                  </div>
+                </div>
+                <div class="champ">
+                  <div class="label">
+                    ORGANISATION PARTICULIERE DU TEMPS DE TRAVAIL :
+                  </div>
+                  <div class="valeur">{{workTimeOrganization}}</div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="champ">
+                  <div
+                    class="label"
+                    style="display: inline-block; margin-right: 5px"
+                  >
+                    I.F.M. :
+                  </div>
+                  <div class="valeur" style="display: inline-block">10.00%</div>
+                  <div
+                    class="label"
+                    style="
+                      display: inline-block;
+                      margin-left: 10px;
+                      margin-right: 5px;
+                    "
+                  >
+                    I.C.C.P :
+                  </div>
+                  <div class="valeur" style="display: inline-block">10.00%</div>
+                </div>
+                <div class="champ">
+                  <div class="label">
+                    Modalités de versement de la paie et des accomptes
+                  </div>
+                  <div class="valeur">{{paymentMethod}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="champ">
+            <div class="label">
+              CARACTERISTIQUES PARTICULIERES DU POSTE DE TRAVAIL
+            </div>
+            <div class="label-petit">
+              (s'il y a lieu nature des protections individuelles de sécurité et
+              surveillance médiale spéciale)
+            </div>
+            <div class="valeur">
+              <ul class="liste-moderne">
+                {{#each securityMeasures}}
+                <li>{{this}}</li>
+                {{/each}}
+              </ul>
+            </div>
+          </div>
+
+          <div class="note" style="border-top: none; margin-top: 3px">
+            *Le terme de la mission prévu dans le contrat initiale ou dans
+            l'avenant de prolongations peut être aménagé dans les conditions
+            stipulées aux articles L.1251-30 CT et L.1251-31 CT
+          </div>
+        </div>
+      </div>
+
+      <!-- MOTIF -->
+      <div class="section">
+        <div class="contenu-section">
+          <div class="grille-3-cols">
+            <div>
+              <div class="label">MOTIF</div>
+              <div class="valeur">
+                <span class="tag">ACCROISSEMENT TEMP. D'ACTIVITE</span>
+              </div>
+            </div>
+            <div>
+              <div class="label">MISSION</div>
+              <div class="valeur"></div>
+            </div>
+            <div>
+              <div class="label">JUSTIFICATIF (S) DU RECOURS</div>
+              <div class="valeur">RENFORT DE PERSONNEL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LÉGISLATION -->
+      <div class="section">
+        <div class="titre-section">LEGISLATION</div>
+        <div class="contenu-section">
+          <div class="legislation">
+            <div class="legislation-item">
+              L'embauche par l'utilisateur à l'issue de la mission n'est pas
+              interdite, sous réserve des interdictions fixées aux articles
+              L.1251-36 du CT
+            </div>
+            <div class="legislation-item">
+              Au cas où la mission s'effectue hors du territoire métropolitain
+              le rapatriement du salarié est à la charge de l'ETT, sauf rupture
+              anticipée du fait du salarié.
+            </div>
+            <div class="legislation-item">
+              Il peut vous être délivré à votre demande une attestation
+              employeur en fin de mission.
+            </div>
+            <div class="legislation-item">
+              Les informations concernant le motif, la durée, la rémunération et
+              les caractéristiques particulières du poste de travail sont
+              données sous la responsabilité de l'utilisateur, seul habilité à
+              les justifier, sans qu'il y ait lieu à mise en demeure préalable
+              de la part de l'ETT.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date et lieu centrés -->
+      <div class="fait-a">FAIT A PARIS LE {{startDate}}</div>
+
+      <!-- Signatures alignées gauche et droite avec nom de l'entreprise -->
+      <div class="signature-section">
+        <div class="signature-box-left" style="padding-left: 0">
+          <div style="width: 86%">
+            <div
+              class="label"
+              style="
+                color: #1a1a1a;
+                font-weight: 700;
+                font-size: 10px;
+                text-align: center;
+              "
+            >
+              L'ENTREPRISE DE TRAVAIL TEMPORAIRE
+            </div>
+            <div class="company-name-signature" style="text-align: center">
+              {{company.name}}
+            </div>
+            <div class="petit-texte" style="text-align: center">
+              (Cachet et Signature ok ok)
+            </div>
+          </div>
+          {{#if (hasImage signature)}}
+          <img
+            src="{{signature}}"
+            alt="Signature ETT"
+            class="signature-image"
+            style="margin-left: 0"
+          />
+          {{/if}}
+        </div>
+        <div class="signature-box-right" style="padding-right: 0">
+          <div
+            class="label"
+            style="
+              color: #1a1a1a;
+              font-weight: 700;
+              font-size: 10px;
+              text-align: center;
+            "
+          >
+            L'INTERIMAIRE
+          </div>
+          <div class="company-name-signature" style="text-align: center">
+            {{employee.lastName}} {{employee.firstName}}
+          </div>
+          <div class="petit-texte" style="text-align: center">
+            reconnait avoir pris connaissance du verso du <br />présent contrat
+            et s'engage à le retourner signé dans <br />les 2 jours ouvrables
+            suivant la mise à disposition
+          </div>
+        </div>
+      </div>
+      <div class="page-number">Page 1 sur 2</div>
+    </div>
+
+    <!-- DÉBUT PAGE 2 - EXTRAITS DU CODE DU TRAVAIL -->
+    <div class="page-2">
+      <!-- En-tête -->
+      <div class="entete-page-2">
+        <div class="titre-page-2">
+          EXTRAITS DU CODE DU TRAVAIL ET PRECISIONS COMPLEMENTAIRE
+        </div>
+      </div>
+
+      <!-- Contenu principal -->
+      <div class="contenu-page-2">
+        <div class="section-page-2">
+          <div class="titre-section-page-2">1. Motif du recours</div>
+          <div class="paragraphe">
+            Un utilisateur ne peut faire appel aux salariés des entreprises de
+            travail temporaire que pour des tâches non durables dénommées «
+            missions » :
+          </div>
+          <div class="liste">
+            <div class="liste-item">
+              1°) Remplacement d'un salarié ou du chef d'entreprise (art. L.
+              1251-6 1°, 4° et 5° CT),
+            </div>
+            <div class="liste-item">
+              2°) Accroissement temporaire de l'activité de l'entreprise (art.
+              L. 1251-6 2° CT),
+            </div>
+            <div class="liste-item">
+              3°) Travaux temporaires par nature (art. L. 1251-6 3° CT) : -
+              Emplois à caractère saisonnier, - Emplois pour lesquels il est
+              d'usage constant de ne pas recourir au contrat à durée
+              indéterminée,
+            </div>
+            <div class="liste-item">
+              4°) Faciliter l'embauche de personnes sans emploi rencontrant des
+              difficultés sociales et professionnelles particulières (art. L.
+              1251-7 1° CT),
+            </div>
+            <div class="liste-item">
+              5°) Assurer un complément de formation professionnelle (art. L.
+              1251-7 2° CT).
+            </div>
+          </div>
+        </div>
+
+        <div class="section-page-2">
+          <div class="titre-section-page-2">2. Durée de la mission</div>
+          <div class="paragraphe">
+            Art. L. 1251-11 CT Le contrat de mission comporte un terme fixé avec
+            précision dès la conclusion du contrat de mise à disposition.
+            Toutefois, le contrat peut ne pas comporter de terme précis
+            lorsqu'il est conclu dans l'un des cas suivants : 1° Remplacement
+            d'un salarié absent ; 2° Remplacement d'un salarié dont le contrat
+            de travail est suspendu ; 3° Dans l'attente de l'entrée en service
+            effective d'un salarié recruté par contrat à durée indéterminée ; 4°
+            Emplois à caractère saisonnier ou pour lesquels, dans certains
+            secteurs d'activité définis par décret ou par voie de convention ou
+            d'accord collectif étendu, il est d'usage constant de ne pas
+            recourir au contrat de travail à durée indéterminée en raison de la
+            nature de l'activité exercée et du caractère par nature temporaire
+            de ces emplois ; 5° Remplacement de l'une des personnes mentionnées
+            aux 4° et 5° de l'article L. 1251-6 CT.
+          </div>
+          <div class="paragraphe">
+            Le contrat de mission est alors conclu pour une durée minimale. Il a
+            pour terme la fin de l'absence de la personne remplacée ou la
+            réalisation de l'objet pour lequel il a été conclu.
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-12 CT La durée totale du contrat de mission ne peut
+            excéder dix-huit mois compte tenu, le cas échéant, du renouvellement
+            intervenant dans les conditions prévues à l'article L. 1251-35 CT.
+            Cette durée est réduite à neuf mois lorsque le contrat est conclu
+            dans l'attente de l'entrée en service effective d'un salarié recruté
+            par contrat à durée indéterminée ou lorsque son objet consiste en la
+            réalisation de travaux urgents nécessités par des mesures de
+            sécurité. Elle est portée à vingt-quatre mois : 1° Lorsque la
+            mission est exécutée à l'étranger ; 2° Lorsque le contrat est conclu
+            dans le cas du départ définitif d'un salarié précédant la
+            suppression de son poste de travail ; 3° Lorsque survient dans
+            l'entreprise, qu'il s'agisse de celle de l'entrepreneur principal ou
+            de celle d'un sous- traitant, une commande exceptionnelle à
+            l'exportation dont l'importance nécessite la mise en oeuvre de
+            moyens quantitativement ou qualitativement exorbitants de ceux que
+            l'entreprise utilise ordinairement. Dans ce cas, la durée initiale
+            du contrat ne peut être inférieure à six mois.
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-35 CT Le contrat de mission est renouvelable une fois
+            pour une durée déterminée qui, ajoutée à la durée du contrat
+            initial, ne peut excéder la durée maximale prévue à l'article L.
+            1251-12 CT. Les conditions de renouvellement sont stipulées dans le
+            contrat ou font l'objet d'un avenant soumis au salarié avant le
+            terme initialement prévu.
+          </div>
+        </div>
+
+        <div class="section-page-2">
+          <div class="titre-section-page-2">
+            3. Aménagement du terme de la mission
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-30 CT Le terme de la mission prévu au contrat de mise à
+            disposition ou fixé par avenant à ce dernier peut être avancé ou
+            reporté à raison d'un jour pour cinq jours de travail. Pour les
+            missions inférieures à dix jours de travail, ce terme peut être
+            avancé ou reporté de deux jours. L'aménagement du terme de la
+            mission ne peut avoir pour effet ni de réduire la durée de la
+            mission initialement prévue de plus de dix jours de travail, ni de
+            conduire à un dépassement de la durée maximale du contrat de mission
+            fixée par l'article L. 1251-12 CT.
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-13 CT Lorsque le contrat de mission est conclu pour
+            remplacer un salarié temporairement absent ou dont le contrat de
+            travail est suspendu ou pour un remplacement effectué au titre du 4°
+            et 5° de l'article L. 1251-6 CT, il peut prendre effet avant
+            l'absence de la personne à remplacer.
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-31 CT Lorsque le contrat de mission est conclu pour
+            remplacer un salarié temporairement absent ou dont le contrat de
+            travail est suspendu ou pour un remplacement effectué au titre des
+            4° et 5° de l'article L. 1251-6 CT, le terme de la mission
+            initialement fixé peut être reporté jusqu'au surlendemain du jour où
+            la personne remplacée reprend son emploi.
+          </div>
+        </div>
+
+        <div class="section-page-2">
+          <div class="titre-section-page-2">
+            4. Rupture prématurée du contrat de travail
+          </div>
+          <div class="paragraphe">
+            Art. L. 1251-28 CT La rupture anticipée du contrat de mission qui
+            intervient à l'initiative du salarié ouvre droit pour l'entreprise
+            de travail temporaire à des dommages et intérêts correspondant au
+            préjudice subi. Ces dispositions ne s'appliquent pas lorsque le
+            salarié justifie de la conclusion d'un contrat de travail à durée
+            indéterminée.
+          </div>
+        </div>
+
+        <div class="colonne-droite-force">
+          <div class="section-page-2">
+            <div class="titre-section-page-2">5. Période d'essai</div>
+            <div class="paragraphe">
+              Art. L. 1251-14 CT Le contrat de mission peut comporter une
+              période d'essai dont la durée est fixée par convention ou accord
+              professionnel de branche étendu ou par convention ou accord
+              d'entreprise ou d'établissement. A défaut de convention ou
+              d'accord, cette durée ne peut excéder : 1° Deux jours si le
+              contrat est conclu pour une durée inférieure ou égale à un mois ;
+              2° Trois jours si le contrat est conclu pour une durée supérieure
+              à un mois et inférieure ou égale à deux mois ; 3° Cinq jours si le
+              contrat est conclu pour une durée supérieure à deux mois.
+            </div>
+            <div class="paragraphe">
+              Art. L. 1251-15 CT La rémunération correspondant à la période
+              d'essai ne peut être différente de celle qui est prévue par le
+              contrat de mission.
+            </div>
+          </div>
+
+          <div class="section-page-2">
+            <div class="titre-section-page-2">
+              6. Indemnité de fin de mission
+            </div>
+            <div class="paragraphe">
+              Art. L. 1251-32 CT Lorsque, à l'issue d'une mission, le salarié ne
+              bénéficie pas immédiatement d'un contrat de travail à durée
+              indéterminée avec l'entreprise utilisatrice, il a droit, à titre
+              de complément de salaire, à une indemnité de fin de mission
+              destinée à compenser la précarité de sa situation. Cette indemnité
+              est égale à 10 % de la rémunération totale brute due au salarié.
+              L'indemnité s'ajoute à la rémunération totale brute due au
+              salarié. Elle est versée par l'entreprise de travail temporaire à
+              l'issue de chaque mission effectivement accomplie, en même temps
+              que le dernier salaire dû au titre de celle-ci et figure sur le
+              bulletin de salaire correspondant.
+            </div>
+            <div class="paragraphe">
+              Art. L. 1251-33 CT L'indemnité de fin de mission n'est pas due :
+              1º Lorsque le contrat de mission est conclu au titre du 3° de
+              l'article L. 1251-6 CT (emplois saisonniers et usage constant) si
+              un accord collectif étendu entre les organisations
+              professionnelles d'employeurs et de salariés de la branche du
+              travail temporaire, ou si une convention ou un accord conclu au
+              sein d'entreprises ou d'établissements de cette branche le prévoit
+              ; 2º Lorsque le contrat de mission est conclu dans le cadre de
+              l'article L. 1251-57 CT (mission-formation) ; 3° Lorsque le
+              contrat de mission est conclu dans le cadre d'un contrat
+              d'insertion-revenu minimum d'activité prévu à l'article L. 5134-82
+              CT ; 4º En cas de rupture anticipée du contrat à l'initiative du
+              salarié, à sa faute grave ou en cas de force majeure.
+            </div>
+          </div>
+
+          <div class="section-page-2">
+            <div class="titre-section-page-2">
+              7. Indemnité compensatrice de congés payés
+            </div>
+            <div class="paragraphe">
+              Art. L. 1251-19 CT Le salarié temporaire a droit à une indemnité
+              compensatrice de congé payé pour chaque mission qu'il effectue
+              quelle qu'en ait été la durée. Le montant de l'indemnité est
+              calculé en fonction de la durée de la mission et ne peut être
+              inférieur au dixième de la rémunération totale brute perçue par le
+              salarié pendant la mission. L'indemnité est versée à la fin de la
+              mission.
+            </div>
+          </div>
+
+          <div class="section-page-2">
+            <div class="titre-section-page-2">
+              8. Caractéristiques particulières du poste et risques
+              professionnels
+            </div>
+            <div class="paragraphe">
+              Sont mentionnés, la description du poste, les tâches à accomplir,
+              le ou les lieux où elles seront à exécuter, ainsi que, le cas
+              échéant, la description des risques professionnels qui sont
+              éventuellement attachés au poste : Ces risques peuvent être liés :
+              - à l'utilisation de machines d'outillage, - aux matériaux ou
+              substances manipulés, - aux conditions de travail, - à
+              l'environnement du poste. Y figurent également, s'il y a lieu, les
+              équipements individuels de sécurité que les intérimaires doivent
+              impérativement utiliser pour assurer leur sécurité. Cette rubrique
+              peut mentionner que le poste figure sur une liste de travaux
+              particulièrement dangereux établie par l'entreprise utilisatrice.
+              Dans ce cas, l'intérimaire bénéficie d'une formation renforcée à
+              la sécurité par l'entreprise utilisatrice. Certains postes de
+              travail nécessitent une surveillance médicale renforcée, en
+              complément de la visite d'aptitude. Cette précision figure sur le
+              contrat. Ces informations sont les premières indications
+              nécessitées par la sécurité des intérimaires et auxquelles ils
+              doivent être particulièrement attentifs.
+            </div>
+          </div>
+
+          <div class="section-page-2">
+            <div class="titre-section-page-2">
+              9. Droit d'accès et de rectification des données personnelles
+            </div>
+            <div class="paragraphe">
+              La loi du 6 janvier 1978 relative à l'informatique, aux fichiers
+              et aux libertés garantit un droit d'accès et de rectification des
+              données personnelles enregistrées dans les fichiers informatisés
+              tenus par l'ETT ou l'organisme de protection sociale Sauf accord
+              des parties, le salarié est alors tenu de respecter un préavis
+              dont la durée est calculée à raison d'un jour par semaine compte
+              tenu : 1° De la durée totale du contrat, renouvellement inclus,
+              lorsque celui-ci comporte un terme précis ; 2° De la durée
+              accomplie lorsque le contrat ne comporte pas un terme précis. Dans
+              les deux cas, la durée totale du préavis ne peut être inférieure à
+              un jour ni supérieure à deux semaines.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="page-number">Page 2 sur 2</div>
+    </div>
+  </body>
+</html>

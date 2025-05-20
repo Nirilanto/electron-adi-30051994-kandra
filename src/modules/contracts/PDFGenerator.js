@@ -249,6 +249,10 @@ class PDFGenerator {
       ? formatDate(employee?.idCardIssueDate)
       : "";
 
+      const birthDate = employee?.birthDate
+      ? formatDate(employee?.birthDate)
+      : "";
+
     const workingHoursSlots = parseWorkingHours(
       contract.workingHours || contract.working_hours
     );
@@ -307,6 +311,7 @@ class PDFGenerator {
       // Informations sur l'employé
       employee: {
         fullName: employeeFullName,
+        birthDate: birthDate,
         firstName: employeeFirstName,
         idCardIssueDate: idCardIssueDateVal,
         idCardExpiryDate: idCardExpiryDateVal,
@@ -332,6 +337,8 @@ class PDFGenerator {
           client?.company_name ||
           ""
         ).toUpperCase(),
+        basketFees: client?.basketFees || "",
+        travelFees: client?.travelFees || "",
         siret: client?.siret || "",
         address: client?.address || "",
         postalCode: client?.postalCode || client?.postal_code || "",

@@ -751,7 +751,7 @@ function ContractForm() {
                 <option value="">Sélectionner...</option>
                 {paymentMethods.map((method) => (
                   <option key={method.id} value={method.id}>
-                    {method.title}
+                    {method.label}
                   </option>
                 ))}
               </select>
