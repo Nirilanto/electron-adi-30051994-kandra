@@ -35,6 +35,8 @@ function ContractForm() {
     startDate: new Date(),
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
     location: "",
+    nonWorkingPeriods: "", // La valeur de la période non travaillée
+    nonWorkingPeriodsType: "specific", // Type de période (specific ou minimum)
     workingHours: "08:00 - 12:00, 13:00 - 17:00",
     hourlyRate: 0,
     billingRate: 0,
@@ -599,20 +601,47 @@ function ContractForm() {
 
             <div className="md:col-span-3">
               <label
-                htmlFor="nonWorkingPeriods"
+                htmlFor="nonWorkingPeriodsType"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Période(s) non travaillée(s): terme précis ou durée minimale
+                Période(s) non travaillée(s)
               </label>
-              <textarea
-                id="nonWorkingPeriods"
-                name="nonWorkingPeriods"
-                rows="2"
-                value={contract.nonWorkingPeriods}
-                onChange={handleChange}
-                placeholder="ex: 24/12/2025 au 05/01/2026, deux semaines en août 2025"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              ></textarea>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                <div>
+                  <select
+                    id="nonWorkingPeriodsType"
+                    name="nonWorkingPeriodsType"
+                    value={contract.nonWorkingPeriodsType}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="specific">Terme précis</option>
+                    <option value="minimum">Durée minimale</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <input
+                    type="text"
+                    id="nonWorkingPeriods"
+                    name="nonWorkingPeriods"
+                    value={contract.nonWorkingPeriods}
+                    onChange={handleChange}
+                    placeholder={
+                      contract.nonWorkingPeriodsType === "specific"
+                        ? "ex: 24/12/2025 au 05/01/2026"
+                        : "ex: deux semaines en août 2025"
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {contract.nonWorkingPeriodsType === "specific"
+                  ? "Spécifiez les dates exactes des périodes non travaillées"
+                  : "Indiquez la durée minimale des périodes non travaillées"}
+              </p>
             </div>
           </div>
         </div>

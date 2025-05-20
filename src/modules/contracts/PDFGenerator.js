@@ -249,7 +249,7 @@ class PDFGenerator {
       ? formatDate(employee?.idCardIssueDate)
       : "";
 
-      const birthDate = employee?.birthDate
+    const birthDate = employee?.birthDate
       ? formatDate(employee?.birthDate)
       : "";
 
@@ -283,6 +283,8 @@ class PDFGenerator {
         contract.endDate
       )}`,
       startDate: formatDate(contract.startDate),
+      useSecurityMeasuresColumns: contract.securityMeasuresList?.length > 2,
+      nonWorkingPeriodsType: contract.nonWorkingPeriodsType === "precise",
       endDate: formatDate(contract.endDate),
       transport: contract.transport,
       duration: duration,

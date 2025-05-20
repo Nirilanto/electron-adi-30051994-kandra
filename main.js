@@ -397,7 +397,7 @@ function getClientContractTemplate() {
               .page {
                   width: 210mm;
                   height: 297mm;
-                  padding: 3mm 8mm 8mm 8mm; /* Réduit de 5mm à 3mm */
+                  padding: 3mm 3mm 3mm 3mm;
                   margin: 0 auto;
                   background-color: white;
                   position: relative;
@@ -717,8 +717,8 @@ function getClientContractTemplate() {
               /* Pied de page */
               .page-number {
                   position: absolute;
-                  bottom: 7mm;
-                  right: 10mm;
+                  bottom: 0mm;
+                  right: 0mm;
                   font-size: 9px; /* Augmenté de 8px à 9px */
                   color: #999;
                   font-weight: 300;
@@ -765,7 +765,7 @@ function getClientContractTemplate() {
               .page-2 {
                   width: 210mm;
                   height: 297mm;
-                  padding: 10mm;
+                  padding: 3mm 3mm 3mm 3mm;
                   margin: 0 auto;
                   background-color: white;
                   position: relative;
@@ -1012,19 +1012,19 @@ function getClientContractTemplate() {
                                   
                                   <div class="divider"></div>
                                   
-                                  <div class="champ">
-                                      <div class="label">Période(s) Non Travaillée(s)</div>
-                                      <div class="options-container">
-                                          <div class="option-row">
-                                              <div class="checkbox checked"></div>
-                                              <div class="option-label">TERME PRECIS</div>
-                                          </div>
-                                          <div class="option-row">
-                                              <div class="checkbox"></div>
-                                              <div class="option-label">DUREE MINIMALE</div>
-                                          </div>
-                                      </div>
-                                  </div>
+                                <div class="champ">
+                                    <div class="label">Période(s) Non Travaillée(s)</div>
+                                    <div class="options-container">
+                                    <div class="option-row">
+                                        <div class="checkbox {{#if nonWorkingPeriodsType}}checked{{/if}}"></div>
+                                        <div class="option-label">TERME PRECIS</div>
+                                    </div>
+                                    <div class="option-row">
+                                        <div class="checkbox {{#unless nonWorkingPeriodsType}}checked{{/unless}}"></div>
+                                        <div class="option-label">DUREE MINIMALE</div>
+                                         </div>
+                                    </div>
+                                </div> 
                               </div>
                               
                               <div>
@@ -1587,7 +1587,7 @@ function getEmployeeContractTemplate() {
       .page {
         width: 210mm;
         height: 297mm;
-        padding: 3mm 8mm 8mm 8mm;
+        padding: 3mm 3mm 3mm 3mm;
         margin: 0 auto;
         background-color: white;
         position: relative;
@@ -1908,8 +1908,8 @@ function getEmployeeContractTemplate() {
       /* Pied de page */
       .page-number {
         position: absolute;
-        bottom: 7mm;
-        right: 10mm;
+        bottom: 0mm;
+        right: 0mm;
         font-size: 9px;
         color: #999;
         font-weight: 300;
@@ -1957,7 +1957,7 @@ function getEmployeeContractTemplate() {
       .page-2 {
         width: 210mm;
         height: 297mm;
-        padding: 10mm;
+        padding: 3mm 3mm 3mm 3mm;
         margin: 0 auto;
         background-color: white;
         position: relative;
@@ -2248,18 +2248,18 @@ function getEmployeeContractTemplate() {
                   </div>
                 </div>
                 <div class="champ">
-                  <div class="label">Période(s) Non Travaillée(s)</div>
-                  <div class="options-container">
+                    <div class="label">Période(s) Non Travaillée(s)</div>
+                    <div class="options-container">
                     <div class="option-row">
-                      <div class="checkbox checked"></div>
-                      <div class="option-label">TERME PRECIS</div>
+                        <div class="checkbox {{#if nonWorkingPeriodsType}}checked{{/if}}"></div>
+                        <div class="option-label">TERME PRECIS</div>
                     </div>
                     <div class="option-row">
-                      <div class="checkbox"></div>
-                      <div class="option-label">DUREE MINIMALE</div>
+                        <div class="checkbox {{#unless nonWorkingPeriodsType}}checked{{/unless}}"></div>
+                        <div class="option-label">DUREE MINIMALE</div>
                     </div>
-                  </div>
                 </div>
+                </div>  
                 <div class="divider"></div>
 
                 <div class="champ">
@@ -2415,21 +2415,27 @@ function getEmployeeContractTemplate() {
           <div class="divider"></div>
 
           <div class="champ">
-            <div class="label">
-              CARACTERISTIQUES PARTICULIERES DU POSTE DE TRAVAIL
-            </div>
-            <div class="label-petit">
-              (s'il y a lieu nature des protections individuelles de sécurité et
-              surveillance médiale spéciale)
-            </div>
+            <div class="label">CARACTERISTIQUES PARTICULIERES DU POSTE DE TRAVAIL</div>
+            <div class="label-petit">(s'il y a lieu nature des protections individuelles de sécurité et surveillance médiale spéciale)</div>
             <div class="valeur">
-              <ul class="liste-moderne">
-                {{#each securityMeasures}}
-                <li>{{this}}</li>
-                {{/each}}
-              </ul>
+                {{#if useSecurityMeasuresColumns}}
+                <div style="display: grid; grid-template-columns: 50% 50%; gap: 5px;">
+                    {{#each securityMeasures}}
+                    <div style="padding-left: 10px; position: relative;">
+                        <span style="position: absolute; left: 0; top: 4px; width: 4px; height: 4px; background-color: #555; border-radius: 50%;"></span>
+                        {{this}}
+                    </div>
+                    {{/each}}
+                </div>
+                {{else}}
+                <ul class="liste-moderne">
+                    {{#each securityMeasures}}
+                    <li>{{this}}</li>
+                    {{/each}}
+                </ul>
+                {{/if}}
             </div>
-          </div>
+        </div>
 
           <div class="note" style="border-top: none; margin-top: 3px">
             *Le terme de la mission prévu dans le contrat initiale ou dans
