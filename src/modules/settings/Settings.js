@@ -1,4 +1,4 @@
-// src/modules/settings/Settings.js
+// Version modifiée de src/modules/settings/Settings.js
 import React, { useState, useEffect } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -14,6 +14,7 @@ import JustificatifTypesSettings from './components/JustificatifTypesSettings';
 import AccessMethodsSettings from './components/AccessMethodsSettings';
 import SecurityMeasuresSettings from './components/SecurityMeasuresSettings';
 import SignaturesSettings from './components/SignaturesSettings';
+import ImportExportSettings from './components/ImportExportSettings'; // Ajouté
 
 function Settings() {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,9 +29,9 @@ function Settings() {
   const [justificatifTypes, setJustificatifTypes] = useState([]);
   const [accessMethods, setAccessMethods] = useState([]);
   const [securityMeasures, setSecurityMeasures] = useState([]);
-  const [signatures, setSignatures] = useState([]); // Nouveau state pour les signatures et tampons
+  const [signatures, setSignatures] = useState([]);
 
-  // Liste des onglets
+  // Liste des onglets - Ajout de l'onglet Import/Export
   const tabs = [
     { id: 0, title: 'Entreprise' },
     { id: 1, title: 'TVA' },
@@ -42,7 +43,8 @@ function Settings() {
     { id: 7, title: 'Justificatifs' },
     { id: 8, title: 'Accès' },
     { id: 9, title: 'Sécurité' },
-    { id: 10, title: 'Signatures' } // Nouvel onglet pour les signatures
+    { id: 10, title: 'Signatures' },
+    { id: 11, title: 'Import/Export' } // Nouvel onglet
   ];
 
   // Chargement initial des données
@@ -322,7 +324,6 @@ function Settings() {
     }
   };
 
-  // Nouveaux gestionnaires pour les signatures et tampons
   const handleSaveSignature = async (signature) => {
     try {
       await SettingsService.saveSignature(signature);
@@ -344,6 +345,50 @@ function Settings() {
     } catch (error) {
       console.error('Erreur lors de la suppression de la signature :', error);
       toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  // Fonction pour actualiser les données après un import
+  const handleDataImported = async () => {
+    try {
+      // Recharger toutes les données
+      const company = await SettingsService.getCompanySettings();
+      setCompanySettings(company);
+      
+      const taxes = await SettingsService.getTaxRates();
+      setTaxRates(taxes);
+      
+      const hours = await SettingsService.getHourTypes();
+      setHourTypes(hours);
+      
+      const payments = await SettingsService.getPaymentMethods();
+      setPaymentMethods(payments);
+      
+      const transport = await SettingsService.getTransportModes();
+      setTransportModes(transport);
+      
+      const quals = await SettingsService.getQualifications();
+      setQualifications(quals);
+      
+      const motifs = await SettingsService.getMotifTypes();
+      setMotifTypes(motifs);
+      
+      const justificatifs = await SettingsService.getJustificatifTypes();
+      setJustificatifTypes(justificatifs);
+      
+      const access = await SettingsService.getAccessMethods();
+      setAccessMethods(access);
+      
+      const security = await SettingsService.getSecurityMeasures();
+      setSecurityMeasures(security);
+      
+      const sigs = await SettingsService.getSignatures();
+      setSignatures(sigs);
+      
+      toast.success('Données actualisées après import');
+    } catch (error) {
+      console.error('Erreur lors de l\'actualisation des données :', error);
+      toast.error('Erreur lors de l\'actualisation des données');
     }
   };
 
@@ -479,6 +524,13 @@ function Settings() {
               signatures={signatures} 
               onSave={handleSaveSignature} 
               onDelete={handleDeleteSignature} 
+            />
+          )}
+          
+          {/* Import/Export de données - Nouvel onglet */}
+          {activeTab === 11 && (
+            <ImportExportSettings 
+              onDataImported={handleDataImported}
             />
           )}
         </div>

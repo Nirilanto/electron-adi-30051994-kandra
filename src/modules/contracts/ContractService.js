@@ -8,9 +8,9 @@ import PDFGenerator from "./PDFGenerator";
 class ContractService {
   constructor() {
     this.db = DatabaseService;
-    this.contractsKey = "cm_contracts";
+    this.contractsKey = "contracts";
     this.settings = SettingsService;
-    this.lastContractNumberKey = "cm_last_contract_number";
+    this.lastContractNumberKey = "last_contract_number";
   }
 
   async getAllContracts() {
