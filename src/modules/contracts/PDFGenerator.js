@@ -329,6 +329,7 @@ class PDFGenerator {
         city: employee?.city || "",
         email: employee?.email || "",
         phone: employee?.phone || "",
+        qualification: (employee?.qualification || "CONSULTANT").toUpperCase(),
         skills: (employee?.skills || "CONSULTANT").toUpperCase(),
       },
 

@@ -902,7 +902,7 @@ function getClientContractTemplate() {
                               </div>
                               <div class="champ">
                                   <div class="label" style="display: inline-block; margin-right: 5px;">Qualification:</div>
-                                  <div class="valeur valeur-importante" style="display: inline-block;">{{employee.skills}}</div>
+                                  <div class="valeur valeur-importante" style="display: inline-block;">{{employee.qualification}}</div>
                               </div>
                               <!-- Restructuration de l'affichage du titre de séjour en 2 lignes -->
                               <div class="champ">
