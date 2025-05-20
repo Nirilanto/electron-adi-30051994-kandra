@@ -321,7 +321,7 @@ class PDFGenerator {
         idCardType: employee?.idCardType,
         idCardNumber: employee?.idCardNumber,
         lastName: employeeLastName,
-        nationality: "FRANÇAISE",
+        nationality: employee?.nationality || "FRANÇAISE",
         address: employee?.address || "",
         postalCode: employee?.postalCode || employee?.postal_code || "",
         city: employee?.city || "",
