@@ -3,6 +3,7 @@ import React from 'react';
 import { UserIcon } from '@heroicons/react/24/outline';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import AutocompleteNationality from '../components/AutocompleteNationality';
 
 const PersonalInfoSection = ({ employee, handleChange, handleDateChange, errors }) => {
   return (
@@ -114,22 +115,10 @@ const PersonalInfoSection = ({ employee, handleChange, handleDateChange, errors 
           <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">
             Nationalité
           </label>
-          <select
-            id="nationality"
-            name="nationality"
-            value={employee.nationality}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="FRANCAISE">FRANCAISE</option>
-            <option value="BULGARE">BULGARE</option>
-            <option value="ALLEMANDE">ALLEMANDE</option>
-            <option value="ITALIENNE">ITALIENNE</option>
-            <option value="ESPAGNOLE">ESPAGNOLE</option>
-            <option value="PORTUGAISE">PORTUGAISE</option>
-            <option value="BRITANNIQUE">BRITANNIQUE</option>
-            <option value="AUTRE">AUTRE</option>
-          </select>
+          <AutocompleteNationality 
+            value={employee.nationality} 
+            onChange={handleChange} 
+          />
         </div>
         
         <div>
