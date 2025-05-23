@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import DatabaseService from "../../services/DatabaseService";
 
 // Icônes
@@ -9,6 +9,7 @@ import {
   TrashIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 
 const EmployeeList = () => {
@@ -22,17 +23,16 @@ const EmployeeList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
+  const navigate = useNavigate();
   // État pour la confirmation de suppression
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
 
-  // Charger la liste des employés au montage du composant
+  // Charger la listM!e des employés au montage du composant
   useEffect(() => {
     const loadEmployees = async () => {
       try {
         // Récupérer tous les employés
         const employeeData = await DatabaseService.getEmployees();
-        console.log(" employeeData -------------- ", employeeData);
-
         setEmployees(employeeData);
       } catch (error) {
         console.error("Erreur lors du chargement des employés:", error);
@@ -175,7 +175,13 @@ const EmployeeList = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredEmployees.map((employee) => (
-                  <tr key={employee.id}>
+                  <tr
+                    key={employee.id}
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() =>
+                      navigate(`/employees/${employee.id}/profile`)
+                    }
+                  >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
@@ -225,8 +231,16 @@ const EmployeeList = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        to={`/employees/${employee.id}`}
+                        to={`/employees/${employee.id}/profile`}
+                        className="text-blue-500 hover:text-blue-700 mx-2"
+                        title="Voir le profil"
+                      >
+                        <UserIcon className="h-5 w-5 inline" />
+                      </Link>
+                      <Link
+                        to={`/employees/${employee.id}/edit`}
                         className="text-primary-500 hover:text-primary-700 mx-2"
+                        title="Modifier"
                       >
                         <PencilIcon className="h-5 w-5 inline" />
                       </Link>

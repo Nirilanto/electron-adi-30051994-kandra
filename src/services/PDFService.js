@@ -33,6 +33,7 @@ class PDFService {
         // et l'API du système de fichiers pour l'enregistrer
         
         // Simuler la génération d'un PDF
+        
         const fileName = `contrat_${contract.id}_${new Date().getTime()}.pdf`;
         const filePath = `/temp/${fileName}`;
         
