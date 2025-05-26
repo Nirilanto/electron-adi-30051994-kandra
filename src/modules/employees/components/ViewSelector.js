@@ -26,7 +26,7 @@ const ViewSelector = ({ currentView, onViewChange }) => {
   ];
 
   return (
-    <div className="flex flex-col bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-white/20 p-1">
+    <div className="flex flex-row bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-white/20 p-1">
       {views.map((view) => {
         const Icon = view.icon;
         const isActive = currentView === view.id;

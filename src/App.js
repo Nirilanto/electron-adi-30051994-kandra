@@ -13,6 +13,8 @@ import ClientList from "./modules/clients/ClientList";
 import ClientProfile from "./modules/clients/ClientProfile";
 import ClientForm from "./modules/clients/ClientForm";
 import ContractList from "./modules/contracts/ContractList";
+import ContractProfile from "./modules/contracts/ContractProfile";
+
 import ContractForm from "./modules/contracts/ContractForm";
 import Settings from "./modules/settings/Settings";
 
@@ -104,6 +106,8 @@ function App() {
         <Route path="/contracts" element={<ContractList />} />
         <Route path="/contracts/new" element={<ContractForm />} />
         <Route path="/contracts/:id" element={<ContractForm />} />
+        <Route path="/contracts/:id/profile" element={<ContractProfile />} />
+        <Route path="/contracts/:id/edit" element={<ContractForm />} />
 
         {/* Redirection pour les routes non définies */}
         <Route path="*" element={<Navigate to="/" replace />} />

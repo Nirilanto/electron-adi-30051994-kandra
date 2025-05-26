@@ -31,7 +31,7 @@ import ViewSelector from '../employees/components/ViewSelector';
 // Barre de recherche moderne
 const ModernSearchBar = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border border-white/20 p-6">
+    <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border border-white/20 p-2">
       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50"></div>
       
       <div className="relative flex flex-col md:flex-row gap-4">
@@ -634,7 +634,7 @@ const ClientList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [clientToDelete, setClientToDelete] = useState(null);
-  const [currentView, setCurrentView] = useState('cards');
+  const [currentView, setCurrentView] = useState('table');
 
   // Chargement des clients
   useEffect(() => {

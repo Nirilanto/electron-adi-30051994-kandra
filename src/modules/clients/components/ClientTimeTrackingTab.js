@@ -1,0 +1,785 @@
+// src/modules/clients/components/ClientTimeTrackingTab.js
+import React, { useState, useEffect } from 'react';
+import { 
+  ClockIcon,
+  CalendarIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DocumentTextIcon,
+  ExclamationTriangleIcon,
+  UserGroupIcon,
+  InformationCircleIcon
+} from '@heroicons/react/24/outline';
+import { toast } from 'react-toastify';
+
+// Services
+import TimeTrackingService from '../../timetracking/TimeTrackingService';
+import ContractService from '../../contracts/ContractService';
+import EmployeeService from '../../employees/EmployeeService';
+
+const ClientTimeTrackingTab = ({ client }) => {
+  // États principaux
+  const [clientContracts, setClientContracts] = useState([]);
+  const [employeesWithContracts, setEmployeesWithContracts] = useState([]);
+  const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
+  const [weeklyTimeEntries, setWeeklyTimeEntries] = useState({}); // Par employé
+  const [expandedEmployees, setExpandedEmployees] = useState(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState({});
+
+  // Statistiques globales de la semaine
+  const [weeklyStats, setWeeklyStats] = useState({
+    totalHours: 0,
+    totalEmployees: 0,
+    totalContracts: 0,
+    validatedDays: 0,
+    pendingDays: 0,
+    totalCost: 0
+  });
+
+  // Chargement initial
+  useEffect(() => {
+    loadClientData();
+  }, [client.id]);
+
+  // Chargement des données quand la semaine change
+  useEffect(() => {
+    if (currentWeekStart) {
+      loadWeeklyTimeEntries();
+    }
+  }, [currentWeekStart]);
+
+  // Initialiser la semaine courante
+  useEffect(() => {
+    const today = new Date();
+    setCurrentWeekStart(getWeekStart(today));
+  }, []);
+
+  // Charger tous les contrats du client et leurs employés
+  const loadClientData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Charger les contrats actifs du client
+      const contracts = await ContractService.getAllContracts();
+      const clientActiveContracts = contracts.filter(
+        contract => contract.clientId == client.id && 
+                   new Date(contract.endDate) >= new Date()
+      );
+      setClientContracts(clientActiveContracts);
+      
+      // Charger tous les employés de ces contrats
+      const allEmployees = await EmployeeService.getAllEmployees();
+      const employeesWithContractInfo = [];
+      
+      for (const contract of clientActiveContracts) {
+        const employee = allEmployees.find(emp => emp.id == contract.employeeId);
+        if (employee) {
+          employeesWithContractInfo.push({
+            ...employee,
+            contractInfo: {
+              id: contract.id,
+              title: contract.title,
+              description: contract.description,
+              location: contract.location,
+              startDate: contract.startDate,
+              endDate: contract.endDate,
+              hourlyRate: contract.hourlyRate,
+              billingRate: contract.billingRate,
+              workingHours: contract.workingHours
+            }
+          });
+        }
+      }
+      
+      setEmployeesWithContracts(employeesWithContractInfo);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Obtenir le début de semaine (lundi)
+  const getWeekStart = (date) => {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  };
+
+  // Obtenir les 7 jours de la semaine
+  const getWeekDays = (weekStart) => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart);
+      day.setDate(weekStart.getDate() + i);
+      days.push(day);
+    }
+    return days;
+  };
+
+  // Navigation entre les semaines
+  const navigateWeek = (direction) => {
+    if (!currentWeekStart) return;
+    
+    const newWeekStart = new Date(currentWeekStart);
+    newWeekStart.setDate(newWeekStart.getDate() + (direction * 7));
+    setCurrentWeekStart(newWeekStart);
+  };
+
+  // Charger les pointages de la semaine pour tous les employés
+  const loadWeeklyTimeEntries = async () => {
+    try {
+      if (employeesWithContracts.length === 0) return;
+      
+      const weekDays = getWeekDays(currentWeekStart);
+      const weekEnd = weekDays[6];
+      
+      // Récupérer tous les pointages pour tous les contrats du client
+      const contractIds = clientContracts.map(c => c.id);
+      const allTimeEntries = [];
+      
+      for (const contractId of contractIds) {
+        const entries = await TimeTrackingService.getTimeEntries({
+          contractId,
+          startDate: currentWeekStart.toISOString().split('T')[0],
+          endDate: weekEnd.toISOString().split('T')[0]
+        });
+        allTimeEntries.push(...entries);
+      }
+      
+      // Organiser par employé puis par date
+      const entriesByEmployee = {};
+      employeesWithContracts.forEach(emp => {
+        entriesByEmployee[emp.id] = {};
+      });
+      
+      allTimeEntries.forEach(entry => {
+        if (!entriesByEmployee[entry.employeeId]) {
+          entriesByEmployee[entry.employeeId] = {};
+        }
+        entriesByEmployee[entry.employeeId][entry.date] = entry;
+      });
+      
+      setWeeklyTimeEntries(entriesByEmployee);
+      calculateWeeklyStats(allTimeEntries);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des pointages:', error);
+      toast.error('Erreur lors du chargement des pointages');
+    }
+  };
+
+  // Calculer les statistiques globales
+  const calculateWeeklyStats = (timeEntries) => {
+    const stats = timeEntries.reduce((acc, entry) => {
+      acc.totalHours += entry.totalHours || 0;
+      if (entry.status === 'validated' || entry.status === 'invoiced') {
+        acc.validatedDays += 1;
+      } else {
+        acc.pendingDays += 1;
+      }
+      if (entry.billingRate) {
+        acc.totalCost += (entry.totalHours || 0) * entry.billingRate;
+      }
+      return acc;
+    }, { totalHours: 0, validatedDays: 0, pendingDays: 0, totalCost: 0 });
+    
+    stats.totalEmployees = employeesWithContracts.length;
+    stats.totalContracts = clientContracts.length;
+    setWeeklyStats(stats);
+  };
+
+  // Vérifier si une date est dans la période du contrat d'un employé
+  const isDateInContractPeriod = (date, contractInfo) => {
+    if (!contractInfo) return false;
+    
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    const contractStart = new Date(contractInfo.startDate);
+    contractStart.setHours(0, 0, 0, 0);
+    
+    const contractEnd = new Date(contractInfo.endDate);
+    contractEnd.setHours(23, 59, 59, 999);
+    
+    return checkDate >= contractStart && checkDate <= contractEnd;
+  };
+
+  // Sauvegarder les heures d'un employé pour un jour
+  const saveTimeEntry = async (employeeId, contractId, date, hours, notes = '') => {
+    const dateStr = date.toISOString().split('T')[0];
+    const saveKey = `${employeeId}-${dateStr}`;
+    setIsSaving(prev => ({ ...prev, [saveKey]: true }));
+    
+    try {
+      const normalHours = Math.min(hours, 8);
+      const overtimeHours = Math.max(hours - 8, 0);
+      
+      // Trouver le contrat pour récupérer les taux
+      const contract = clientContracts.find(c => c.id === contractId);
+      
+      const timeEntryData = {
+        employeeId,
+        contractId,
+        clientId: client.id,
+        date: dateStr,
+        totalHours: hours,
+        normalHours,
+        overtimeHours,
+        hourlyRate: contract?.hourlyRate || 0,
+        billingRate: contract?.billingRate || 0,
+        workType: 'normal',
+        notes,
+        status: 'draft'
+      };
+      
+      const existingEntry = weeklyTimeEntries[employeeId]?.[dateStr];
+      
+      if (existingEntry) {
+        if (existingEntry.status === 'invoiced') {
+          toast.error('Impossible de modifier un pointage facturé');
+          return;
+        }
+        await TimeTrackingService.updateTimeEntry(existingEntry.id, timeEntryData);
+      } else {
+        await TimeTrackingService.createTimeEntry(timeEntryData);
+      }
+      
+      await loadWeeklyTimeEntries();
+      toast.success('Pointage sauvegardé');
+      
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(prev => ({ ...prev, [saveKey]: false }));
+    }
+  };
+
+  // Valider un jour pour un employé
+  const validateDay = async (employeeId, date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const entry = weeklyTimeEntries[employeeId]?.[dateStr];
+    
+    if (!entry) {
+      toast.error('Aucun pointage à valider pour ce jour');
+      return;
+    }
+    
+    if (entry.status === 'invoiced') {
+      toast.error('Ce pointage est déjà facturé');
+      return;
+    }
+    
+    try {
+      await TimeTrackingService.validateTimeEntry(entry.id);
+      await loadWeeklyTimeEntries();
+      toast.success('Journée validée');
+    } catch (error) {
+      console.error('Erreur lors de la validation:', error);
+      toast.error('Erreur lors de la validation');
+    }
+  };
+
+  // Obtenir les heures par défaut depuis un contrat
+  const getDefaultHours = (contractInfo) => {
+    if (!contractInfo?.workingHours) return 8;
+    
+    try {
+      const match = contractInfo.workingHours.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+      if (match) {
+        const [, startH, startM, endH, endM] = match;
+        const startMinutes = parseInt(startH) * 60 + parseInt(startM);
+        const endMinutes = parseInt(endH) * 60 + parseInt(endM);
+        const totalMinutes = endMinutes - startMinutes;
+        return Math.max(totalMinutes / 60, 0);
+      }
+    } catch (error) {
+      console.error('Erreur lors du parsing des horaires:', error);
+    }
+    
+    return 8;
+  };
+
+  // Toggle accordéon employé
+  const toggleEmployee = (employeeId) => {
+    setExpandedEmployees(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(employeeId)) {
+        newSet.delete(employeeId);
+      } else {
+        newSet.add(employeeId);
+      }
+      return newSet;
+    });
+  };
+
+  // Composant pour une journée d'un employé
+  const DayEntry = ({ employeeId, contractId, contractInfo, date, entry, isCompact = false }) => {
+    const [hours, setHours] = useState(entry?.totalHours || 0);
+    const [notes, setNotes] = useState(entry?.notes || '');
+    const dateStr = date.toISOString().split('T')[0];
+    const isToday = dateStr === new Date().toISOString().split('T')[0];
+    const isInContractPeriod = isDateInContractPeriod(date, contractInfo);
+    const saveKey = `${employeeId}-${dateStr}`;
+    const isSavingDay = isSaving[saveKey];
+    const defaultHours = getDefaultHours(contractInfo);
+    
+    if (!isInContractPeriod) {
+      return (
+        <div className="p-2 rounded bg-gray-50 border border-gray-200 opacity-50">
+          <div className="text-center text-gray-400 text-xs">
+            <div className="font-medium">
+              {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
+            </div>
+            <div>{date.toLocaleDateString('fr-FR', { day: 'numeric' })}</div>
+            <div className="mt-1">Hors contrat</div>
+          </div>
+        </div>
+      );
+    }
+    
+    const handleSave = () => {
+      if (hours > 0) {
+        saveTimeEntry(employeeId, contractId, date, parseFloat(hours), notes);
+      }
+    };
+    
+    const handleSetDefault = () => {
+      setHours(defaultHours);
+    };
+    
+    const getStatusColor = () => {
+      if (!entry) return 'border-gray-200 bg-white';
+      switch (entry.status) {
+        case 'validated': return 'border-green-300 bg-green-50';
+        case 'invoiced': return 'border-blue-300 bg-blue-50';
+        default: return 'border-yellow-300 bg-yellow-50';
+      }
+    };
+    
+    const getStatusIcon = () => {
+      if (!entry) return null;
+      switch (entry.status) {
+        case 'validated': return <CheckCircleIcon className="h-3 w-3 text-green-600" />;
+        case 'invoiced': return <DocumentTextIcon className="h-3 w-3 text-blue-600" />;
+        default: return <ExclamationTriangleIcon className="h-3 w-3 text-yellow-600" />;
+      }
+    };
+    
+    return (
+      <div className={`p-2 rounded border ${getStatusColor()} ${isToday ? 'ring-1 ring-blue-300' : ''}`}>
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-xs">
+            <div className="font-medium text-gray-900">
+              {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
+            </div>
+            <div className="text-gray-600">
+              {date.toLocaleDateString('fr-FR', { day: 'numeric' })}
+            </div>
+          </div>
+          <div className="flex items-center space-x-1">
+            {getStatusIcon()}
+            {isToday && <div className="w-1 h-1 bg-blue-500 rounded-full"></div>}
+          </div>
+        </div>
+        
+        <div className="space-y-1">
+          <div className="flex space-x-1">
+            <input
+              type="number"
+              value={hours}
+              onChange={(e) => setHours(e.target.value)}
+              min="0"
+              max="24"
+              step="0.5"
+              className="flex-1 px-1 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+              disabled={entry?.status === 'invoiced'}
+              placeholder="0h"
+            />
+            <button
+              onClick={handleSetDefault}
+              className="px-1 py-1 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+              disabled={entry?.status === 'invoiced'}
+              title={`${defaultHours}h`}
+            >
+              {defaultHours}h
+            </button>
+          </div>
+          
+          {hours > 8 && (
+            <div className="text-xs text-orange-600 bg-orange-50 px-1 py-0.5 rounded">
+              +{(hours - 8).toFixed(1)}h
+            </div>
+          )}
+          
+          {!isCompact && (
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows="1"
+              className="w-full px-1 py-0.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+              disabled={entry?.status === 'invoiced'}
+              placeholder="Notes..."
+            />
+          )}
+          
+          <div className="flex space-x-1">
+            {entry?.status !== 'invoiced' && (
+              <>
+                <button
+                  onClick={handleSave}
+                  disabled={isSavingDay || hours <= 0}
+                  className="flex-1 px-1 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {isSavingDay ? '...' : 'OK'}
+                </button>
+                
+                {entry && entry.status === 'draft' && (
+                  <button
+                    onClick={() => validateDay(employeeId, date)}
+                    className="px-1 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                    title="Valider"
+                  >
+                    ✓
+                  </button>
+                )}
+              </>
+            )}
+            
+            {entry?.status === 'invoiced' && (
+              <div className="text-xs text-blue-600 bg-blue-50 px-1 py-0.5 rounded w-full text-center">
+                Facturé
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Composant accordéon pour un employé
+  const EmployeeAccordion = ({ employee }) => {
+    const isExpanded = expandedEmployees.has(employee.id);
+    const employeeEntries = weeklyTimeEntries[employee.id] || {};
+    const contractInfo = employee.contractInfo;
+    
+    // Calculer les stats de cet employé pour la semaine
+    const employeeStats = Object.values(employeeEntries).reduce((acc, entry) => {
+      acc.totalHours += entry.totalHours || 0;
+      acc.workingDays += 1;
+      return acc;
+    }, { totalHours: 0, workingDays: 0 });
+    
+    return (
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        {/* En-tête accordéon avec plus d'informations */}
+        <button
+          onClick={() => toggleEmployee(employee.id)}
+          className="w-full px-4 py-4 bg-gray-50 hover:bg-gray-100 flex justify-between items-center text-left transition-colors"
+        >
+          <div className="flex items-center space-x-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-medium text-sm">
+                {employee.firstName?.[0]}{employee.lastName?.[0]}
+              </span>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center space-x-3">
+                <div className="font-medium text-gray-900">
+                  {employee.firstName} {employee.lastName}
+                </div>
+                <div className="text-sm text-gray-500">•</div>
+                <div className="text-sm font-medium text-blue-600">
+                  {contractInfo?.title || 'Mission non définie'}
+                </div>
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                <div className="flex items-center space-x-4">
+                  <span>📍 {contractInfo?.location || 'Lieu non défini'}</span>
+                  <span>💰 {contractInfo?.billingRate || 0}€/h</span>
+                  <span>⏱️ {employeeStats.totalHours.toFixed(1)}h cette semaine</span>
+                  <span>📅 {employeeStats.workingDays} jours</span>
+                </div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                Période: {contractInfo ? new Date(contractInfo.startDate).toLocaleDateString() : ''} - {contractInfo ? new Date(contractInfo.endDate).toLocaleDateString() : ''}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {employeeStats.totalHours.toFixed(1)}h
+              </div>
+              <div className="text-xs text-gray-500">
+                {isExpanded ? 'Replier' : 'Déplier'}
+              </div>
+            </div>
+            {isExpanded ? (
+              <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+            )}
+          </div>
+        </button>
+        
+        {/* Contenu accordéon */}
+        {isExpanded && currentWeekStart && (
+          <div className="p-4 bg-white border-t border-gray-200">
+            <div className="mb-3 text-sm text-gray-600 bg-blue-50 p-2 rounded">
+              <strong>Mission:</strong> {contractInfo?.description || 'Aucune description'}<br/>
+              <strong>Horaires:</strong> {contractInfo?.workingHours || '8h-17h'} ({getDefaultHours(contractInfo)}h/jour par défaut)
+            </div>
+            <div className="grid grid-cols-7 gap-2">
+              {getWeekDays(currentWeekStart).map((date) => {
+                const dateStr = date.toISOString().split('T')[0];
+                const entry = employeeEntries[dateStr];
+                
+                return (
+                  <DayEntry
+                    key={`${employee.id}-${dateStr}`}
+                    employeeId={employee.id}
+                    contractId={contractInfo?.id}
+                    contractInfo={contractInfo}
+                    date={date}
+                    entry={entry}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }; ({ employee }) => {
+    const isExpanded = expandedEmployees.has(employee.id);
+    const employeeEntries = weeklyTimeEntries[employee.id] || {};
+    
+    // Calculer les stats de cet employé pour la semaine
+    const employeeStats = Object.values(employeeEntries).reduce((acc, entry) => {
+      acc.totalHours += entry.totalHours || 0;
+      acc.workingDays += 1;
+      return acc;
+    }, { totalHours: 0, workingDays: 0 });
+    
+    return (
+      <div className="border border-gray-200 rounded-lg overflow-hidden">
+        {/* En-tête accordéon */}
+        <button
+          onClick={() => toggleEmployee(employee.id)}
+          className="w-full px-4 py-3 bg-gray-50 hover:bg-gray-100 flex justify-between items-center text-left transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-medium text-sm">
+                {employee.firstName?.[0]}{employee.lastName?.[0]}
+              </span>
+            </div>
+            <div>
+              <div className="font-medium text-gray-900">
+                {employee.firstName} {employee.lastName}
+              </div>
+              <div className="text-sm text-gray-600">
+                {employeeStats.totalHours.toFixed(1)}h cette semaine • {employeeStats.workingDays} jours
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">
+              {isExpanded ? 'Replier' : 'Déplier'}
+            </span>
+            {isExpanded ? (
+              <ChevronUpIcon className="h-5 w-5 text-gray-400" />
+            ) : (
+              <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+            )}
+          </div>
+        </button>
+        
+        {/* Contenu accordéon */}
+        {isExpanded && currentWeekStart && (
+          <div className="p-4 bg-white border-t border-gray-200">
+            <div className="grid grid-cols-7 gap-2">
+              {getWeekDays(currentWeekStart).map((date) => {
+                const dateStr = date.toISOString().split('T')[0];
+                const entry = employeeEntries[dateStr];
+                
+                return (
+                  <DayEntry
+                    key={`${employee.id}-${dateStr}`}
+                    employeeId={employee.id}
+                    date={date}
+                    entry={entry}
+                    defaultHours={getDefaultHours()}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">Chargement des contrats...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* En-tête */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+        <h2 className="text-2xl font-bold text-gray-900 flex items-center mb-4">
+          <ClockIcon className="h-6 w-6 mr-2 text-blue-600" />
+          Pointage Client - {client.companyName}
+        </h2>
+        
+        {/* Informations globales */}
+        <div className="bg-white rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <div className="text-sm text-gray-600">Contrats actifs</div>
+            <div className="font-medium">{clientContracts.length}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Employés assignés</div>
+            <div className="font-medium">{employeesWithContracts.length}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-600">Période globale</div>
+            <div className="font-medium">
+              {clientContracts.length > 0 ? (
+                <>
+                  {new Date(Math.min(...clientContracts.map(c => new Date(c.startDate)))).toLocaleDateString()} - {new Date(Math.max(...clientContracts.map(c => new Date(c.endDate)))).toLocaleDateString()}
+                </>
+              ) : 'Aucune période'}
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {employeesWithContracts.length === 0 ? (
+        <div className="text-center py-12">
+          <InformationCircleIcon className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+          <p className="text-gray-500">Aucun employé assigné aux contrats de ce client</p>
+        </div>
+      ) : (
+        <>
+          {/* Navigation semaine + statistiques */}
+          <div className="bg-white rounded-lg p-4">
+            <div className="flex justify-between items-center mb-4">
+              <button
+                onClick={() => navigateWeek(-1)}
+                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ChevronLeftIcon className="h-5 w-5 mr-1" />
+                Semaine précédente
+              </button>
+              
+              <div className="text-center">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Semaine du {currentWeekStart?.toLocaleDateString('fr-FR')}
+                </h3>
+                <div className="text-sm text-gray-600">
+                  {currentWeekStart && (
+                    <>
+                      {currentWeekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - {
+                        (() => {
+                          const weekEnd = new Date(currentWeekStart);
+                          weekEnd.setDate(weekEnd.getDate() + 6);
+                          return weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+                        })()
+                      }
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              <button
+                onClick={() => navigateWeek(1)}
+                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Semaine suivante
+                <ChevronRightIcon className="h-5 w-5 ml-1" />
+              </button>
+            </div>
+            
+            {/* Statistiques globales */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-blue-600">Total heures</div>
+                <div className="text-xl font-bold text-blue-700">{weeklyStats.totalHours.toFixed(1)}h</div>
+              </div>
+              <div className="bg-purple-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-purple-600">Employés</div>
+                <div className="text-xl font-bold text-purple-700">{weeklyStats.totalEmployees}</div>
+              </div>
+              <div className="bg-indigo-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-indigo-600">Contrats</div>
+                <div className="text-xl font-bold text-indigo-700">{weeklyStats.totalContracts}</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-green-600">Jours validés</div>
+                <div className="text-xl font-bold text-green-700">{weeklyStats.validatedDays}</div>
+              </div>
+              <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-yellow-600">En attente</div>
+                <div className="text-xl font-bold text-yellow-700">{weeklyStats.pendingDays}</div>
+              </div>
+              <div className="bg-emerald-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-emerald-600">Coût estimé</div>
+                <div className="text-xl font-bold text-emerald-700">{weeklyStats.totalCost.toFixed(0)}€</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Liste des employés avec accordéons */}
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium text-gray-900">
+                Employés et leurs missions ({employeesWithContracts.length})
+              </h3>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setExpandedEmployees(new Set(employeesWithContracts.map(emp => emp.id)))}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Tout déplier
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  onClick={() => setExpandedEmployees(new Set())}
+                  className="text-sm text-blue-600 hover:text-blue-700"
+                >
+                  Tout replier
+                </button>
+              </div>
+            </div>
+            
+            {employeesWithContracts.map((employee) => (
+              <EmployeeAccordion
+                key={employee.id}
+                employee={employee}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+export default ClientTimeTrackingTab;

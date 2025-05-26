@@ -9,7 +9,7 @@ import ClientProfileHeader from './components/ClientProfileHeader';
 import ClientTabNavigation from './components/ClientTabNavigation';
 import ClientInfoTab from './components/ClientInfoTab';
 import ClientAboutTab from './components/ClientAboutTab';
-import { ClientHistoryTab, ClientTimeTrackingTab } from './components/ClientPlaceholderTabs';
+import ClientTimeTrackingTab  from './components/ClientTimeTrackingTab';
 
 // Import du service (à créer)
 import ClientService from './ClientService';
@@ -59,8 +59,8 @@ function ClientProfile() {
         return <ClientAboutTab client={client} />;
       // case 'historique':
       //   return <ClientHistoryTab />;
-      // case 'pointage':
-      //   return <ClientTimeTrackingTab />;
+      case 'pointage':
+        return <ClientTimeTrackingTab client={client} />;
       // default:
       //   return <ClientInfoTab client={client} />;
     }

@@ -31,7 +31,7 @@ import EmployeeListView from './components/EmployeeListView';
 // Composants modernes
 const ModernSearchBar = ({ searchTerm, setSearchTerm, statusFilter, setStatusFilter }) => {
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border border-white/20 p-6">
+    <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-sm shadow-lg border border-white/20 p-2">
       {/* Arrière-plan décoratif */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 to-indigo-50/50"></div>
       
@@ -330,7 +330,7 @@ const EmployeeList = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
-  const [currentView, setCurrentView] = useState('cards'); // 'table', 'list', 'cards'
+  const [currentView, setCurrentView] = useState('table'); // 'table', 'list', 'cards'
 
   // Chargement des employés
   useEffect(() => {
