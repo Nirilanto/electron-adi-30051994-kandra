@@ -539,9 +539,7 @@ class DatabaseService {
       const activeClients = clients.filter((c) => c.status === "active").length;
 
       const totalContracts = contracts.length;
-      const activeContracts = contracts.filter(
-        (c) => c.status === "active"
-      ).length;
+      const activeContracts = contracts.length;
 
       // Contrats se terminant bientôt
       const endingSoonContracts = await this.getEndingSoonContracts();
