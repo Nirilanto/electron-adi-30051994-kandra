@@ -713,7 +713,7 @@ const ClientList = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="mx-auto p-6">
         {/* En-tête */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center space-x-4">

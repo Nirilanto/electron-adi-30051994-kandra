@@ -16,6 +16,7 @@ import ContractList from "./modules/contracts/ContractList";
 import ContractProfile from "./modules/contracts/ContractProfile";
 
 import ContractForm from "./modules/contracts/ContractForm";
+import GlobalTimeTracking from "./modules/timetracking/GlobalTimeTracking";
 import Settings from "./modules/settings/Settings";
 
 // Services
@@ -101,6 +102,9 @@ function App() {
         <Route path="/clients/:id/edit" element={<ClientForm />} />
 
         <Route path="/settings" element={<Settings />} />
+
+        {/* Module Pointage Global */}
+        <Route path="/timetracking" element={<GlobalTimeTracking />} />
 
         {/* Module Contrats */}
         <Route path="/contracts" element={<ContractList />} />
