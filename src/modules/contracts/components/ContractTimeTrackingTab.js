@@ -24,19 +24,19 @@ const ContractTimeTrackingTab = ({ contract }) => {
   // États principaux
   const [contractEmployee, setContractEmployee] = useState(null);
   const [contractClient, setContractClient] = useState(null);
-  const [currentWeekStart, setCurrentWeekStart] = useState(new Date());
-  const [weeklyTimeEntries, setWeeklyTimeEntries] = useState({});
+  const [allTimeEntries, setAllTimeEntries] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState({});
 
-  // Statistiques de la semaine pour ce contrat
-  const [weeklyStats, setWeeklyStats] = useState({
+  // Statistiques globales pour tout le contrat
+  const [contractStats, setContractStats] = useState({
     totalHours: 0,
     validatedDays: 0,
     pendingDays: 0,
     totalCost: 0,
     totalRevenue: 0,
-    workingDays: 0
+    workingDays: 0,
+    totalDays: 0
   });
 
   // Chargement initial
@@ -44,18 +44,12 @@ const ContractTimeTrackingTab = ({ contract }) => {
     loadContractDetails();
   }, [contract.id]);
 
-  // Chargement des données quand la semaine change
+  // Chargement des données quand les détails sont chargés
   useEffect(() => {
-    if (currentWeekStart && contractEmployee) {
-      loadWeeklyTimeEntries();
+    if (contractEmployee) {
+      loadAllTimeEntries();
     }
-  }, [currentWeekStart, contractEmployee]);
-
-  // Initialiser la semaine courante
-  useEffect(() => {
-    const today = new Date();
-    setCurrentWeekStart(getWeekStart(today));
-  }, []);
+  }, [contractEmployee]);
 
   // Charger les détails du contrat (employé + client)
   const loadContractDetails = async () => {
@@ -82,48 +76,37 @@ const ContractTimeTrackingTab = ({ contract }) => {
     }
   };
 
-  // Obtenir le début de semaine (lundi)
-  const getWeekStart = (date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(d.setDate(diff));
-  };
-
-  // Obtenir les 7 jours de la semaine
-  const getWeekDays = (weekStart) => {
+  // Obtenir tous les jours du contrat
+  const getContractDays = () => {
     const days = [];
-    for (let i = 0; i < 7; i++) {
-      const day = new Date(weekStart);
-      day.setDate(weekStart.getDate() + i);
-      days.push(day);
+    const startDate = new Date(contract.startDate);
+    const endDate = new Date(contract.endDate);
+    
+    // Normaliser les dates
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(0, 0, 0, 0);
+    
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      days.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+    
     return days;
   };
 
-  // Navigation entre les semaines
-  const navigateWeek = (direction) => {
-    if (!currentWeekStart) return;
-    
-    const newWeekStart = new Date(currentWeekStart);
-    newWeekStart.setDate(newWeekStart.getDate() + (direction * 7));
-    setCurrentWeekStart(newWeekStart);
-  };
-
-  // Charger les pointages de la semaine pour ce contrat
-  const loadWeeklyTimeEntries = async () => {
+  // Charger tous les pointages du contrat
+  const loadAllTimeEntries = async () => {
     try {
       if (!contractEmployee) return;
       
-      const weekDays = getWeekDays(currentWeekStart);
-      const weekEnd = weekDays[6];
-      
-      // Récupérer les pointages pour ce contrat uniquement
+      // Récupérer tous les pointages pour ce contrat
       const timeEntries = await TimeTrackingService.getTimeEntries({
         contractId: contract.id,
         employeeId: contractEmployee.id,
-        startDate: currentWeekStart.toISOString().split('T')[0],
-        endDate: weekEnd.toISOString().split('T')[0]
+        startDate: contract.startDate,
+        endDate: contract.endDate
       });
       
       // Organiser par date
@@ -132,8 +115,8 @@ const ContractTimeTrackingTab = ({ contract }) => {
         entriesByDate[entry.date] = entry;
       });
       
-      setWeeklyTimeEntries(entriesByDate);
-      calculateWeeklyStats(timeEntries);
+      setAllTimeEntries(entriesByDate);
+      calculateContractStats(timeEntries);
       
     } catch (error) {
       console.error('Erreur lors du chargement des pointages:', error);
@@ -141,8 +124,10 @@ const ContractTimeTrackingTab = ({ contract }) => {
     }
   };
 
-  // Calculer les statistiques de la semaine
-  const calculateWeeklyStats = (timeEntries) => {
+  // Calculer les statistiques du contrat
+  const calculateContractStats = (timeEntries) => {
+    const contractDays = getContractDays();
+    
     const stats = timeEntries.reduce((acc, entry) => {
       acc.totalHours += entry.totalHours || 0;
       acc.workingDays += 1;
@@ -173,7 +158,8 @@ const ContractTimeTrackingTab = ({ contract }) => {
       totalRevenue: 0 
     });
     
-    setWeeklyStats(stats);
+    stats.totalDays = contractDays.length;
+    setContractStats(stats);
   };
 
   // Vérifier si une date est dans la période du contrat
@@ -218,7 +204,7 @@ const ContractTimeTrackingTab = ({ contract }) => {
         status: 'draft'
       };
       
-      const existingEntry = weeklyTimeEntries[dateStr];
+      const existingEntry = allTimeEntries[dateStr];
       
       if (existingEntry) {
         if (existingEntry.status === 'invoiced') {
@@ -230,7 +216,7 @@ const ContractTimeTrackingTab = ({ contract }) => {
         await TimeTrackingService.createTimeEntry(timeEntryData);
       }
       
-      await loadWeeklyTimeEntries();
+      await loadAllTimeEntries();
       toast.success('Pointage sauvegardé');
       
     } catch (error) {
@@ -244,7 +230,7 @@ const ContractTimeTrackingTab = ({ contract }) => {
   // Valider un jour
   const validateDay = async (date) => {
     const dateStr = date.toISOString().split('T')[0];
-    const entry = weeklyTimeEntries[dateStr];
+    const entry = allTimeEntries[dateStr];
     
     if (!entry) {
       toast.error('Aucun pointage à valider pour ce jour');
@@ -258,7 +244,7 @@ const ContractTimeTrackingTab = ({ contract }) => {
     
     try {
       await TimeTrackingService.validateTimeEntry(entry.id);
-      await loadWeeklyTimeEntries();
+      await loadAllTimeEntries();
       toast.success('Journée validée');
     } catch (error) {
       console.error('Erreur lors de la validation:', error);
@@ -291,26 +277,12 @@ const ContractTimeTrackingTab = ({ contract }) => {
     const [hours, setHours] = useState(entry?.totalHours || 0);
     const [notes, setNotes] = useState(entry?.notes || '');
     const dateStr = date.toISOString().split('T')[0];
-    const isToday = dateStr === new Date().toISOString().split('T')[0];
-    const isInContractPeriod = isDateInContractPeriod(date);
+    const today = new Date().toISOString().split('T')[0];
+    const isToday = dateStr === today;
+    const isPast = new Date(dateStr) < new Date(today);
+    const isFuture = new Date(dateStr) > new Date(today);
     const isSavingDay = isSaving[dateStr];
     const defaultHours = getDefaultHours();
-    
-    if (!isInContractPeriod) {
-      return (
-        <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 opacity-50">
-          <div className="text-center text-gray-400">
-            <div className="text-sm font-medium">
-              {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
-            </div>
-            <div className="text-xs">
-              {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-            </div>
-            <div className="text-xs mt-2">Hors contrat</div>
-          </div>
-        </div>
-      );
-    }
     
     const handleSave = () => {
       if (hours > 0) {
@@ -323,11 +295,16 @@ const ContractTimeTrackingTab = ({ contract }) => {
     };
     
     const getStatusColor = () => {
-      if (!entry) return 'border-gray-200 bg-white';
+      if (!entry) {
+        if (isToday) return 'border-blue-400 bg-blue-50';
+        if (isPast) return 'border-gray-200 bg-gray-50';
+        return 'border-gray-200 bg-white';
+      }
+      
       switch (entry.status) {
-        case 'validated': return 'border-green-300 bg-green-50';
-        case 'invoiced': return 'border-blue-300 bg-blue-50';
-        default: return 'border-yellow-300 bg-yellow-50';
+        case 'validated': return 'border-green-400 bg-green-50';
+        case 'invoiced': return 'border-blue-400 bg-blue-50';
+        default: return 'border-yellow-400 bg-yellow-50';
       }
     };
     
@@ -340,22 +317,45 @@ const ContractTimeTrackingTab = ({ contract }) => {
       }
     };
     
+    const getTodayIndicator = () => {
+      if (!isToday) return null;
+      return (
+        <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white shadow-lg">
+          <div className="w-full h-full bg-blue-500 rounded-full animate-pulse"></div>
+        </div>
+      );
+    };
+    
     return (
-      <div className={`p-3 rounded-lg border ${getStatusColor()} ${isToday ? 'ring-1 ring-blue-300' : ''}`}>
+      <div className={`relative p-3 rounded-lg border-2 transition-all ${getStatusColor()} ${
+        isToday ? 'ring-2 ring-blue-300 shadow-lg transform scale-105' : ''
+      } ${isPast && !entry ? 'opacity-60' : ''} ${isFuture ? 'opacity-80' : ''}`}>
+        
+        {/* Indicateur aujourd'hui */}
+        {getTodayIndicator()}
+        
         {/* En-tête du jour */}
         <div className="flex justify-between items-center mb-2">
           <div>
-            <div className="text-sm font-medium text-gray-900">
+            <div className={`text-sm font-medium ${isToday ? 'text-blue-700' : 'text-gray-900'}`}>
               {date.toLocaleDateString('fr-FR', { weekday: 'short' })}
             </div>
-            <div className="text-xs text-gray-600">
+            <div className={`text-xs ${isToday ? 'text-blue-600' : 'text-gray-600'}`}>
               {date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
             </div>
+            {isToday && (
+              <div className="text-xs font-bold text-blue-600 mt-1">
+                AUJOURD'HUI
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-1">
             {getStatusIcon()}
-            {isToday && (
-              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full" title="Aujourd'hui"></div>
+            {isPast && !entry && (
+              <div className="text-xs text-gray-400">Passé</div>
+            )}
+            {isFuture && (
+              <div className="text-xs text-gray-500">Futur</div>
             )}
           </div>
         </div>
@@ -370,13 +370,21 @@ const ContractTimeTrackingTab = ({ contract }) => {
               min="0"
               max="24"
               step="0.5"
-              className="flex-1 px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className={`flex-1 px-2 py-1.5 border rounded text-sm focus:outline-none focus:ring-2 ${
+                isToday 
+                  ? 'border-blue-300 focus:ring-blue-500 bg-blue-50' 
+                  : 'border-gray-300 focus:ring-blue-500'
+              }`}
               disabled={entry?.status === 'invoiced'}
               placeholder="0h"
             />
             <button
               onClick={handleSetDefault}
-              className="px-2 py-1.5 text-xs bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+              className={`px-2 py-1.5 text-xs rounded transition-colors ${
+                isToday
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              } disabled:opacity-50`}
               disabled={entry?.status === 'invoiced'}
               title={`${defaultHours}h par défaut`}
             >
@@ -396,7 +404,11 @@ const ContractTimeTrackingTab = ({ contract }) => {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows="1"
-            className="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
+            className={`w-full px-2 py-1 border rounded text-xs focus:outline-none focus:ring-1 resize-none ${
+              isToday 
+                ? 'border-blue-300 focus:ring-blue-500 bg-blue-50' 
+                : 'border-gray-300 focus:ring-blue-500'
+            }`}
             disabled={entry?.status === 'invoiced'}
             placeholder="Notes..."
             onFocus={(e) => e.target.rows = 2}
@@ -410,7 +422,11 @@ const ContractTimeTrackingTab = ({ contract }) => {
                 <button
                   onClick={handleSave}
                   disabled={isSavingDay || hours <= 0}
-                  className="flex-1 px-2 py-1.5 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`flex-1 px-2 py-1.5 rounded text-xs font-medium transition-colors ${
+                    isToday
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
                   {isSavingDay ? '...' : 'Sauver'}
                 </button>
@@ -418,7 +434,7 @@ const ContractTimeTrackingTab = ({ contract }) => {
                 {entry && entry.status === 'draft' && (
                   <button
                     onClick={() => validateDay(date)}
-                    className="px-2 py-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700"
+                    className="px-2 py-1.5 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors"
                     title="Valider"
                   >
                     ✓
@@ -512,83 +528,89 @@ const ContractTimeTrackingTab = ({ contract }) => {
         </div>
       ) : (
         <>
-          {/* Navigation semaine + statistiques */}
+          {/* Statistiques globales du contrat */}
           <div className="bg-white rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
-              <button
-                onClick={() => navigateWeek(-1)}
-                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ChevronLeftIcon className="h-5 w-5 mr-1" />
-                Semaine précédente
-              </button>
-              
-              <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Semaine du {currentWeekStart?.toLocaleDateString('fr-FR')}
-                </h3>
-                <div className="text-sm text-gray-600">
-                  {currentWeekStart && (
-                    <>
-                      {currentWeekStart.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} - {
-                        (() => {
-                          const weekEnd = new Date(currentWeekStart);
-                          weekEnd.setDate(weekEnd.getDate() + 6);
-                          return weekEnd.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-                        })()
-                      }
-                    </>
-                  )}
-                </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Statistiques du contrat
+              </h3>
+              <div className="text-sm text-gray-600">
+                Période complète : {getContractDays().length} jours
               </div>
-              
-              <button
-                onClick={() => navigateWeek(1)}
-                className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Semaine suivante
-                <ChevronRightIcon className="h-5 w-5 ml-1" />
-              </button>
             </div>
             
-            {/* Statistiques de la semaine */}
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+            {/* Statistiques du contrat */}
+            <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
               <div className="bg-blue-50 rounded-lg p-3 text-center">
                 <div className="text-sm text-blue-600">Total heures</div>
-                <div className="text-xl font-bold text-blue-700">{weeklyStats.totalHours.toFixed(1)}h</div>
+                <div className="text-xl font-bold text-blue-700">{contractStats.totalHours.toFixed(1)}h</div>
+              </div>
+              <div className="bg-indigo-50 rounded-lg p-3 text-center">
+                <div className="text-sm text-indigo-600">Jours total</div>
+                <div className="text-xl font-bold text-indigo-700">{contractStats.totalDays}</div>
               </div>
               <div className="bg-purple-50 rounded-lg p-3 text-center">
                 <div className="text-sm text-purple-600">Jours travaillés</div>
-                <div className="text-xl font-bold text-purple-700">{weeklyStats.workingDays}</div>
+                <div className="text-xl font-bold text-purple-700">{contractStats.workingDays}</div>
               </div>
               <div className="bg-green-50 rounded-lg p-3 text-center">
                 <div className="text-sm text-green-600">Jours validés</div>
-                <div className="text-xl font-bold text-green-700">{weeklyStats.validatedDays}</div>
+                <div className="text-xl font-bold text-green-700">{contractStats.validatedDays}</div>
               </div>
               <div className="bg-yellow-50 rounded-lg p-3 text-center">
                 <div className="text-sm text-yellow-600">En attente</div>
-                <div className="text-xl font-bold text-yellow-700">{weeklyStats.pendingDays}</div>
+                <div className="text-xl font-bold text-yellow-700">{contractStats.pendingDays}</div>
               </div>
               <div className="bg-orange-50 rounded-lg p-3 text-center">
-                <div className="text-sm text-orange-600">Coût</div>
-                <div className="text-xl font-bold text-orange-700">{weeklyStats.totalCost.toFixed(0)}€</div>
+                <div className="text-sm text-orange-600">Coût total</div>
+                <div className="text-xl font-bold text-orange-700">{contractStats.totalCost.toFixed(0)}€</div>
               </div>
               <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                <div className="text-sm text-emerald-600">Revenus</div>
-                <div className="text-xl font-bold text-emerald-700">{weeklyStats.totalRevenue.toFixed(0)}€</div>
+                <div className="text-sm text-emerald-600">Revenus total</div>
+                <div className="text-xl font-bold text-emerald-700">{contractStats.totalRevenue.toFixed(0)}€</div>
               </div>
             </div>
           </div>
           
-          {/* Grille des jours */}
+          {/* Grille de tous les jours du contrat */}
           <div className="bg-white rounded-lg p-4">
-            <h4 className="text-lg font-medium text-gray-900 mb-4">
-              Pointage de {contractEmployee.firstName} {contractEmployee.lastName}
-            </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-              {getWeekDays(currentWeekStart).map((date) => {
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-lg font-medium text-gray-900">
+                Pointage complet - {contractEmployee.firstName} {contractEmployee.lastName}
+              </h4>
+              <div className="text-sm text-gray-600 bg-blue-50 px-3 py-1 rounded-full">
+                📅 {new Date(contract.startDate).toLocaleDateString()} → {new Date(contract.endDate).toLocaleDateString()}
+              </div>
+            </div>
+            
+            {/* Légende */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-sm font-medium text-gray-700 mb-2">Légende :</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-200 border-2 border-blue-400 rounded"></div>
+                  <span>Aujourd'hui</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-yellow-200 border-2 border-yellow-400 rounded"></div>
+                  <span>Brouillon</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-200 border-2 border-green-400 rounded"></div>
+                  <span>Validé</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-200 border-2 border-blue-400 rounded"></div>
+                  <span>Facturé</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Grille responsive des jours */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-7 gap-3">
+              {getContractDays().map((date) => {
                 const dateStr = date.toISOString().split('T')[0];
-                const entry = weeklyTimeEntries[dateStr];
+                const entry = allTimeEntries[dateStr];
                 
                 return (
                   <DayEntry
@@ -599,6 +621,15 @@ const ContractTimeTrackingTab = ({ contract }) => {
                 );
               })}
             </div>
+            
+            {/* Message si période très longue */}
+            {getContractDays().length > 100 && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="text-sm text-amber-700">
+                  ⚠️ Cette mission contient {getContractDays().length} jours. L'affichage peut être lent sur certains appareils.
+                </div>
+              </div>
+            )}
           </div>
         </>
       )}
