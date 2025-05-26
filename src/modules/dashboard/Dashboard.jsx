@@ -109,6 +109,8 @@ const Dashboard = () => {
     setStats(dashboardStats);
     
     const endingContracts = await DatabaseService.getEndingSoonContracts();
+    console.log("endingContracts    ------------------------ ", endingContracts);
+    
     setEndingSoonContracts(endingContracts);
   };
 
@@ -767,8 +769,6 @@ const Dashboard = () => {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Contrat</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Employé</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Client</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Échéance</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-700">Statut</th>
                         <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
@@ -776,7 +776,7 @@ const Dashboard = () => {
                     </thead>
                     <tbody>
                       {endingSoonContracts.slice(0, 5).map((contract) => {
-                        const daysRemaining = getDaysRemaining(contract.end_date);
+                        const daysRemaining = getDaysRemaining(contract.endDate);
                         let urgencyClass = 'bg-green-100 text-green-800';
                         let urgencyIcon = '🟢';
                         
@@ -792,17 +792,11 @@ const Dashboard = () => {
                           <tr key={contract.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                             <td className="py-4 px-4">
                               <div className="font-medium text-gray-900">
-                                {contract.reference || `CONT-${contract.id}`}
+                                {contract.title || `CONT-${contract.id}`}
                               </div>
                             </td>
                             <td className="py-4 px-4 text-gray-700">
-                              {contract.employee_firstname} {contract.employee_lastname}
-                            </td>
-                            <td className="py-4 px-4 text-gray-700">
-                              {contract.client_company}
-                            </td>
-                            <td className="py-4 px-4 text-gray-700">
-                              {formatDate(contract.end_date)}
+                              {formatDate(contract.endDate)}
                             </td>
                             <td className="py-4 px-4">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${urgencyClass}`}>

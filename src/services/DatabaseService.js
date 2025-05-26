@@ -477,7 +477,7 @@ class DatabaseService {
 
   // Obtenir les contrats actifs
   async getActiveContracts() {
-    return this.getContracts({ status: "active" });
+    return this.getContracts({  });
   }
 
   // Obtenir les contrats qui se terminent bientôt (dans les 30 jours)
@@ -492,13 +492,15 @@ class DatabaseService {
       thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
 
       // Récupérer tous les contrats actifs
-      const activeContracts = await this.getContracts({ status: "active" });
+      const activeContracts = await this.getContracts({});
+      console.log("activeContracts :::::::::::::::::::: ", activeContracts);
+      
 
       // Filtrer ceux qui se terminent dans les 30 jours
       const endingSoonContracts = activeContracts.filter((contract) => {
-        if (!contract.end_date) return false;
+        if (!contract.endDate) return false;
 
-        const endDate = new Date(contract.end_date);
+        const endDate = new Date(contract.endDate);
         return endDate >= today && endDate <= thirtyDaysLater;
       });
 
@@ -559,7 +561,7 @@ class DatabaseService {
       // Revenu du mois (approximatif basé sur le taux de facturation)
       let revenueThisMonth = 0;
       contracts.forEach((contract) => {
-        if (contract.status === "active" && contract.billing_rate) {
+        if ( contract.billing_rate) {
           const startDate = new Date(contract.start_date);
 
           // Si le contrat a commencé ce mois-ci
