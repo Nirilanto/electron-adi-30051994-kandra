@@ -8,8 +8,9 @@ import Layout from "./components/Layout";
 import Dashboard from "./modules/dashboard/Dashboard";
 import EmployeeList from "./modules/employees/EmployeeList";
 import EmployeeForm from "./modules/employees/EmployeeForm";
-import EmployeeProfile from './modules/employees/EmployeeProfile';
+import EmployeeProfile from "./modules/employees/EmployeeProfile";
 import ClientList from "./modules/clients/ClientList";
+import ClientProfile from "./modules/clients/ClientProfile";
 import ClientForm from "./modules/clients/ClientForm";
 import ContractList from "./modules/contracts/ContractList";
 import ContractForm from "./modules/contracts/ContractForm";
@@ -93,7 +94,9 @@ function App() {
         {/* Module Clients */}
         <Route path="/clients" element={<ClientList />} />
         <Route path="/clients/new" element={<ClientForm />} />
-        <Route path="/clients/:id" element={<ClientForm />} />
+        {/* <Route path="/clients/:id" element={<ClientForm />} /> */}
+        <Route path="/clients/:id/profile" element={<ClientProfile />} />
+        <Route path="/clients/:id/edit" element={<ClientForm />} />
 
         <Route path="/settings" element={<Settings />} />
 

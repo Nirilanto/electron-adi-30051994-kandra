@@ -1,24 +1,30 @@
-// src/modules/employees/components/EmployeeProfileHeader.js
+// src/modules/clients/components/ClientProfileHeader.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeftIcon,
   PencilIcon,
-  UserIcon,
+  BuildingOfficeIcon,
   CheckBadgeIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  GlobeEuropeAfricaIcon,
+  MapPinIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  IdentificationIcon
 } from '@heroicons/react/24/outline';
 
-const EmployeeProfileHeader = ({ employee }) => {
+const ClientProfileHeader = ({ client }) => {
   const navigate = useNavigate();
 
   const getInitials = () => {
-    if (!employee.firstName || !employee.lastName) return '??';
-    return `${employee.firstName.charAt(0)}${employee.lastName.charAt(0)}`.toUpperCase();
+    const companyName = client.companyName || client.company_name || '';
+    if (!companyName) return '??';
+    return companyName.substring(0, 2).toUpperCase();
   };
 
   const getStatusConfig = () => {
-    switch (employee.status) {
+    switch (client.status) {
       case 'active':
         return {
           bg: 'bg-gradient-to-r from-green-400 to-emerald-500',
@@ -37,7 +43,7 @@ const EmployeeProfileHeader = ({ employee }) => {
         return {
           bg: 'bg-gradient-to-r from-gray-400 to-gray-500',
           text: 'text-white',
-          icon: UserIcon,
+          icon: BuildingOfficeIcon,
           label: 'Inconnu'
         };
     }
@@ -45,6 +51,7 @@ const EmployeeProfileHeader = ({ employee }) => {
 
   const statusConfig = getStatusConfig();
   const StatusIcon = statusConfig.icon;
+  const companyName = client.companyName || client.company_name || 'Entreprise inconnue';
 
   return (
     <div className="relative overflow-hidden">
@@ -62,7 +69,7 @@ const EmployeeProfileHeader = ({ employee }) => {
           <div className="flex items-start space-x-6">
             {/* Bouton retour */}
             <button
-              onClick={() => navigate('/employees')}
+              onClick={() => navigate('/clients')}
               className="group mt-2 p-3 rounded-xl bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-white/20"
               aria-label="Retour"
             >
@@ -87,7 +94,7 @@ const EmployeeProfileHeader = ({ employee }) => {
               {/* Informations principales */}
               <div>
                 <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">
-                  {employee.firstName} {employee.lastName}
+                  {companyName}
                 </h1>
                 
                 <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -97,42 +104,46 @@ const EmployeeProfileHeader = ({ employee }) => {
                     {statusConfig.label}
                   </span> */}
                   
-                  {/* Qualification */}
-                  {employee.qualification && (
+                  {/* Type d'entreprise ou secteur */}
+                  {client.sector && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/80 text-gray-700 shadow-md backdrop-blur-sm border border-white/20">
-                      {employee.qualification}
+                      {client.sector}
                     </span>
                   )}
                   
-                  {/* Numéro employé */}
-                  {employee.employeeNumber && (
+                  {/* SIRET */}
+                  {client.siret && (
                     <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-white/80 text-gray-600 shadow-md backdrop-blur-sm border border-white/20">
-                      N° {employee.employeeNumber}
+                      <IdentificationIcon className="h-3 w-3 mr-1" />
+                      {client.siret}
                     </span>
                   )}
                 </div>
                 
                 {/* Informations secondaires */}
                 <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                  {employee.email && (
+                  {client.contactName && (
                     <div className="flex items-center">
                       <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
-                      {employee.email}
+                      Contact: {client.contactName}
                     </div>
                   )}
-                  {employee.phone && (
+                  {client.email && (
                     <div className="flex items-center">
                       <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                      {employee.phone}
+                      {client.email}
                     </div>
                   )}
-                  {employee.hourlyRate && (
+                  {client.phone && (
                     <div className="flex items-center">
-                      <div className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></div>
-                      {new Intl.NumberFormat('fr-FR', { 
-                        style: 'currency', 
-                        currency: 'EUR' 
-                      }).format(employee.hourlyRate)}/h
+                      <div className="w-2 h-2 bg-purple-400 rounded-full mr-2"></div>
+                      {client.phone}
+                    </div>
+                  )}
+                  {(client.city || client.address) && (
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-orange-400 rounded-full mr-2"></div>
+                      {client.city || client.address}
                     </div>
                   )}
                 </div>
@@ -142,7 +153,7 @@ const EmployeeProfileHeader = ({ employee }) => {
           
           {/* Bouton d'action moderne */}
           <button
-            onClick={() => navigate(`/employees/${employee.id}/edit`)}
+            onClick={() => navigate(`/clients/${client.id}/edit`)}
             className="group flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
           >
             <PencilIcon className="h-5 w-5 mr-2 group-hover:rotate-12 transition-transform" />
@@ -154,4 +165,4 @@ const EmployeeProfileHeader = ({ employee }) => {
   );
 };
 
-export default EmployeeProfileHeader;
+export default ClientProfileHeader;

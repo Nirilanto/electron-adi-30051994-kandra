@@ -1,3 +1,4 @@
+// src/modules/clients/ClientService.js
 import DatabaseService from '../../services/DatabaseService';
 
 class ClientService {
@@ -58,13 +59,19 @@ class ClientService {
       
       // Filtrer les clients en fonction du terme de recherche et du statut
       return clients.filter(client => {
-        // Vérifier si le nom de l'entreprise, le contact ou l'email correspond au terme de recherche
+        // Support des deux formats de noms de champs
+        const companyName = client.companyName || client.company_name || '';
+        const contactName = client.contactName || client.contact_name || '';
+        const email = client.email || '';
+        const siret = client.siret || '';
+        
+        // Vérifier si les critères correspondent au terme de recherche
         const matchesTerm = 
           searchTerm === '' ||
-          (client.company_name && client.company_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.contact_name && client.contact_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          (client.siret && client.siret.includes(searchTerm));
+          companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          siret.includes(searchTerm);
         
         // Vérifier si le statut correspond
         const matchesStatus = 
@@ -79,12 +86,24 @@ class ClientService {
     }
   }
 
+  // Obtenir les clients actifs
+  async getActiveClients() {
+    try {
+      return await DatabaseService.getClients({ status: 'active' });
+    } catch (error) {
+      console.error('Erreur dans ClientService.getActiveClients:', error);
+      throw error;
+    }
+  }
+
   // Valider les données d'un client
   validateClientData(data) {
     const errors = {};
     
-    // Vérifier les champs obligatoires
-    if (!data.company_name || data.company_name.trim() === '') {
+    // Vérifier les champs obligatoires - support des deux formats
+    const companyName = data.companyName || data.company_name;
+    if (!companyName || companyName.trim() === '') {
+      errors.companyName = 'Le nom de l\'entreprise est obligatoire';
       errors.company_name = 'Le nom de l\'entreprise est obligatoire';
     }
     
@@ -93,11 +112,20 @@ class ClientService {
       errors.email = 'Adresse email non valide';
     }
     
-    // Valider le SIRET
+    // Valider le SIRET (14 chiffres)
     if (data.siret) {
       const siretClean = data.siret.replace(/\s/g, '');
       if (!/^\d{14}$/.test(siretClean)) {
         errors.siret = 'Le numéro SIRET doit comporter 14 chiffres';
+      }
+    }
+    
+    // Valider le numéro de TVA
+    if (data.vatNumber && data.vatNumber.length > 0) {
+      // Format basique pour la TVA intracommunautaire
+      const vatRegex = /^[A-Z]{2}[A-Z0-9]+$/;
+      if (!vatRegex.test(data.vatNumber.replace(/\s/g, ''))) {
+        errors.vatNumber = 'Format de numéro de TVA invalide';
       }
     }
     
@@ -111,16 +139,21 @@ class ClientService {
   formatClientForDisplay(client) {
     if (!client) return null;
     
+    // Support des deux formats de noms de champs
+    const companyName = client.companyName || client.company_name || 'Entreprise inconnue';
+    const postalCode = client.postalCode || client.postal_code;
+    
     return {
       ...client,
+      displayName: companyName,
       formattedSiret: client.siret 
-        ? client.siret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4')
+        ? this.formatSiret(client.siret)
         : '-',
       statusText: client.status === 'active' ? 'Actif' : 'Inactif',
-      address: [
+      fullAddress: [
         client.address,
-        client.postal_code,
-        client.city,
+        client.addressComplement,
+        postalCode && client.city ? `${postalCode} ${client.city}` : '',
         client.country !== 'France' ? client.country : ''
       ].filter(Boolean).join(', ')
     };
@@ -135,6 +168,50 @@ class ClientService {
     
     // Formater le SIRET (XXX XXX XXX XXXXX)
     return cleanSiret.replace(/(\d{3})(\d{3})(\d{3})(\d{5})/, '$1 $2 $3 $4');
+  }
+
+  // Obtenir les statistiques d'un client
+  async getClientStats(clientId) {
+    try {
+      const client = await this.getClientById(clientId);
+      
+      return {
+        contractCount: client.contractCount || 0,
+        totalRevenue: client.totalRevenue || 0,
+        lastOrderDate: client.lastOrderDate || null,
+        averageOrderValue: client.averageOrderValue || 0,
+        satisfactionRating: client.satisfactionRating || null
+      };
+    } catch (error) {
+      console.error('Erreur dans ClientService.getClientStats:', error);
+      throw error;
+    }
+  }
+
+  // Obtenir l'historique des contrats d'un client
+  async getClientContracts(clientId) {
+    try {
+      // À implémenter quand le module contrats sera prêt
+      // return await DatabaseService.getContracts({ client_id: clientId });
+      return [];
+    } catch (error) {
+      console.error('Erreur dans ClientService.getClientContracts:', error);
+      throw error;
+    }
+  }
+
+  // Normaliser les données client pour compatibilité
+  normalizeClientData(client) {
+    return {
+      ...client,
+      // Assurer la compatibilité des noms de champs
+      companyName: client.companyName || client.company_name,
+      company_name: client.company_name || client.companyName,
+      contactName: client.contactName || client.contact_name,
+      contact_name: client.contact_name || client.contactName,
+      postalCode: client.postalCode || client.postal_code,
+      postal_code: client.postal_code || client.postalCode
+    };
   }
 }
 
