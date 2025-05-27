@@ -112,7 +112,7 @@ function EmployeeProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-100">
       {/* Container principal */}
-      <div className="max-w-7xl mx-auto">
+      <div className="mx-auto">
         {/* En-tête du profil */}
         <EmployeeProfileHeader employee={employee} />
 
