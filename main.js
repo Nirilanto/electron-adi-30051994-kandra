@@ -249,6 +249,8 @@ ipcMain.handle("generate-pdf", async (_, args) => {
       template = getEmployeeContractTemplate();
     } else if (type === "client_contract") {
       template = getClientContractTemplate();
+    } else if (type === "invoice") {
+      template = getClientInvoiceTemplate();
     } else {
       template = getClientContractTemplate(); // Par défaut
     }
@@ -369,10 +371,497 @@ ipcMain.handle("generate-pdf", async (_, args) => {
   }
 });
 
+function getClientInvoiceTemplate() {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{documentType}} {{invoiceNumber}}</title>
+    <style>
+        :root {
+            --primary: #333333;
+            --secondary: #666666;
+            --light-gray: #f8f9fa;
+            --medium-gray: #dee2e6;
+            --dark-gray: #495057;
+            --text: #212529;
+            --white: #ffffff;
+            --blue: #007bff;
+            --green: #28a745;
+            --success: #d4edda;
+            --border: #e9ecef;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11px;
+            line-height: 1.4;
+            color: var(--text);
+            background-color: var(--white);
+            padding: 0;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 210mm;
+            margin: 0 auto;
+            background-color: var(--white);
+            border: 1px solid var(--border);
+            padding: 20px;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--blue);
+        }
+        
+        .logo-section {
+            flex: 1;
+        }
+        
+        .company-logo {
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--blue);
+            margin-bottom: 5px;
+        }
+        
+        .company-info {
+            font-size: 10px;
+            color: var(--secondary);
+            line-height: 1.3;
+        }
+        
+        .document-info {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .document-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--blue);
+            margin-bottom: 5px;
+        }
+        
+        .document-number {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .document-dates {
+            font-size: 10px;
+            color: var(--secondary);
+        }
+        
+        .parties-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 25px;
+        }
+        
+        .party-box {
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .party-header {
+            background-color: var(--light-gray);
+            padding: 8px 12px;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .party-content {
+            padding: 12px;
+        }
+        
+        .party-name {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .party-details {
+            font-size: 10px;
+            color: var(--secondary);
+            line-height: 1.4;
+        }
+        
+        .invoice-details {
+            background-color: var(--light-gray);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: var(--secondary);
+            font-size: 10px;
+        }
+        
+        .detail-value {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 11px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .items-table th {
+            background-color: var(--dark-gray);
+            color: var(--white);
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        
+        .items-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            vertical-align: top;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+        
+        .items-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .font-medium {
+            font-weight: 600;
+        }
+        
+        .totals-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 25px;
+        }
+        
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .totals-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+        }
+        
+        .totals-table tr:last-child td {
+            border-bottom: none;
+            background-color: var(--success);
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .payment-conditions {
+            background-color: var(--light-gray);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .conditions-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .conditions-text {
+            font-size: 10px;
+            color: var(--secondary);
+            line-height: 1.4;
+        }
+        
+        .notes-section {
+            margin-bottom: 20px;
+        }
+        
+        .notes-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .notes-content {
+            font-size: 10px;
+            color: var(--secondary);
+            line-height: 1.4;
+            padding: 10px;
+            background-color: var(--light-gray);
+            border-radius: 3px;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 8px;
+            color: var(--secondary);
+            padding-top: 15px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-draft {
+            background-color: #f8f9fa;
+            color: #6c757d;
+        }
+        
+        .status-sent {
+            background-color: #cce5ff;
+            color: #0066cc;
+        }
+        
+        .status-paid {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        @media print {
+            body {
+                background-color: white;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                max-width: none;
+                width: 100%;
+                border: none;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="company-logo">{{company.name}}</div>
+                <div class="company-info">
+                    {{company.address}}<br>
+                    {{company.postalCode}} {{company.city}}<br>
+                    {{company.email}}<br>
+                    SIRET: {{company.siret}} - APE: {{company.ape}}
+                </div>
+            </div>
+            <div class="document-info">
+                <div class="document-title">{{documentType}}</div>
+                <div class="document-number">N° {{invoiceNumber}}</div>
+                <div class="document-dates">
+                    Date: {{invoiceDate}}<br>
+                    Échéance: {{dueDate}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Parties -->
+        <div class="parties-section">
+            <div class="party-box">
+                <div class="party-header">VENDEUR</div>
+                <div class="party-content">
+                    <div class="party-name">{{company.name}}</div>
+                    <div class="party-details">
+                        {{company.address}}<br>
+                        {{company.postalCode}} {{company.city}}<br>
+                        {{#if company.phone}}Tél: {{company.phone}}<br>{{/if}}
+                        Email: {{company.email}}<br>
+                        SIRET: {{company.siret}}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="party-box">
+                <div class="party-header">FACTURÉ À</div>
+                <div class="party-content">
+                    <div class="party-name">{{client.companyName}}</div>
+                    <div class="party-details">
+                        {{#if client.contactName}}{{client.contactName}}<br>{{/if}}
+                        {{client.address}}<br>
+                        {{#if client.addressComplement}}{{client.addressComplement}}<br>{{/if}}
+                        {{client.postalCode}} {{client.city}}<br>
+                        {{#if client.siret}}SIRET: {{client.siret}}<br>{{/if}}
+                        {{#if client.email}}Email: {{client.email}}{{/if}}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Détails de la facture -->
+        <div class="invoice-details">
+            <div class="details-grid">
+                <div class="detail-item">
+                    <span class="detail-label">Période de facturation:</span>
+                    <span class="detail-value">{{periodStart}} - {{periodEnd}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Total heures:</span>
+                    <span class="detail-value">{{totals.totalHours}}h</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Conditions de paiement:</span>
+                    <span class="detail-value">{{paymentTerms}}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Mode de paiement:</span>
+                    <span class="detail-value">{{paymentMethod}}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau des prestations -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Prestation</th>
+                    <th style="width: 15%;">Période</th>
+                    <th style="width: 10%;" class="text-center">Qté</th>
+                    <th style="width: 10%;" class="text-center">Unité</th>
+                    <th style="width: 12%;" class="text-right">Prix unit.</th>
+                    <th style="width: 13%;" class="text-right">Montant</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each workPeriods}}
+                <tr>
+                    <td>
+                        <div class="font-medium">{{this.description}}</div>
+                        <div style="font-size: 9px; color: var(--secondary); margin-top: 2px;">
+                            {{this.employeeName}}{{#if this.location}} • {{this.location}}{{/if}}
+                        </div>
+                    </td>
+                    <td style="font-size: 9px;">
+                        {{this.startDate}}<br>
+                        {{this.endDate}}
+                    </td>
+                    <td class="text-center font-medium">{{this.quantity}}</td>
+                    <td class="text-center">{{this.unit}}</td>
+                    <td class="text-right">{{this.formattedUnitPrice}}</td>
+                    <td class="text-right font-medium">{{this.formattedAmount}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <!-- Totaux -->
+        <div class="totals-section">
+            <table class="totals-table">
+                <tr>
+                    <td>Sous-total HT</td>
+                    <td class="text-right font-medium">{{totals.formattedSubtotalHT}}</td>
+                </tr>
+                <tr>
+                    <td>TVA ({{totals.tvaRate}}%)</td>
+                    <td class="text-right font-medium">{{totals.formattedTvaAmount}}</td>
+                </tr>
+                <tr>
+                    <td>TOTAL TTC</td>
+                    <td class="text-right">{{totals.formattedTotalTTC}}</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Conditions de paiement -->
+        <div class="payment-conditions">
+            <div class="conditions-title">Conditions de paiement</div>
+            <div class="conditions-text">
+                Paiement à réception de facture par {{paymentMethod}}.<br>
+                Délai de paiement : {{paymentTerms}}.<br>
+                En cas de retard de paiement, des pénalités de 3 fois le taux de l'intérêt légal seront appliquées.
+            </div>
+        </div>
+
+        <!-- Notes -->
+        {{#if notes}}
+        <div class="notes-section">
+            <div class="notes-title">Notes</div>
+            <div class="notes-content">{{notes}}</div>
+        </div>
+        {{/if}}
+
+        <!-- Footer -->
+        <div class="footer">
+            {{company.name}} - {{company.address}}, {{company.postalCode}} {{company.city}}<br>
+            SIRET: {{company.siret}} - APE: {{company.ape}}<br>
+            Document généré le {{generationDate}}
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
 // Ajoutez ces nouvelles fonctions pour obtenir les templates HTML des PDFs
 
 function getClientContractTemplate() {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
       <html lang="fr">
       <head>
           <meta charset="UTF-8">
@@ -1298,9 +1787,10 @@ function getClientContractTemplate() {
               <div class="page-number">Page 2 sur 2</div>
           </div>
       </body>
-      </html>`;}
+      </html>`;
+}
 
-  function getCertificateTemplate() {
+function getCertificateTemplate() {
   return `
   <!DOCTYPE html>
   <html lang="fr">
@@ -1562,7 +2052,7 @@ function getClientContractTemplate() {
 
 
 function getEmployeeContractTemplate() {
-    return `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="fr">
   <head>
     <meta charset="UTF-8" />
