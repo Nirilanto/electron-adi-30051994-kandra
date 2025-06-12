@@ -58,7 +58,7 @@ class DatabaseService {
     try {
       // Ajouter le préfixe à la clé
       const prefixedKey = `${this.storePrefix}${key}`;
-      
+
       // Utiliser uniquement localStorage
       const value = localStorage.getItem(prefixedKey);
       console.log(`Récupération de ${prefixedKey}:`, value);
@@ -79,7 +79,7 @@ class DatabaseService {
     try {
       // Ajouter le préfixe à la clé
       const prefixedKey = `${this.storePrefix}${key}`;
-      
+
       // Utiliser uniquement localStorage
       localStorage.setItem(prefixedKey, JSON.stringify(value));
       console.log(`Enregistrement de ${prefixedKey}:`, value);
@@ -99,7 +99,7 @@ class DatabaseService {
     try {
       // Ajouter le préfixe à la clé
       const prefixedKey = `${this.storePrefix}${key}`;
-      
+
       // Utiliser uniquement localStorage
       localStorage.removeItem(prefixedKey);
       return true;
@@ -116,7 +116,7 @@ class DatabaseService {
   async keys() {
     try {
       // Filtrer les clés qui commencent par le préfixe
-      return Object.keys(localStorage).filter(key => 
+      return Object.keys(localStorage).filter(key =>
         key.startsWith(this.storePrefix)
       );
     } catch (error) {
@@ -124,7 +124,7 @@ class DatabaseService {
       return [];
     }
   }
-  
+
   /**
    * Enregistre l'historique de génération de PDF
    * @param {string} contractId - ID du contrat
@@ -477,7 +477,7 @@ class DatabaseService {
 
   // Obtenir les contrats actifs
   async getActiveContracts() {
-    return this.getContracts({  });
+    return this.getContracts({});
   }
 
   // Obtenir les contrats qui se terminent bientôt (dans les 30 jours)
@@ -494,7 +494,7 @@ class DatabaseService {
       // Récupérer tous les contrats actifs
       const activeContracts = await this.getContracts({});
       console.log("activeContracts :::::::::::::::::::: ", activeContracts);
-      
+
 
       // Filtrer ceux qui se terminent dans les 30 jours
       const endingSoonContracts = activeContracts.filter((contract) => {
@@ -518,6 +518,234 @@ class DatabaseService {
       throw error;
     }
   }
+
+  // src/services/DatabaseService.js - Ajout des méthodes factures
+  // Ajouter ces méthodes à votre DatabaseService.js existant
+
+  // Dans la méthode initializeDatabase(), ajouter:
+  /*
+  localStorage.setItem(`${this.storePrefix}lastId_invoices`, "0");
+  localStorage.setItem(`${this.storePrefix}invoices`, JSON.stringify([]));
+  */
+
+  // Méthodes pour les factures
+  async getInvoices(filters = {}) {
+    try {
+      if (!this.initialized) {
+        await this.initializeDatabase();
+      }
+
+      let invoices = await this.getAll("invoices", filters, "invoice_date", "DESC");
+
+      // Enrichir avec les données client
+      for (let i = 0; i < invoices.length; i++) {
+        const invoice = invoices[i];
+
+        try {
+          if (invoice.clientId || invoice.client_id) {
+            const clientId = invoice.clientId || invoice.client_id;
+            const client = await this.getClientById(clientId);
+            if (client) {
+              invoice.clientName = client.contactName || client.contact_name || '';
+              invoice.clientCompany = client.companyName || client.company_name || '';
+              invoice.clientEmail = client.email || '';
+              invoice.clientPhone = client.phone || '';
+              invoice.clientAddress = client.address || '';
+              invoice.clientCity = client.city || '';
+              invoice.clientPostalCode = client.postalCode || client.postal_code || '';
+            }
+          }
+        } catch (error) {
+          console.log(`Impossible de récupérer le client pour la facture ${invoice.id}:`, error);
+        }
+      }
+
+      return invoices;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des factures:", error);
+      throw error;
+    }
+  }
+
+  async getInvoiceById(id) {
+    try {
+      if (!this.initialized) {
+        await this.initializeDatabase();
+      }
+
+      const invoice = await this.getById("invoices", id);
+
+      // Enrichir avec les données client
+      try {
+        if (invoice.clientId || invoice.client_id) {
+          const clientId = invoice.clientId || invoice.client_id;
+          const client = await this.getClientById(clientId);
+          if (client) {
+            invoice.client = client;
+            invoice.clientName = client.contactName || client.contact_name || '';
+            invoice.clientCompany = client.companyName || client.company_name || '';
+          }
+        }
+      } catch (error) {
+        console.log(`Impossible de récupérer le client pour la facture ${invoice.id}:`, error);
+      }
+
+      return invoice;
+    } catch (error) {
+      console.error("Erreur lors de la récupération de la facture:", error);
+      throw error;
+    }
+  }
+
+  async createInvoice(data) {
+    try {
+      if (!this.initialized) {
+        await this.initializeDatabase();
+      }
+
+      // Normaliser les noms de champs
+      const normalizedData = {
+        ...data,
+        client_id: data.clientId || data.client_id,
+        invoice_number: data.invoiceNumber || data.invoice_number,
+        invoice_date: data.invoiceDate || data.invoice_date,
+        due_date: data.dueDate || data.due_date,
+        period_start: data.periodStart || data.period_start,
+        period_end: data.periodEnd || data.period_end,
+        total_amount: data.totalAmount || data.total_amount || 0,
+        work_periods: data.workPeriods || data.work_periods || [],
+        status: data.status || 'draft'
+      };
+
+      return await this.create("invoices", normalizedData);
+    } catch (error) {
+      console.error("Erreur lors de la création de la facture:", error);
+      throw error;
+    }
+  }
+
+  async updateInvoice(id, data) {
+    try {
+      if (!this.initialized) {
+        await this.initializeDatabase();
+      }
+
+      // Normaliser les noms de champs
+      const normalizedData = {
+        ...data,
+        client_id: data.clientId || data.client_id,
+        invoice_number: data.invoiceNumber || data.invoice_number,
+        invoice_date: data.invoiceDate || data.invoice_date,
+        due_date: data.dueDate || data.due_date,
+        period_start: data.periodStart || data.period_start,
+        period_end: data.periodEnd || data.period_end,
+        total_amount: data.totalAmount || data.total_amount || 0,
+        work_periods: data.workPeriods || data.work_periods || []
+      };
+
+      return await this.update("invoices", id, normalizedData);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la facture:", error);
+      throw error;
+    }
+  }
+
+  async deleteInvoice(id) {
+    try {
+      if (!this.initialized) {
+        await this.initializeDatabase();
+      }
+
+      return await this.delete("invoices", id);
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la facture:", error);
+      throw error;
+    }
+  }
+
+  // Obtenir les factures par client
+  async getInvoicesByClient(clientId) {
+    try {
+      return await this.getInvoices({ client_id: clientId });
+    } catch (error) {
+      console.error("Erreur lors de la récupération des factures par client:", error);
+      throw error;
+    }
+  }
+
+  // Obtenir les factures par statut
+  async getInvoicesByStatus(status) {
+    try {
+      return await this.getInvoices({ status: status });
+    } catch (error) {
+      console.error("Erreur lors de la récupération des factures par statut:", error);
+      throw error;
+    }
+  }
+
+  // Obtenir les factures d'une période
+  async getInvoicesByPeriod(startDate, endDate) {
+    try {
+      const invoices = await this.getInvoices();
+
+      return invoices.filter(invoice => {
+        const invoiceDate = new Date(invoice.invoice_date || invoice.invoiceDate);
+        return invoiceDate >= new Date(startDate) && invoiceDate <= new Date(endDate);
+      });
+    } catch (error) {
+      console.error('Erreur lors de la récupération des factures par période:', error);
+      throw error;
+    }
+  }
+
+  // Obtenir les statistiques des factures
+  async getInvoiceStatistics() {
+    try {
+      const invoices = await this.getInvoices();
+
+      const stats = {
+        total: invoices.length,
+        draft: invoices.filter(i => i.status === 'draft').length,
+        sent: invoices.filter(i => i.status === 'sent').length,
+        paid: invoices.filter(i => i.status === 'paid').length,
+        overdue: invoices.filter(i => i.status === 'overdue').length,
+        rejected: invoices.filter(i => i.status === 'rejected').length,
+        totalAmount: invoices.reduce((sum, i) => sum + (parseFloat(i.total_amount || i.totalAmount) || 0), 0),
+        paidAmount: invoices
+          .filter(i => i.status === 'paid')
+          .reduce((sum, i) => sum + (parseFloat(i.total_amount || i.totalAmount) || 0), 0),
+        pendingAmount: invoices
+          .filter(i => i.status === 'sent' || i.status === 'overdue')
+          .reduce((sum, i) => sum + (parseFloat(i.total_amount || i.totalAmount) || 0), 0)
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('Erreur lors du calcul des statistiques factures:', error);
+      throw error;
+    }
+  }
+
+  // Mettre à jour le statut d'une facture
+  async updateInvoiceStatus(id, status) {
+    try {
+      const invoice = await this.getInvoiceById(id);
+      if (!invoice) {
+        throw new Error('Facture non trouvée');
+      }
+
+      return await this.updateInvoice(id, {
+        ...invoice,
+        status,
+        updated_at: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du statut:', error);
+      throw error;
+    }
+  }
+
+
 
   // Obtenir des statistiques pour le tableau de bord
   async getDashboardStats() {
@@ -561,7 +789,7 @@ class DatabaseService {
       // Revenu du mois (approximatif basé sur le taux de facturation)
       let revenueThisMonth = 0;
       contracts.forEach((contract) => {
-        if ( contract.billing_rate) {
+        if (contract.billing_rate) {
           const startDate = new Date(contract.start_date);
 
           // Si le contrat a commencé ce mois-ci

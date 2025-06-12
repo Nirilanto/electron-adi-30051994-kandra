@@ -19,6 +19,8 @@ import ContractForm from "./modules/contracts/ContractForm";
 import GlobalTimeTracking from "./modules/timetracking/GlobalTimeTracking";
 import Settings from "./modules/settings/Settings";
 
+import { InvoiceList, InvoiceForm, InvoiceDetail } from './modules/invoices';
+
 // Services
 import DatabaseService from "./services/DatabaseService";
 
@@ -112,6 +114,12 @@ function App() {
         <Route path="/contracts/:id" element={<ContractForm />} />
         <Route path="/contracts/:id/profile" element={<ContractProfile />} />
         <Route path="/contracts/:id/edit" element={<ContractForm />} />
+
+        {/* Module invoices */}
+        <Route path="/invoices" element={<InvoiceList />} />
+        <Route path="/invoices/new" element={<InvoiceForm />} />
+        <Route path="/invoices/:id" element={<InvoiceDetail />} />
+        <Route path="/invoices/:id/edit" element={<InvoiceForm />} />
 
         {/* Redirection pour les routes non définies */}
         <Route path="*" element={<Navigate to="/" replace />} />
