@@ -1,6 +1,7 @@
 // src/modules/settings/components/SignaturesSettings.js
 import React, { useState, useRef } from 'react';
 import { PencilSquareIcon, TrashIcon, PlusIcon, PhotoIcon } from '@heroicons/react/24/outline';
+// import DatabaseCleanupButton from './DatabaseCleanupButton';
 
 function SignaturesSettings({ signatures, onSave, onDelete }) {
   const [editMode, setEditMode] = useState(false);
@@ -8,18 +9,18 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
   const [editingId, setEditingId] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
-  
+
   // Initialiser le formulaire d'édition avec les données de la signature sélectionnée
   const handleEdit = (signature) => {
     setEditingId(signature.id);
-    setNewSignature({ 
+    setNewSignature({
       ...signature,
-      imageData: signature.imageData || null 
+      imageData: signature.imageData || null
     });
     setPreviewUrl(signature.imageData);
     setEditMode(true);
   };
-  
+
   // Annuler l'édition
   const handleCancel = () => {
     setEditMode(false);
@@ -27,7 +28,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
     setNewSignature({ id: null, title: '', type: 'signature', imageData: null });
     setPreviewUrl(null);
   };
-  
+
   // Enregistrer la signature
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -38,14 +39,14 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
     onSave(newSignature);
     handleCancel();
   };
-  
+
   // Supprimer une signature
   const handleDelete = (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette signature/tampon ?')) {
       onDelete(id);
     }
   };
-  
+
   // Gérer les changements dans le formulaire
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -54,18 +55,18 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
       [name]: value
     }));
   };
-  
+
   // Gérer le téléchargement de fichier
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
+
     // Vérifier le type de fichier (uniquement images)
     if (!file.type.match('image.*')) {
       alert('Veuillez sélectionner un fichier image (jpg, png, jpeg)');
       return;
     }
-    
+
     // Lire le fichier et convertir en base64
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -75,17 +76,17 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
     };
     reader.readAsDataURL(file);
   };
-  
+
   // Cliquer sur le bouton "Parcourir" pour ouvrir le sélecteur de fichier
   const handleBrowseClick = () => {
     fileInputRef.current.click();
   };
-  
+
   return (
     <div className="bg-white p-6 rounded-lg shadow">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-800">Signatures et tampons</h2>
-        
+
         {!editMode && (
           <button
             type="button"
@@ -102,14 +103,14 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
           </button>
         )}
       </div>
-      
+
       {/* Formulaire d'ajout/édition */}
       {editMode && (
         <form onSubmit={handleSubmit} className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
           <h3 className="text-lg font-medium text-gray-700 mb-4">
             {editingId ? 'Modifier la signature/tampon' : 'Ajouter une signature/tampon'}
           </h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
@@ -126,7 +127,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                 placeholder="Ex: Signature Directeur, Tampon Entreprise"
               />
             </div>
-            
+
             <div>
               <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
                 Type
@@ -144,12 +145,12 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
               </select>
             </div>
           </div>
-          
+
           <div className="mt-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Image
             </label>
-            
+
             <div className="mt-1 flex items-center">
               <input
                 type="file"
@@ -158,7 +159,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                 accept="image/png, image/jpeg, image/jpg"
                 className="hidden"
               />
-              
+
               <button
                 type="button"
                 onClick={handleBrowseClick}
@@ -167,24 +168,24 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                 <PhotoIcon className="h-5 w-5 mr-2" />
                 Parcourir...
               </button>
-              
+
               <span className="ml-3 text-sm text-gray-500">
                 {previewUrl ? 'Image sélectionnée' : 'JPG, JPEG ou PNG'}
               </span>
             </div>
-            
+
             {previewUrl && (
               <div className="mt-4 border p-2 rounded-md bg-white">
                 <p className="text-sm text-gray-500 mb-2">Aperçu :</p>
-                <img 
+                <img
                   src={previewUrl}
-                  alt="Aperçu" 
+                  alt="Aperçu"
                   className="max-h-40 max-w-full object-contain border border-gray-200"
                 />
               </div>
             )}
           </div>
-          
+
           <div className="flex justify-end mt-4 space-x-3">
             <button
               type="button"
@@ -193,7 +194,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
             >
               Annuler
             </button>
-            
+
             <button
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -204,7 +205,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
           </div>
         </form>
       )}
-      
+
       {/* Tableau des signatures et tampons */}
       {signatures.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -221,7 +222,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                   >
                     <PencilSquareIcon className="h-5 w-5" />
                   </button>
-                  
+
                   <button
                     type="button"
                     onClick={() => handleDelete(signature.id)}
@@ -232,15 +233,15 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
                   </button>
                 </div>
               </div>
-              
+
               <p className="text-sm text-gray-500 mb-2">
                 Type: {signature.type === 'signature' ? 'Signature' : 'Tampon'}
               </p>
-              
+
               <div className="border p-2 rounded bg-gray-50">
-                <img 
+                <img
                   src={signature.imageData}
-                  alt={signature.title} 
+                  alt={signature.title}
                   className="h-32 w-full object-contain"
                 />
               </div>
@@ -265,6 +266,7 @@ function SignaturesSettings({ signatures, onSave, onDelete }) {
           )}
         </div>
       )}
+      {/* <DatabaseCleanupButton /> */}
     </div>
   );
 }
