@@ -371,7 +371,6 @@ ipcMain.handle("generate-pdf", async (_, args) => {
   }
 });
 
-// Remplacer la fonction getClientInvoiceTemplate dans main.js par cette version
 // Remplacer complètement la fonction getClientInvoiceTemplate dans main.js
 
 function getClientInvoiceTemplate() {
@@ -390,113 +389,186 @@ function getClientInvoiceTemplate() {
         
         body {
             font-family: Arial, sans-serif;
-            font-size: 11px;
-            line-height: 1.2;
+            font-size: 10px;
+            line-height: 1.4;
             color: #000;
             background-color: white;
-            padding: 10mm;
         }
         
+        /* Page avec marges agrandies */
         .page {
-            width: 100%;
-            max-width: 210mm;
+            width: 210mm;
+            height: 297mm;
+            padding: 15mm;
             margin: 0 auto;
             background-color: white;
+            position: relative;
         }
         
-        /* En-tête avec logo et infos entreprise */
+        /* En-tête simple et professionnel */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
             border-bottom: 2px solid #000;
-            padding-bottom: 10px;
         }
         
-        .company-info {
+        .company-section {
             flex: 1;
         }
         
         .company-name {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
-            margin-bottom: 3px;
+            color: #000;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
         
         .company-details {
             font-size: 9px;
-            line-height: 1.3;
+            color: #333;
+            line-height: 1.4;
             margin-bottom: 2px;
         }
         
-        .invoice-title {
+        .invoice-section {
             flex: 1;
             text-align: right;
         }
         
-        .invoice-number {
-            font-size: 16px;
+        .invoice-title {
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 5px;
+            color: #000;
+            margin-bottom: 8px;
         }
         
-        /* Section client */
-        .client-section {
+        .invoice-dates {
+            font-size: 10px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .invoice-number {
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+            border: 2px solid #000;
+            padding: 8px 12px;
+            display: inline-block;
+        }
+        
+        /* Sections simples */
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+        
+        .section-title {
+            background-color: #f5f5f5;
+            color: #000;
+            padding: 10px 15px;
+            font-weight: bold;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #ccc;
+        }
+        
+        .section-content {
+            padding: 15px;
+            background-color: white;
+        }
+        
+        /* Informations client */
+        .client-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
             margin-bottom: 15px;
-            border: 1px solid #000;
-            padding: 8px;
         }
         
         .client-name {
             font-size: 12px;
             font-weight: bold;
-            margin-bottom: 3px;
+            color: #000;
+            margin-bottom: 8px;
         }
         
-        .client-details {
+        .client-info {
             font-size: 10px;
-            line-height: 1.3;
+            color: #333;
+            line-height: 1.5;
         }
         
         .chantier-info {
-            margin-top: 8px;
-            font-size: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #666;
             font-weight: bold;
+            color: #000;
         }
         
-        /* Tableau principal */
-        .main-table {
+        .info-label {
+            font-weight: bold;
+            color: #333;
+            margin-right: 8px;
+        }
+        
+        /* Tableau simple et professionnel */
+        .prestations-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
-            border: 1px solid #000;
+            margin: 0;
         }
         
-        .main-table th {
-            background-color: #f0f0f0;
-            border: 1px solid #000;
-            padding: 6px 4px;
+        .prestations-table th {
+            background-color: #333;
+            color: white;
+            padding: 12px 8px;
             text-align: center;
             font-weight: bold;
-            font-size: 9px;
+            font-size: 10px;
+            text-transform: uppercase;
+            border: 1px solid #333;
         }
         
-        .main-table td {
-            border: 1px solid #000;
-            padding: 4px 6px;
+        .prestations-table td {
+            padding: 10px 8px;
+            border: 1px solid #ccc;
             font-size: 9px;
             vertical-align: top;
+        }
+        
+        .prestations-table tr:nth-child(even) {
+            background-color: #f9f9f9;
         }
         
         .employee-name {
             font-weight: bold;
             font-size: 10px;
+            color: #000;
+            margin-bottom: 3px;
         }
         
-        .period-info {
+        .hours-info {
             font-size: 8px;
-            line-height: 1.2;
+            color: #666;
+        }
+        
+        .period-details {
+            font-size: 8px;
+            color: #333;
+            line-height: 1.3;
+        }
+        
+        .week-number {
+            font-weight: bold;
+            color: #000;
         }
         
         .text-center {
@@ -507,89 +579,129 @@ function getClientInvoiceTemplate() {
             text-align: right;
         }
         
-        /* Section totaux */
-        .totals-section {
+        .font-bold {
+            font-weight: bold;
+        }
+        
+        /* Section totaux simple */
+        .totals-wrapper {
             display: flex;
             justify-content: flex-end;
-            margin-bottom: 15px;
+            margin: 20px 0;
         }
         
         .totals-table {
             border-collapse: collapse;
-            border: 1px solid #000;
+            min-width: 280px;
+            border: 1px solid #333;
         }
         
         .totals-table td {
-            border: 1px solid #000;
-            padding: 6px 12px;
+            padding: 10px 15px;
+            border: 1px solid #ccc;
             font-size: 11px;
         }
         
-        .totals-table .label {
+        .totals-label {
             font-weight: bold;
-            background-color: #f0f0f0;
+            background-color: #f5f5f5;
+            color: #000;
         }
         
-        .totals-table .value {
+        .totals-value {
             text-align: right;
             font-weight: bold;
+            background-color: white;
+            color: #000;
         }
         
-        .total-final {
+        .totals-final .totals-label,
+        .totals-final .totals-value {
+            background-color: #333;
+            color: white;
             font-size: 12px;
             font-weight: bold;
         }
         
-        /* Conditions */
-        .conditions {
+        /* Conditions et informations légales */
+        .legal-section {
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .legal-title {
+            font-weight: bold;
+            font-size: 11px;
+            color: #000;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+        
+        .legal-text {
             font-size: 9px;
-            line-height: 1.3;
-            margin-bottom: 10px;
+            color: #333;
+            line-height: 1.4;
             text-align: justify;
         }
         
-        .payment-conditions {
-            font-size: 10px;
-            font-weight: bold;
+        .payment-info {
             text-align: center;
-            margin-bottom: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #000;
+            background-color: #f5f5f5;
+            border: 1px solid #ccc;
+            padding: 12px;
+            margin-bottom: 15px;
         }
         
-        .penalty-info {
+        .penalty-notice {
             font-size: 8px;
             text-align: center;
+            color: #666;
             font-style: italic;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 8px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
         }
         
-        .currency-note {
+        .currency-notice {
             font-size: 9px;
             text-align: right;
+            color: #666;
             font-style: italic;
+            margin-bottom: 20px;
         }
         
+        /* Numéro de page fixe en bas à droite */
         .page-number {
-            font-size: 9px;
-            text-align: center;
-            margin-top: 10px;
+            position: absolute;
+            bottom: 10mm;
+            right: 15mm;
+            font-size: 10px;
+            color: #666;
+            font-weight: bold;
         }
         
         @media print {
             body {
-                padding: 0;
+                background: none;
             }
             .page {
-                max-width: none;
-                width: 100%;
+                margin: 0;
+                box-shadow: none;
             }
         }
     </style>
 </head>
 <body>
     <div class="page">
-        <!-- En-tête -->
+        <!-- En-tête simple et professionnel -->
         <div class="header">
-            <div class="company-info">
+            <div class="company-section">
                 <div class="company-name">{{company.name}}</div>
                 <div class="company-details">{{company.address}}</div>
                 <div class="company-details">{{company.postalCode}} {{company.city}}</div>
@@ -599,106 +711,130 @@ function getClientInvoiceTemplate() {
                 <div class="company-details">N° TVA INTRA : {{company.tvaNumber}}</div>
                 <div class="company-details">CAUTION FINANCIERE : TST</div>
             </div>
-            <div class="invoice-title">
-                <div class="invoice-number">{{documentType}} N°</div>
-                <div class="invoice-number">{{invoiceNumber}}</div>
+            <div class="invoice-section">
+                <div class="invoice-title">{{documentType}}</div>
+                <div class="invoice-dates">
+                    Date: {{invoiceDate}}<br>
+                    Échéance: {{dueDate}}
+                </div>
+                <div class="invoice-number">N° {{invoiceNumber}}</div>
             </div>
         </div>
 
         <!-- Section client -->
-        <div class="client-section">
-            <div class="client-name">{{client.companyName}}</div>
-            <div class="client-details">{{client.address}}</div>
-            <div class="client-details">{{client.postalCode}} {{client.city}}</div>
-            
-            <div class="chantier-info">
-                Chantier : {{client.chantier}} LE {{invoiceDate}}
+        <div class="section">
+            <div class="section-title">INFORMATIONS CLIENT</div>
+            <div class="section-content">
+                <div class="client-grid">
+                    <div>
+                        <div class="client-name">{{client.companyName}}</div>
+                        <div class="client-info">
+                            {{client.address}}<br>
+                            {{client.postalCode}} {{client.city}}
+                        </div>
+                    </div>
+                    <div>
+                        <div class="client-info">
+                            <span class="info-label">Contact:</span>{{client.contactName}}<br>
+                            <span class="info-label">Email:</span>{{client.email}}<br>
+                            <span class="info-label">SIRET:</span>{{client.siret}}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="chantier-info">
+                    Chantier : {{client.chantier}} LE {{invoiceDate}}
+                </div>
             </div>
         </div>
 
-        <!-- Tableau principal -->
-        <table class="main-table">
-            <thead>
-                <tr>
-                    <th style="width: 25%;">Nom/Prénom</th>
-                    <th style="width: 25%;">Période</th>
-                    <th style="width: 8%;">Unité</th>
-                    <th style="width: 8%;">Coéf.</th>
-                    <th style="width: 12%;">P.U. H.T</th>
-                    <th style="width: 14%;">Montant H.T</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#each workPeriods}}
-                <tr>
-                    <td>
-                        <div class="employee-name">{{this.employeeName}}</div>
-                        <div style="font-size: 8px; margin-top: 2px;">{{this.quantity}}</div>
-                    </td>
-                    <td>
-                        <div class="period-info">
-                            Semaine du {{this.startDate}} Au {{this.endDate}}<br>
-                            {{this.weekNumber}}/{{this.year}} {{this.unit}}
-                        </div>
-                    </td>
-                    <td class="text-center">{{this.unit}}</td>
-                    <td class="text-center">{{this.coefficient}}</td>
-                    <td class="text-right">{{this.formattedUnitPrice}}</td>
-                    <td class="text-right">{{this.formattedAmount}}</td>
-                </tr>
-                {{/each}}
-            </tbody>
-        </table>
+        <!-- Tableau des prestations -->
+        <div class="section">
+            <div class="section-title">DÉTAIL DES PRESTATIONS</div>
+            <div class="section-content">
+                <table class="prestations-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Nom/Prénom</th>
+                            <th style="width: 25%;">Période</th>
+                            <th style="width: 10%;">Unité</th>
+                            <th style="width: 8%;">Coéf.</th>
+                            <th style="width: 12%;">P.U. H.T</th>
+                            <th style="width: 14%;">Montant H.T</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#each workPeriods}}
+                        <tr>
+                            <td>
+                                <div class="employee-name">{{this.employeeName}}</div>
+                                <div class="hours-info">{{this.quantity}}h</div>
+                            </td>
+                            <td>
+                                <div class="period-details">
+                                    Semaine du {{this.startDate}} Au {{this.endDate}}<br>
+                                    <span class="week-number">{{this.weekNumber}}/{{this.year}}</span> {{this.unit}}
+                                </div>
+                            </td>
+                            <td class="text-center">{{this.unit}}</td>
+                            <td class="text-center">{{this.coefficient}}</td>
+                            <td class="text-right">{{this.formattedUnitPrice}}</td>
+                            <td class="text-right font-bold">{{this.formattedAmount}}</td>
+                        </tr>
+                        {{/each}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <!-- Section totaux -->
-        <div class="totals-section">
+        <div class="totals-wrapper">
             <table class="totals-table">
                 <tr>
-                    <td class="label">Total H.T (€)</td>
-                    <td class="value">{{totals.formattedSubtotalHT}}</td>
+                    <td class="totals-label">Total H.T (€)</td>
+                    <td class="totals-value">{{totals.formattedSubtotalHT}}</td>
                 </tr>
                 <tr>
-                    <td class="label">TVA (%)</td>
-                    <td class="value">{{totals.tvaRate}}</td>
+                    <td class="totals-label">TVA ({{totals.tvaRate}}%)</td>
+                    <td class="totals-value">{{totals.formattedTvaAmount}}</td>
                 </tr>
-                <tr>
-                    <td class="label">Total T.T.C (€)</td>
-                    <td class="value">{{totals.formattedTvaAmount}}</td>
-                </tr>
-                <tr>
-                    <td class="label total-final">NET A PAYER (€)</td>
-                    <td class="value total-final">{{totals.formattedTotalTTC}}</td>
+                <tr class="totals-final">
+                    <td class="totals-label">NET À PAYER (€)</td>
+                    <td class="totals-value">{{totals.formattedTotalTTC}}</td>
                 </tr>
             </table>
         </div>
 
         <!-- Conditions générales -->
-        <div class="conditions">
-            Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de 
-            prestations. Toutes contestations, quels que soient l'origine des ordres et le mode de règlement 
-            sont exclusivement de la compétence des tribunaux du lieu de E.T.T. L'acceptation des règlements 
-            avec l'émission de nos traites ne modifie pas cette clause attributive de juridiction. Taxe acquittée 
-            sur les encaissements.
+        <div class="legal-section">
+            <div class="legal-title">CONDITIONS GÉNÉRALES</div>
+            <div class="legal-text">
+                Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de 
+                prestations. Toutes contestations, quels que soient l'origine des ordres et le mode de règlement 
+                sont exclusivement de la compétence des tribunaux du lieu de E.T.T. L'acceptation des règlements 
+                avec l'émission de nos traites ne modifie pas cette clause attributive de juridiction. Taxe acquittée 
+                sur les encaissements.
+            </div>
         </div>
 
         <!-- Informations de pénalités -->
-        <div class="penalty-info">
+        <div class="penalty-notice">
             En cas de retard de paiement, seront exigibles, conformément à l'article L441-6 du code du commerce, 
             une indemnité calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une 
             indemnité forfaitaire pour frais de recouvrement de 40 euros.
         </div>
 
         <!-- Conditions de paiement -->
-        <div class="payment-conditions">
-            CONDITIONS DE PAIEMENT : {{paymentMethod}} ECHEANCE {{dueDate}}
+        <div class="payment-info">
+            CONDITIONS DE PAIEMENT : {{paymentMethod}} ÉCHÉANCE {{dueDate}}
         </div>
 
         <!-- Note devise -->
-        <div class="currency-note">
+        <div class="currency-notice">
             Tous les montants sont en EUROS (€)
         </div>
 
-        <!-- Numéro de page -->
+        <!-- Numéro de page fixe en bas à droite -->
         <div class="page-number">
             Page 1 sur 1
         </div>
@@ -706,7 +842,6 @@ function getClientInvoiceTemplate() {
 </body>
 </html>`;
 }
-
 // Ajoutez ces nouvelles fonctions pour obtenir les templates HTML des PDFs
 
 function getClientContractTemplate() {
