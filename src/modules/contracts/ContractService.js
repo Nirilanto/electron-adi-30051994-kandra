@@ -15,15 +15,15 @@ class ContractService {
 
   async getAllContracts() {
     try {
-      // Récupérer tous les contrats
+      // Récupérer tous les contrats (sans les signatures - juste les IDs)
       const contracts = (await this.db.get(this.contractsKey)) || [];
 
-      // Si aucun contrat n'est trouvé, retourner un tableau vide
       if (!contracts || contracts.length === 0) {
         return [];
       }
 
       // Pour chaque contrat, récupérer les données du client et de l'employé
+      // MAIS PAS les signatures (on garde juste les IDs)
       const enrichedContracts = await Promise.all(
         contracts.map(async (contract) => {
           try {
@@ -47,19 +47,21 @@ class ContractService {
               }
             }
 
+            // NE PAS récupérer les signatures ici - on garde juste les IDs
+            // signatureId et stampId restent tels quels
+
             return enrichedContract;
           } catch (error) {
             console.error(
               `Erreur lors de l'enrichissement du contrat ${contract.id}:`,
               error
             );
-            // Retourner le contrat original si une erreur se produit
             return contract;
           }
         })
       );
 
-      console.log("Contrats enrichis:", enrichedContracts);
+      console.log("Contrats enrichis (sans duplication signatures):", enrichedContracts);
       return enrichedContracts;
     } catch (error) {
       console.error("Erreur lors de la récupération des contrats:", error);
@@ -83,18 +85,27 @@ class ContractService {
   async saveContract(contract) {
     let contracts = await this.getAllContracts();
 
-    if (contract.id) {
+    // Nettoyer le contrat : ne garder que les IDs des signatures, pas les objets complets
+    const cleanContract = {
+      ...contract,
+      // Garder seulement les IDs
+      signatureId: contract.signatureId || "",
+      stampId: contract.stampId || "",
+      securityMeasures: contract.securityMeasures || []
+    };
+
+    if (cleanContract.id) {
       // Mise à jour d'un contrat existant
       contracts = contracts.map((c) =>
-        c.id === contract.id
-          ? { ...contract, updatedAt: new Date().toISOString() }
+        c.id === cleanContract.id
+          ? { ...cleanContract, updatedAt: new Date().toISOString() }
           : c
       );
     } else {
       // Nouveau contrat
       const contractNumber = await this.getNextContractNumber();
       const newContract = {
-        ...contract,
+        ...cleanContract,
         id: uuidv4(),
         contractNumber: contractNumber,
         createdAt: new Date().toISOString(),
@@ -104,7 +115,7 @@ class ContractService {
     }
 
     await this.db.set(this.contractsKey, contracts);
-    return contract.id ? contract : contracts[contracts.length - 1];
+    return cleanContract.id ? cleanContract : contracts[contracts.length - 1];
   }
 
   async deleteContract(id) {
@@ -114,27 +125,81 @@ class ContractService {
     return true;
   }
 
+  // Méthode helper pour récupérer les signatures complètes depuis les IDs
+  async getContractWithSignatures(contractData) {
+    const enrichedContract = { ...contractData };
+
+    try {
+      // Récupérer toutes les signatures disponibles
+      const signatures = await this.settings.getSignatures();
+
+      // Récupérer la signature si un ID est défini
+      if (contractData.signatureId) {
+        const signature = signatures.find(
+          s => s.id === parseInt(contractData.signatureId)
+        );
+        if (signature) {
+          enrichedContract.signature = signature;
+        }
+      }
+
+      // Récupérer le tampon si un ID est défini
+      if (contractData.stampId) {
+        const stamp = signatures.find(
+          s => s.id === parseInt(contractData.stampId)
+        );
+        if (stamp) {
+          enrichedContract.stamp = stamp;
+        }
+      }
+
+      // Récupérer les mesures de sécurité complètes
+      if (contractData.securityMeasures && contractData.securityMeasures.length > 0) {
+        const securityMeasures = await this.settings.getSecurityMeasures();
+        enrichedContract.securityMeasuresList = contractData.securityMeasures
+          .map((id) => {
+            const measure = securityMeasures.find(
+              (m) => m.id === parseInt(id)
+            );
+            return measure ? measure.label : null;
+          })
+          .filter(Boolean);
+      } else {
+        enrichedContract.securityMeasuresList = [];
+      }
+
+    } catch (error) {
+      console.error("Erreur lors de la récupération des signatures:", error);
+      enrichedContract.signature = null;
+      enrichedContract.stamp = null;
+      enrichedContract.securityMeasuresList = [];
+    }
+
+    return enrichedContract;
+  }
+
   async generateEmployeeContractPDF(contractData) {
     try {
+      // Enrichir le contrat avec les signatures complètes
+      const enrichedContract = await this.getContractWithSignatures(contractData);
+      
       // Obtenir les données complètes
-      const contract = contractData;
       const companySettings = await this.settings.getCompanySettings();
       const employee =
-        contract.employee ||
-        (await this.db.getEmployeeById(contract.employeeId));
+        enrichedContract.employee ||
+        (await this.db.getEmployeeById(enrichedContract.employeeId));
       const client =
-        contract.client || (await this.db.getClientById(contract.clientId));
+        enrichedContract.client || 
+        (await this.db.getClientById(enrichedContract.clientId));
 
-      // Récupérer les données de signature et tampon si elles existent
-      const signature = contract.signature || null;
-      const stamp = contract.stamp || null;
-
-      // Récupérer les mesures de sécurité
-      const securityMeasures = contract.securityMeasuresList || [];
+      // Récupérer les données de signature et tampon (maintenant depuis les objets complets)
+      const signature = enrichedContract.signature || null;
+      const stamp = enrichedContract.stamp || null;
+      const securityMeasures = enrichedContract.securityMeasuresList || [];
 
       // Utiliser le générateur PDF
       const result = await PDFGenerator.generateEmployeeContractPDF(
-        contract,
+        enrichedContract,
         employee,
         client,
         {
@@ -164,29 +229,30 @@ class ContractService {
   }
 
   async generateClientContractPDF(contractData) {
-    console.log(" Mandalo  ato lou e ", contractData);
+    console.log("Génération PDF client pour contrat:", contractData.id);
 
     try {
+      // Enrichir le contrat avec les signatures complètes
+      const enrichedContract = await this.getContractWithSignatures(contractData);
+      
       const companySettings = await this.settings.getCompanySettings();
 
       // Obtenir les données complètes
-      const contract = contractData;
       const employee =
-        contract.employee ||
-        (await this.db.getEmployeeById(contract.employeeId));
+        enrichedContract.employee ||
+        (await this.db.getEmployeeById(enrichedContract.employeeId));
       const client =
-        contract.client || (await this.db.getClientById(contract.clientId));
+        enrichedContract.client || 
+        (await this.db.getClientById(enrichedContract.clientId));
 
-      // Récupérer les mesures de sécurité
-      const securityMeasures = contract.securityMeasuresList || [];
-
-      // Récupérer les données de signature et tampon si elles existent
-      const signature = contract.signature || null;
-      const stamp = contract.stamp || null;
+      // Récupérer les mesures de sécurité et signatures (maintenant depuis les objets complets)
+      const securityMeasures = enrichedContract.securityMeasuresList || [];
+      const signature = enrichedContract.signature || null;
+      const stamp = enrichedContract.stamp || null;
 
       // Utiliser le générateur PDF
       const result = await PDFGenerator.generateClientContractPDF(
-        contract,
+        enrichedContract,
         employee,
         client,
         {
@@ -214,11 +280,12 @@ class ContractService {
       return { success: false, error: error.message };
     }
   }
+
   generateEmployeeCertificatePDF(contract) {
     // Code pour générer un certificat d'accomplissement pour l'employé
   }
 
-  // Utilitaires
+  // Utilitaires (inchangés)
   calculateDuration(startDate, endDate) {
     if (!startDate || !endDate) return "";
 
@@ -258,83 +325,8 @@ class ContractService {
 
     return duration;
   }
-  // Modifications à apporter à ContractService.js
-  // Ajoutez ces fonctions à votre fichier ContractService.js existant
 
-  // Génération du PDF pour l'entreprise cliente
-  // async generateClientContractPDF(contract) {
-  //   try {
-  //     // Récupérer les informations de l'entreprise
-  //     const companySettings = await this.settings.getCompanySettings();
-
-  //     // Préparer les données pour le template
-  //     const data = {
-  //       // Informations sur le contrat
-  //       reference: `N° ${contract.contractNumber}`,
-  //       title: contract.title || "CONTRAT DE PRESTATION",
-  //       description: contract.description || "",
-  //       startDate: formatDateToFrench(new Date(contract.startDate)),
-  //       endDate: formatDateToFrench(new Date(contract.endDate)),
-  //       duration: this.calculateDuration(contract.startDate, contract.endDate),
-  //       location: contract.location || "",
-
-  //       // Tarifs et conditions financières
-  //       hourlyRate: `${contract.billingRate || 0} €`,
-  //       totalEstimation: `${this.calculateTotalEstimation(contract)} €`,
-  //       paymentMethod: contract.paymentMethod || "Virement bancaire",
-  //       paymentTerms: "30 jours fin de mois",
-
-  //       // Informations sur le client
-  //       client: {
-  //         companyName: contract.client?.companyName || "",
-  //         address: contract.client?.address || "",
-  //         zipCode: contract.client?.zipCode || "",
-  //         city: contract.client?.city || "",
-  //         siret: contract.client?.siret || "",
-  //         contactName: contract.client?.contactName || "",
-  //         contactEmail: contract.client?.contactEmail || "",
-  //         contactPhone: contract.client?.contactPhone || "",
-  //       },
-
-  //       // Informations sur la société
-  //       company: {
-  //         name: companySettings.name || "VOTRE ENTREPRISE",
-  //         address: companySettings.address || "",
-  //         zipCode: companySettings.zipCode || "",
-  //         city: companySettings.city || "",
-  //         siret: companySettings.siret || "",
-  //         rcs: companySettings.rcs || "",
-  //         ape: companySettings.ape || "",
-  //         phone: companySettings.phone || "",
-  //         email: companySettings.email || "",
-  //         logo: companySettings.logo || null,
-  //       },
-
-  //       // Autres informations
-  //       generationDate: formatDateToFrench(new Date(contract.startDate)), //formatDateToFrench(new Date()),
-  //       year: new Date().getFullYear(),
-  //       motif: contract.motif || "ACCROISSEMENT TEMP. D'ACTIVITE",
-  //       justificatif: contract.justificatif || "RENFORT DE PERSONNEL",
-  //     };
-
-  //     // Générer le PDF
-  //     const result = await window.electron.generatePDF(
-  //       "client_contract", // Type de document
-  //       data, // Données pour le template
-  //       `Contrat_Client_${contract.contractNumber}.pdf` // Nom du fichier
-  //     );
-
-  //     return result;
-  //   } catch (error) {
-  //     console.error(
-  //       "Erreur lors de la génération du contrat client PDF:",
-  //       error
-  //     );
-  //     throw error;
-  //   }
-  // }
-
-  // Méthode pour calculer une estimation totale du contrat
+  // Méthode pour calculer une estimation totale du contrat (inchangée)
   calculateTotalEstimation(contract) {
     if (!contract.startDate || !contract.endDate || !contract.billingRate) {
       return 0;
@@ -367,40 +359,43 @@ class ContractService {
   }
 
   // Vous pouvez ajouter cette fonction pour générer un certificat d'accomplissement
-  // pour l'employé à la fin de la mission
+  // pour l'employé à la fin de la mission (inchangée)
   async generateEmployeeCertificatePDF(contract) {
     try {
+      // Enrichir le contrat avec les signatures complètes
+      const enrichedContract = await this.getContractWithSignatures(contract);
+      
       // Récupérer les informations de l'entreprise
       const companySettings = await this.settings.getCompanySettings();
 
       // Préparer les données pour le template
       const data = {
         // Informations sur le contrat
-        reference: `N° ${contract.contractNumber}`,
+        reference: `N° ${enrichedContract.contractNumber}`,
         title: "CERTIFICAT DE RÉALISATION DE MISSION",
-        description: contract.description || "",
-        startDate: formatDateToFrench(new Date(contract.startDate)),
-        endDate: formatDateToFrench(new Date(contract.endDate)),
-        duration: this.calculateDuration(contract.startDate, contract.endDate),
-        location: contract.location || "",
+        description: enrichedContract.description || "",
+        startDate: formatDateToFrench(new Date(enrichedContract.startDate)),
+        endDate: formatDateToFrench(new Date(enrichedContract.endDate)),
+        duration: this.calculateDuration(enrichedContract.startDate, enrichedContract.endDate),
+        location: enrichedContract.location || "",
 
         // Informations sur l'employé
         employee: {
-          fullName: `${contract.employee?.firstName || ""} ${
-            contract.employee?.lastName || ""
+          fullName: `${enrichedContract.employee?.firstName || ""} ${
+            enrichedContract.employee?.lastName || ""
           }`.trim(),
-          address: contract.employee?.address || "",
-          email: contract.employee?.email || "",
-          phone: contract.employee?.phone || "",
-          skills: contract.employee?.skills || "",
+          address: enrichedContract.employee?.address || "",
+          email: enrichedContract.employee?.email || "",
+          phone: enrichedContract.employee?.phone || "",
+          skills: enrichedContract.employee?.skills || "",
         },
 
         // Informations sur le client
         client: {
-          companyName: contract.client?.companyName || "",
-          address: contract.client?.address || "",
-          siret: contract.client?.siret || "",
-          contactName: contract.client?.contactName || "",
+          companyName: enrichedContract.client?.companyName || "",
+          address: enrichedContract.client?.address || "",
+          siret: enrichedContract.client?.siret || "",
+          contactName: enrichedContract.client?.contactName || "",
         },
 
         // Informations sur la société
@@ -426,7 +421,7 @@ class ContractService {
       const result = await window.electron.generatePDF(
         "certificate", // Type de document
         data, // Données pour le template
-        `Certificat_${contract.contractNumber}.pdf` // Nom du fichier
+        `Certificat_${enrichedContract.contractNumber}.pdf` // Nom du fichier
       );
 
       return result;

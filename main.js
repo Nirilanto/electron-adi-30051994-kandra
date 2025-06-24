@@ -2995,7 +2995,7 @@ function getEmployeeContractTemplate() {
               {{company.name}}
             </div>
             <div class="petit-texte" style="text-align: center">
-              (Cachet et Signature ok ok)
+              (Cachet et Signature)
             </div>
           </div>
           {{#if (hasImage signature)}}

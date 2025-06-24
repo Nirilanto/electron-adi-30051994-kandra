@@ -54,8 +54,8 @@ function ContractForm() {
     weeklyMissionDuration: "35",
     weeklyCollectiveAvgDuration: "35",
     weeklyCollectiveDuration: "35",
-    signatureId: "",
-    stampId: "",
+    signatureId: "",  // Seulement l'ID, pas l'objet complet
+    stampId: "",      // Seulement l'ID, pas l'objet complet
     securityMeasures: [],
   });
 
@@ -128,6 +128,10 @@ function ContractForm() {
               ...contractData,
               startDate: new Date(contractData.startDate),
               endDate: new Date(contractData.endDate),
+              // Garder seulement les IDs des signatures, pas les objets complets
+              signatureId: contractData.signatureId || "",
+              stampId: contractData.stampId || "",
+              securityMeasures: contractData.securityMeasures || []
             });
             setIsSaved(true);
           } else {
@@ -179,17 +183,19 @@ function ContractForm() {
     try {
       setIsSubmitting(true);
 
-      // Préparer l'objet contrat
+      // Préparer l'objet contrat - OPTIMISÉ : ne stocker que les références
       const contractData = {
         ...contract,
         startDate: contract.startDate.toISOString(),
         endDate: contract.endDate.toISOString(),
+        // Ajouter les objets employé et client pour affichage (récupérés depuis les IDs)
         employee: contract.employeeId
           ? employees.find((e) => e.id === contract.employeeId)
           : null,
         client: contract.clientId
           ? clients.find((c) => c.id === contract.clientId)
           : null,
+        // Ajouter les labels pour affichage (récupérés depuis les IDs)
         motif: contract.motifId
           ? motifs.find((m) => m.id === parseInt(contract.motifId))?.title
           : null,
@@ -212,25 +218,15 @@ function ContractForm() {
               (a) => a.id === parseInt(contract.accessMethodId)
             )?.title
           : null,
-        signature: contract.signatureId
-          ? signatures.find((s) => s.id === parseInt(contract.signatureId))
-          : null,
-        stamp: contract.stampId
-          ? signatures.find((s) => s.id === parseInt(contract.stampId))
-          : null,
-        securityMeasuresList: contract.securityMeasures
-          ? contract.securityMeasures
-              .map((id) => {
-                const measure = securityMeasures.find(
-                  (m) => m.id === parseInt(id)
-                );
-                return measure ? measure.label : null;
-              })
-              .filter(Boolean)
-          : [],
+        
+        // IMPORTANT : NE PLUS stocker les objets signatures complets
+        // Seulement les IDs sont nécessaires
+        signatureId: contract.signatureId || "",
+        stampId: contract.stampId || "",
+        securityMeasures: contract.securityMeasures || []
       };
 
-      // Enregistrer le contrat
+      // Enregistrer le contrat (le service ne stockera que les IDs)
       const savedContract = await ContractService.saveContract(contractData);
 
       // Mettre à jour l'ID si c'est un nouveau contrat
@@ -255,7 +251,7 @@ function ContractForm() {
     }
   };
 
-  // Génération de PDF client
+  // Génération de PDF client - OPTIMISÉ
   const handleGenerateClientPDF = async () => {
     if (!isSaved) {
       toast.warning(
@@ -267,6 +263,7 @@ function ContractForm() {
     try {
       setIsPdfGenerating((prev) => ({ ...prev, client: true }));
 
+      // Préparer les données avec uniquement les références (IDs)
       const contractData = {
         ...contract,
         startDate: contract.startDate.toISOString(),
@@ -299,6 +296,10 @@ function ContractForm() {
               (a) => a.id === parseInt(contract.accessMethodId)
             )?.title
           : null,
+        // Garder seulement les IDs - le service récupérera les signatures
+        signatureId: contract.signatureId,
+        stampId: contract.stampId,
+        securityMeasures: contract.securityMeasures
       };
 
       const result = await ContractService.generateClientContractPDF(
@@ -318,7 +319,7 @@ function ContractForm() {
     }
   };
 
-  // Génération de PDF employé
+  // Génération de PDF employé - OPTIMISÉ
   const handleGenerateEmployeePDF = async () => {
     if (!isSaved) {
       toast.warning(
@@ -337,6 +338,7 @@ function ContractForm() {
     try {
       setIsPdfGenerating((prev) => ({ ...prev, employee: true }));
 
+      // Préparer les données avec uniquement les références (IDs)
       const contractData = {
         ...contract,
         startDate: contract.startDate.toISOString(),
@@ -369,6 +371,10 @@ function ContractForm() {
               (a) => a.id === parseInt(contract.accessMethodId)
             )?.title
           : null,
+        // Garder seulement les IDs - le service récupérera les signatures
+        signatureId: contract.signatureId,
+        stampId: contract.stampId,
+        securityMeasures: contract.securityMeasures
       };
 
       const result = await ContractService.generateEmployeeContractPDF(
@@ -1015,7 +1021,7 @@ function ContractForm() {
             </div>
           </div>
 
-          {/* Section Signatures */}
+          {/* Section Signatures - OPTIMISÉE */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -1045,14 +1051,22 @@ function ContractForm() {
                       ))}
                   </select>
 
+                  {/* Aperçu de la signature sélectionnée - OPTIMISÉ */}
                   {contract.signatureId && (
                     <div className="mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                       <p className="text-xs text-gray-600 mb-2">Aperçu :</p>
-                      <img
-                        src={signatures.find(s => s.id === parseInt(contract.signatureId))?.imageData}
-                        alt="Signature sélectionnée"
-                        className="h-16 object-contain mx-auto bg-white rounded border"
-                      />
+                      {(() => {
+                        const selectedSignature = signatures.find(s => s.id === parseInt(contract.signatureId));
+                        return selectedSignature ? (
+                          <img
+                            src={selectedSignature.imageData}
+                            alt="Signature sélectionnée"
+                            className="h-16 object-contain mx-auto bg-white rounded border"
+                          />
+                        ) : (
+                          <p className="text-xs text-gray-500">Signature non trouvée</p>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
