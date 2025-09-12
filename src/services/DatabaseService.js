@@ -61,7 +61,7 @@ class DatabaseService {
 
       // Utiliser uniquement localStorage
       const value = localStorage.getItem(prefixedKey);
-      console.log(`Récupération de ${prefixedKey}:`, value);
+      // console.log(`Récupération de ${prefixedKey}:`, value);
       return value ? JSON.parse(value) : null;
     } catch (error) {
       console.error(`Erreur lors de la récupération de ${key}:`, error);

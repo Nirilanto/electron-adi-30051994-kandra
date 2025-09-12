@@ -286,7 +286,7 @@ function InvoiceForm() {
                 const matchesSelectedPeriod = selectedWorkPeriodIds.some(periodId => {
                     const workPeriod = workPeriods.find(p => p.id === periodId);
                     return workPeriod && 
-                           workPeriod.employeeId === entry.employeeId && 
+                           String(workPeriod.employeeId) === String(entry.employeeId) && 
                            workPeriod.contractId === entry.contractId;
                 });
                 
@@ -294,6 +294,33 @@ function InvoiceForm() {
             });
 
             const grouped = await groupTimeEntriesByEmployee(filtered, invoiceData.periodStart, invoiceData.periodEnd);
+            
+            // Ajouter les employés sélectionnés qui n'ont pas de pointage (avec 0 heures)
+            const selectedWorkPeriods = workPeriods.filter(p => p.selected);
+            for (const workPeriod of selectedWorkPeriods) {
+                if (!grouped[workPeriod.employeeId]) {
+                    // Récupérer les données de l'employé
+                    const employee = await EmployeeService.getEmployeeById(workPeriod.employeeId);
+                    
+                    grouped[workPeriod.employeeId] = {
+                        employee: employee,
+                        entries: [],
+                        weeklyData: {},
+                        totals: {
+                            totalHours: 0,
+                            normalHours: 0,
+                            overtime125: 0,
+                            overtime150: 0,
+                            workingDays: 0,
+                            totalAmount: 0,
+                            normalAmount: 0,
+                            overtime125Amount: 0,
+                            overtime150Amount: 0
+                        }
+                    };
+                }
+            }
+            
             setGroupedTimeEntries(grouped);
 
         } catch (error) {

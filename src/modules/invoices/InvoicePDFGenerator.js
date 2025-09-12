@@ -28,12 +28,8 @@ class InvoicePDFGenerator {
         );
       }
 
-      console.log("Préparation du PDF pour la facture: 001", invoice.invoiceNumber, customPath);
-
       // Préparer les données de la facture pour le PDF
       const invoiceData = this.prepareInvoiceData(invoice, client, company);
-
-      console.log("Préparation du PDF pour la facture invoiceData:", invoiceData);
 
       // Générer un nom de fichier par défaut si aucun chemin personnalisé n'est fourni
       const defaultFileName = `facture_${
@@ -188,19 +184,14 @@ class InvoicePDFGenerator {
     const employeesData = invoice.employeesData || [];
     const workLines = [];
 
-    console.log('DEBUG - employeesData.length:', employeesData.length);
-    
     employeesData.forEach(employeeData => {
       const employeeName = `${employeeData.employee?.firstName || ''} ${employeeData.employee?.lastName || ''}`.trim();
-      console.log('DEBUG - Traitement employé:', employeeName);
-      console.log('DEBUG - weeklyData keys:', Object.keys(employeeData.weeklyData || {}));
       
       // Pour chaque semaine de l'employé
       Object.entries(employeeData.weeklyData || {})
         .filter(([weekKey, weekData]) => weekData && weekData.weekEntries?.length > 0)
         .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
         .forEach(([weekKey, weekData]) => {
-          console.log('DEBUG - Traitement semaine:', weekKey, 'avec', weekData.weekEntries?.length, 'entrées');
           const weekCalculation = weekData.weekCalculation || {};
           
           // IMPORTANT: Utiliser le billingRate (taux de facturation CLIENT) 
@@ -208,15 +199,6 @@ class InvoicePDFGenerator {
           const clientBillingRate = weekCalculation.averageBillingRate || 
                                    weekCalculation.averageHourlyRate ||
                                    27.50; // Valeur par défaut basée sur le modèle
-                                   
-          console.log('DEBUG - clientBillingRate utilisé:', clientBillingRate, 'pour', employeeName);
-          console.log('DEBUG - weekCalculation:', {
-            averageBillingRate: weekCalculation.averageBillingRate,
-            averageHourlyRate: weekCalculation.averageHourlyRate,
-            normalHours: weekCalculation.normalHours,
-            overtime125: weekCalculation.overtime125,
-            overtime150: weekCalculation.overtime150
-          });
           
           // Ligne heures normales
           if (weekCalculation.normalHours > 0) {

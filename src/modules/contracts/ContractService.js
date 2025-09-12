@@ -61,7 +61,7 @@ class ContractService {
         })
       );
 
-      console.log("Contrats enrichis (sans duplication signatures):", enrichedContracts);
+      // console.log("Contrats enrichis (sans duplication signatures):", enrichedContracts);
       return enrichedContracts;
     } catch (error) {
       console.error("Erreur lors de la récupération des contrats:", error);

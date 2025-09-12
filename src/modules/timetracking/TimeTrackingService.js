@@ -42,10 +42,13 @@ class TimeTrackingService {
         throw new Error('Un pointage existe déjà pour cette date et ce contrat');
       }
 
-      // Préparer les données
+      // Préparer les données avec normalisation des types
       const timeEntry = {
         id: uuidv4(),
         ...timeEntryData,
+        // Forcer employeeId et clientId en string pour cohérence
+        employeeId: String(timeEntryData.employeeId),
+        clientId: String(timeEntryData.clientId),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: timeEntryData.status || 'draft'
@@ -173,10 +176,20 @@ class TimeTrackingService {
         throw new Error('Impossible de modifier un pointage facturé');
       }
       
-      // Mettre à jour les données
+      // Mettre à jour les données avec normalisation des types
+      const normalizedUpdateData = { ...updateData };
+      
+      // Forcer employeeId et clientId en string si présents dans updateData
+      if (normalizedUpdateData.employeeId) {
+        normalizedUpdateData.employeeId = String(normalizedUpdateData.employeeId);
+      }
+      if (normalizedUpdateData.clientId) {
+        normalizedUpdateData.clientId = String(normalizedUpdateData.clientId);
+      }
+      
       timeEntries[index] = {
         ...timeEntries[index],
-        ...updateData,
+        ...normalizedUpdateData,
         updatedAt: new Date().toISOString()
       };
       
