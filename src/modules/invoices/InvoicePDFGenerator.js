@@ -188,27 +188,35 @@ class InvoicePDFGenerator {
     const employeesData = invoice.employeesData || [];
     const workLines = [];
 
+    console.log('DEBUG - employeesData.length:', employeesData.length);
+    
     employeesData.forEach(employeeData => {
       const employeeName = `${employeeData.employee?.firstName || ''} ${employeeData.employee?.lastName || ''}`.trim();
+      console.log('DEBUG - Traitement employé:', employeeName);
+      console.log('DEBUG - weeklyData keys:', Object.keys(employeeData.weeklyData || {}));
       
       // Pour chaque semaine de l'employé
       Object.entries(employeeData.weeklyData || {})
         .filter(([weekKey, weekData]) => weekData && weekData.weekEntries?.length > 0)
         .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
         .forEach(([weekKey, weekData]) => {
+          console.log('DEBUG - Traitement semaine:', weekKey, 'avec', weekData.weekEntries?.length, 'entrées');
           const weekCalculation = weekData.weekCalculation || {};
           
           // IMPORTANT: Utiliser le billingRate (taux de facturation CLIENT) 
-          // Récupérer le billingRate depuis les données de pointage
-          const weekEntries = weekData.weekEntries || [];
-          
-          // Prendre le billingRate de la première entrée de la semaine (devrait être le même pour toutes)
-          const clientBillingRate = weekEntries.length > 0 ? 
-                                    (weekEntries[0].billingRate || weekEntries[0].billing_rate) : 
-                                    weekCalculation.averageBillingRate ||
-                                    27.50; // Valeur par défaut basée sur le modèle
+          // Le billingRate est calculé et stocké dans weekCalculation, pas dans les weekEntries individuelles
+          const clientBillingRate = weekCalculation.averageBillingRate || 
+                                   weekCalculation.averageHourlyRate ||
+                                   27.50; // Valeur par défaut basée sur le modèle
                                    
           console.log('DEBUG - clientBillingRate utilisé:', clientBillingRate, 'pour', employeeName);
+          console.log('DEBUG - weekCalculation:', {
+            averageBillingRate: weekCalculation.averageBillingRate,
+            averageHourlyRate: weekCalculation.averageHourlyRate,
+            normalHours: weekCalculation.normalHours,
+            overtime125: weekCalculation.overtime125,
+            overtime150: weekCalculation.overtime150
+          });
           
           // Ligne heures normales
           if (weekCalculation.normalHours > 0) {
@@ -376,13 +384,45 @@ class InvoicePDFGenerator {
    * Groupe les lignes de travail par employé pour l'affichage
    */
   static groupWorkLinesByEmployee(workLines) {
+    // Fonction locale pour formater les montants
+    const formatCurrency = (amount) => {
+      if (!amount) return "0,00 €";
+      return new Intl.NumberFormat("fr-FR", {
+        style: "currency",
+        currency: "EUR",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(amount);
+    };
+
     const groups = {};
     
     workLines.forEach(line => {
       if (!groups[line.employeeName]) {
         groups[line.employeeName] = [];
       }
-      groups[line.employeeName].push(line);
+      
+      // Debug: voir les valeurs avant formatage
+      console.log('DEBUG - Line avant formatage:', {
+        employeeName: line.employeeName,
+        unitPrice: line.unitPrice,
+        amount: line.amount,
+        type: line.type
+      });
+      
+      // Ajouter les versions formatées pour le template Handlebars
+      const lineWithFormatting = {
+        ...line,
+        formattedUnitPrice: formatCurrency(line.unitPrice),
+        formattedAmount: formatCurrency(line.amount)
+      };
+      
+      console.log('DEBUG - Line après formatage:', {
+        formattedUnitPrice: lineWithFormatting.formattedUnitPrice,
+        formattedAmount: lineWithFormatting.formattedAmount
+      });
+      
+      groups[line.employeeName].push(lineWithFormatting);
     });
     
     return Object.entries(groups).map(([employeeName, lines]) => ({
