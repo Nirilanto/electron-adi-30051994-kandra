@@ -24,6 +24,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 import InvoiceService from './InvoiceService';
 import ClientService from '../clients/ClientService';
 import ContractService from '../contracts/ContractService';
+import InvoicePDFGenerator from './InvoicePDFGenerator';
+import TimeTrackingService from '../timetracking/TimeTrackingService';
+import EmployeeService from '../employees/EmployeeService';
 
 function InvoiceForm() {
     const { id } = useParams();
@@ -39,6 +42,8 @@ function InvoiceForm() {
     const [contracts, setContracts] = useState([]);
     const [workPeriods, setWorkPeriods] = useState([]);
     const [selectedWorkPeriods, setSelectedWorkPeriods] = useState([]);
+    const [timeEntries, setTimeEntries] = useState([]);
+    const [groupedTimeEntries, setGroupedTimeEntries] = useState({});
 
     // État du formulaire
     const [invoiceData, setInvoiceData] = useState({
@@ -56,6 +61,7 @@ function InvoiceForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
 
     // Chargement initial
     useEffect(() => {
@@ -66,6 +72,13 @@ function InvoiceForm() {
     useEffect(() => {
         if (invoiceData.clientId && currentStep === 2) {
             loadClientContracts();
+        }
+    }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep]);
+
+    // Charger les données de pointage pour l'étape 3
+    useEffect(() => {
+        if (invoiceData.clientId && currentStep === 3) {
+            loadTimeTrackingData();
         }
     }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep]);
 
@@ -210,6 +223,227 @@ function InvoiceForm() {
         }));
     };
 
+    const loadTimeTrackingData = async () => {
+        if (!invoiceData.clientId) return;
+
+        try {
+            setIsLoading(true);
+
+            // Récupérer les pointages pour ce client et cette période
+            const timeEntriesData = await TimeTrackingService.getTimeEntriesByClient(
+                invoiceData.clientId,
+                invoiceData.periodStart.toISOString(),
+                invoiceData.periodEnd.toISOString()
+            );
+
+            setTimeEntries(timeEntriesData);
+
+            // Filtrer selon l'intervalle sélectionné et grouper par employé
+            const filtered = timeEntriesData.filter(entry => {
+                const entryDate = new Date(entry.date);
+                return entryDate >= invoiceData.periodStart && entryDate <= invoiceData.periodEnd;
+            });
+
+            const grouped = await groupTimeEntriesByEmployee(filtered, invoiceData.periodStart, invoiceData.periodEnd);
+            setGroupedTimeEntries(grouped);
+
+        } catch (error) {
+            console.error('Erreur lors du chargement des données de pointage:', error);
+            toast.error('Erreur lors du chargement des données de pointage');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getWeekRange = (date) => {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Lundi de la semaine
+        
+        const monday = new Date(d.setDate(diff));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        
+        const formatDate = (date) => {
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        };
+        
+        return {
+            monday: new Date(monday),
+            sunday: new Date(sunday),
+            key: `${formatDate(monday)}-${formatDate(sunday)}`,
+            displayKey: `${formatDate(monday)} - ${formatDate(sunday)}`
+        };
+    };
+
+    const calculateWeeklyOvertime = (weekEntries) => {
+        const totalWeekHours = weekEntries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+        
+        let normalHours = 0;
+        let overtime125 = 0;
+        let overtime150 = 0;
+
+        if (totalWeekHours <= 35) {
+            // Toutes les heures sont normales
+            normalHours = totalWeekHours;
+        } else if (totalWeekHours <= 43) {
+            // 35h normales + heures sup à 1.25
+            normalHours = 35;
+            overtime125 = totalWeekHours - 35;
+        } else {
+            // 35h normales + 8h sup à 1.25 + reste à 1.50
+            normalHours = 35;
+            overtime125 = 8; // de 35h à 43h
+            overtime150 = totalWeekHours - 43;
+        }
+
+        return {
+            totalWeekHours,
+            normalHours,
+            overtime125,
+            overtime150
+        };
+    };
+
+    const groupTimeEntriesByEmployee = async (entries, periodStart, periodEnd) => {
+        try {
+            const grouped = {};
+
+            // Générer toutes les semaines de la période sélectionnée
+            const getAllWeeksInPeriod = (start, end) => {
+                const weeks = new Set();
+                let current = new Date(start);
+                
+                while (current <= end) {
+                    const weekRange = getWeekRange(current);
+                    weeks.add(weekRange.key);
+                    current.setDate(current.getDate() + 7); // Passer à la semaine suivante
+                }
+                
+                return Array.from(weeks);
+            };
+
+            const allWeeksInPeriod = getAllWeeksInPeriod(periodStart, periodEnd);
+
+            for (const entry of entries) {
+                if (!grouped[entry.employeeId]) {
+                    // Récupérer les données de l'employé
+                    const employee = await EmployeeService.getEmployeeById(entry.employeeId);
+                    
+                    grouped[entry.employeeId] = {
+                        employee: employee,
+                        entries: [],
+                        weeklyData: {},
+                        totals: {
+                            totalHours: 0,
+                            normalHours: 0,
+                            overtime125: 0,
+                            overtime150: 0,
+                            workingDays: 0
+                        }
+                    };
+
+                    // Initialiser toutes les semaines de la période
+                    allWeeksInPeriod.forEach(weekKey => {
+                        grouped[entry.employeeId].weeklyData[weekKey] = [];
+                    });
+                }
+
+                // Enrichir l'entrée avec les données du contrat
+                let enrichedEntry = { ...entry };
+                
+                if (entry.contractId) {
+                    try {
+                        const contract = await ContractService.getContractById(entry.contractId);
+                        if (contract) {
+                            enrichedEntry.contractTitle = contract.title || contract.jobTitle || 'Contrat sans titre';
+                            enrichedEntry.contractLocation = contract.location || '';
+                        }
+                    } catch (error) {
+                        console.warn(`Contrat ${entry.contractId} non trouvé:`, error);
+                        enrichedEntry.contractTitle = 'Contrat non trouvé';
+                    }
+                } else {
+                    enrichedEntry.contractTitle = 'Aucun contrat associé';
+                }
+
+                // Calculer la semaine (lundi-dimanche)
+                const entryDate = new Date(entry.date);
+                const weekRange = getWeekRange(entryDate);
+                const weekKey = weekRange.key;
+
+                // Vérifier que la semaine est dans notre période (peut déborder)
+                if (grouped[entry.employeeId].weeklyData[weekKey] !== undefined) {
+                    grouped[entry.employeeId].weeklyData[weekKey].push(enrichedEntry);
+                }
+
+                // Ajouter l'entrée enrichie avec info de semaine
+                enrichedEntry.weekKey = weekKey;
+                enrichedEntry.weekDisplayKey = weekRange.displayKey;
+                grouped[entry.employeeId].entries.push(enrichedEntry);
+                grouped[entry.employeeId].totals.workingDays += 1;
+            }
+
+            // Calculer les heures supplémentaires par semaine
+            for (const employeeId in grouped) {
+                const employeeData = grouped[employeeId];
+                let totalNormal = 0;
+                let totalOvertime125 = 0;
+                let totalOvertime150 = 0;
+                let totalHours = 0;
+
+                // Calculer pour chaque semaine (y compris celles vides)
+                for (const weekKey in employeeData.weeklyData) {
+                    const weekEntries = employeeData.weeklyData[weekKey];
+                    
+                    if (weekEntries.length === 0) {
+                        // Semaine sans pointage
+                        continue;
+                    }
+
+                    // Filtrer seulement les jours dans l'intervalle sélectionné
+                    const filteredWeekEntries = weekEntries.filter(entry => {
+                        const entryDate = new Date(entry.date);
+                        return entryDate >= periodStart && entryDate <= periodEnd;
+                    });
+
+                    if (filteredWeekEntries.length === 0) {
+                        continue;
+                    }
+
+                    const weekCalculation = calculateWeeklyOvertime(filteredWeekEntries);
+                    
+                    totalNormal += weekCalculation.normalHours;
+                    totalOvertime125 += weekCalculation.overtime125;
+                    totalOvertime150 += weekCalculation.overtime150;
+                    totalHours += weekCalculation.totalWeekHours;
+
+                    // Enrichir chaque entrée avec les données de semaine
+                    weekEntries.forEach(entry => {
+                        entry.weekTotalHours = weekCalculation.totalWeekHours;
+                        entry.weekNormalHours = weekCalculation.normalHours;
+                        entry.weekOvertime125 = weekCalculation.overtime125;
+                        entry.weekOvertime150 = weekCalculation.overtime150;
+                    });
+                }
+
+                // Mettre à jour les totaux
+                employeeData.totals.totalHours = totalHours;
+                employeeData.totals.normalHours = totalNormal;
+                employeeData.totals.overtime125 = totalOvertime125;
+                employeeData.totals.overtime150 = totalOvertime150;
+            }
+
+            return grouped;
+        } catch (error) {
+            console.error('Erreur lors du groupement des pointages:', error);
+            return {};
+        }
+    };
+
     const handleWorkPeriodToggle = (periodId) => {
         setWorkPeriods(prev =>
             prev.map(period =>
@@ -220,33 +454,6 @@ function InvoiceForm() {
         );
     };
 
-    const handleQuantityChange = (periodId, newQuantity) => {
-        setWorkPeriods(prev =>
-            prev.map(period =>
-                period.id === periodId
-                    ? {
-                        ...period,
-                        totalHours: parseFloat(newQuantity) || 0,
-                        amount: (parseFloat(newQuantity) || 0) * period.hourlyRate
-                    }
-                    : period
-            )
-        );
-    };
-
-    const handleRateChange = (periodId, newRate) => {
-        setWorkPeriods(prev =>
-            prev.map(period =>
-                period.id === periodId
-                    ? {
-                        ...period,
-                        hourlyRate: parseFloat(newRate) || 0,
-                        amount: period.totalHours * (parseFloat(newRate) || 0)
-                    }
-                    : period
-            )
-        );
-    };
 
     const validateStep = (step) => {
         const newErrors = {};
@@ -350,6 +557,62 @@ function InvoiceForm() {
 
     const formatDate = (date) => {
         return date.toLocaleDateString('fr-FR');
+    };
+
+    const handlePreviewInvoice = async () => {
+        try {
+            setIsGeneratingPreview(true);
+
+            // Préparer les données de la facture
+            const selectedPeriods = workPeriods.filter(p => p.selected);
+            const totalAmount = selectedPeriods.reduce((sum, period) => sum + period.amount, 0);
+            
+            const invoiceForPreview = {
+                ...invoiceData,
+                workPeriods: selectedPeriods,
+                totalAmount,
+                clientName: clients.find(c => c.id === invoiceData.clientId)?.contactName || '',
+                clientCompany: clients.find(c => c.id === invoiceData.clientId)?.companyName || '',
+                periodStart: invoiceData.periodStart.toISOString(),
+                periodEnd: invoiceData.periodEnd.toISOString(),
+                invoiceDate: invoiceData.invoiceDate.toISOString(),
+                dueDate: invoiceData.dueDate.toISOString(),
+                invoiceNumber: 'APERCU-' + Date.now() // Numéro temporaire pour l'aperçu
+            };
+
+            // Récupérer les données du client complet
+            const client = clients.find(c => c.id === invoiceData.clientId);
+
+            // Données de l'entreprise
+            const company = {
+                name: "ATLANTIS",
+                address: "221 RUE DE LAFAYETTE",
+                zipCode: "75010",
+                city: "PARIS",
+                siret: "948 396 973 R.C.S. PARIS",
+                ape: "7820Z",
+                email: "CONTACTATLANTIS75@GMAIL.COM",
+                phone: ""
+            };
+
+            // Générer l'aperçu
+            const result = await InvoicePDFGenerator.generateInvoicePDF(
+                invoiceForPreview,
+                client,
+                company
+            );
+
+            if (result.success) {
+                toast.success('Aperçu ouvert avec succès');
+            } else {
+                toast.error('Erreur lors de la génération de l\'aperçu');
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération de l\'aperçu:', error);
+            toast.error('Erreur lors de la génération de l\'aperçu');
+        } finally {
+            setIsGeneratingPreview(false);
+        }
     };
 
     if (isLoading && !isEdit) {
@@ -585,54 +848,8 @@ function InvoiceForm() {
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div className="text-right">
-                                                    <p className="font-medium text-gray-900">
-                                                        {formatCurrency(period.amount)}
-                                                    </p>
-                                                    <p className="text-sm text-gray-500">
-                                                        {period.workingDays} jours
-                                                    </p>
-                                                </div>
                                             </div>
 
-                                            {period.selected && (
-                                                <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                            Heures
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.5"
-                                                            min="0"
-                                                            value={period.totalHours}
-                                                            onChange={(e) => handleQuantityChange(period.id, e.target.value)}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                            Taux horaire (€)
-                                                        </label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.01"
-                                                            min="0"
-                                                            value={period.hourlyRate}
-                                                            onChange={(e) => handleRateChange(period.id, e.target.value)}
-                                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                                                            Montant
-                                                        </label>
-                                                        <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md font-medium">
-                                                            {formatCurrency(period.amount)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
                                     ))}
 
@@ -643,17 +860,16 @@ function InvoiceForm() {
                                         </p>
                                     )}
 
-                                    {/* Résumé */}
+                                    {/* Résumé simple */}
                                     <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                                        <div className="flex justify-between items-center">
-                                            <span className="font-medium text-gray-900">Total sélectionné:</span>
-                                            <span className="text-xl font-bold text-blue-600">
-                                                {formatCurrency(getSelectedTotal())}
-                                            </span>
+                                        <div className="text-center">
+                                            <p className="font-medium text-gray-900">
+                                                {workPeriods.filter(p => p.selected).length} période(s) sélectionnée(s)
+                                            </p>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                Les montants seront calculés à l'étape suivante
+                                            </p>
                                         </div>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {workPeriods.filter(p => p.selected).length} période(s) sélectionnée(s)
-                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -724,6 +940,245 @@ function InvoiceForm() {
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Tableau des heures de pointage */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                                    <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                    Heures de travail hebdomadaires
+                                </h3>
+
+                                {isLoading ? (
+                                    <div className="text-center py-8">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
+                                        <p className="text-gray-600">Chargement des données de pointage...</p>
+                                    </div>
+                                ) : Object.keys(groupedTimeEntries).length === 0 ? (
+                                    <div className="text-center py-8 bg-gray-50 rounded-lg">
+                                        <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                        <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun pointage trouvé</h3>
+                                        <p className="mt-1 text-sm text-gray-500">
+                                            Aucune donnée de pointage pour cette période et ce client.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {Object.entries(groupedTimeEntries).map(([employeeId, employeeData]) => (
+                                            <div key={employeeId} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                                {/* En-tête employé */}
+                                                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 flex items-center">
+                                                                <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                                                {employeeData.employee?.firstName} {employeeData.employee?.lastName}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600 mt-1">
+                                                                {employeeData.totals.workingDays} jour(s) travaillé(s)
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-lg font-bold text-blue-600">
+                                                                {employeeData.totals.totalHours.toFixed(1)}h
+                                                            </p>
+                                                            <p className="text-sm text-gray-600">
+                                                                Total
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Tableau des pointages */}
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200">
+                                                        <thead className="bg-gray-50">
+                                                            <tr>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semaine</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates travaillées</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrat(s)</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horaires par jour</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total semaine</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. normales (x1.00)</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.25)</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.50)</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-200">
+                                                            {Object.entries(employeeData.weeklyData)
+                                                                .filter(([weekKey, weekEntries]) => weekEntries.length > 0)
+                                                                .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
+                                                                .map(([weekKey, weekEntries], weekIndex) => {
+                                                                    const weekCalculation = calculateWeeklyOvertime(weekEntries);
+                                                                    const firstEntry = weekEntries[0];
+                                                                    const weekRange = getWeekRange(new Date(firstEntry.date));
+                                                                    
+                                                                    return (
+                                                                        <tr key={weekKey} className="hover:bg-gray-50">
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                                <div className="font-semibold">
+                                                                                    {weekRange.displayKey}
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500 mt-1">
+                                                                                    {weekEntries.length} jour(s) travaillé(s)
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                                                <div className="space-y-1">
+                                                                                    {weekEntries.map((entry, idx) => (
+                                                                                        <div key={idx} className="text-xs">
+                                                                                            {formatDate(new Date(entry.date))}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                                <div className="space-y-1">
+                                                                                    {[...new Set(weekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
+                                                                                        <div key={idx} className="text-xs">
+                                                                                            {contract || 'Contrat non trouvé'}
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                                <div className="space-y-1">
+                                                                                    {weekEntries.map((entry, idx) => (
+                                                                                        <div key={idx} className="text-xs">
+                                                                                            {entry.startTime && entry.endTime 
+                                                                                                ? `${entry.startTime} - ${entry.endTime}`
+                                                                                                : 'Non renseigné'
+                                                                                            }
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                <div className="font-semibold">
+                                                                                    {weekCalculation.totalWeekHours.toFixed(1)}h
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500">
+                                                                                    Total semaine
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                <div className="font-semibold">
+                                                                                    {weekCalculation.normalHours.toFixed(1)}h
+                                                                                </div>
+                                                                                <div className="text-xs text-gray-500">
+                                                                                    x1.00
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 text-right font-medium">
+                                                                                <div className="font-bold">
+                                                                                    {weekCalculation.overtime125.toFixed(1)}h
+                                                                                </div>
+                                                                                <div className="text-xs text-orange-500">
+                                                                                    x1.25
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right font-medium">
+                                                                                <div className="font-bold">
+                                                                                    {weekCalculation.overtime150.toFixed(1)}h
+                                                                                </div>
+                                                                                <div className="text-xs text-red-500">
+                                                                                    x1.50
+                                                                                </div>
+                                                                            </td>
+                                                                            <td className="px-6 py-4 whitespace-nowrap">
+                                                                                <div className="space-y-1">
+                                                                                    {[...new Set(weekEntries.map(entry => entry.status))].map((status, idx) => (
+                                                                                        <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                                                            status === 'validated' 
+                                                                                                ? 'bg-green-100 text-green-800'
+                                                                                                : status === 'invoiced'
+                                                                                                ? 'bg-blue-100 text-blue-800'
+                                                                                                : 'bg-yellow-100 text-yellow-800'
+                                                                                        }`}>
+                                                                                            {status === 'validated' ? 'Validé' : 
+                                                                                             status === 'invoiced' ? 'Facturé' : 
+                                                                                             'Brouillon'}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    );
+                                                                })
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                {/* Résumé employé */}
+                                                <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                                        <div className="space-y-1">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Heures normales (x1.00):</span>
+                                                                <span className="font-medium">{employeeData.totals.normalHours.toFixed(1)}h</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-orange-600">Heures sup. (x1.25):</span>
+                                                                <span className="font-medium text-orange-600">{employeeData.totals.overtime125.toFixed(1)}h</span>
+                                                            </div>
+                                                            <div className="flex justify-between">
+                                                                <span className="text-red-600">Heures sup. (x1.50):</span>
+                                                                <span className="font-medium text-red-600">{employeeData.totals.overtime150.toFixed(1)}h</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-col justify-center items-end">
+                                                            <div className="text-right">
+                                                                <span className="text-lg font-bold text-blue-600">
+                                                                    {employeeData.totals.totalHours.toFixed(1)}h
+                                                                </span>
+                                                                <div className="text-xs text-gray-500">Total période</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                                                        <div className="flex justify-between">
+                                                            <span>Règle: 35h normales, puis x1.25 jusqu'à 43h, puis x1.50</span>
+                                                            <span>{Object.keys(employeeData.weeklyData).length} semaine(s)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Bouton d'aperçu */}
+                            <div className="mb-6">
+                                <button
+                                    type="button"
+                                    onClick={handlePreviewInvoice}
+                                    disabled={isGeneratingPreview || workPeriods.filter(p => p.selected).length === 0}
+                                    className={`w-full flex items-center justify-center px-6 py-3 rounded-lg border-2 border-dashed transition-colors ${
+                                        isGeneratingPreview || workPeriods.filter(p => p.selected).length === 0
+                                            ? 'border-gray-300 text-gray-400 cursor-not-allowed'
+                                            : 'border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50'
+                                    }`}
+                                >
+                                    {isGeneratingPreview ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent mr-2"></div>
+                                            Génération de l'aperçu...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DocumentTextIcon className="h-5 w-5 mr-2" />
+                                            Aperçu de la facture
+                                        </>
+                                    )}
+                                </button>
+                                {workPeriods.filter(p => p.selected).length === 0 && (
+                                    <p className="text-sm text-gray-500 text-center mt-2">
+                                        Sélectionnez au moins une prestation pour voir l'aperçu
+                                    </p>
+                                )}
                             </div>
 
                             {/* Récapitulatif final */}
