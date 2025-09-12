@@ -62,6 +62,7 @@ function InvoiceForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [expandedWeeks, setExpandedWeeks] = useState({});
+    const [isFinalized, setIsFinalized] = useState(false);
 
     // Chargement initial
     useEffect(() => {
@@ -77,10 +78,10 @@ function InvoiceForm() {
 
     // Charger les données de pointage pour l'étape 3
     useEffect(() => {
-        if (invoiceData.clientId && currentStep === 3) {
+        if (invoiceData.clientId && currentStep === 3 && !isFinalized) {
             loadTimeTrackingData();
         }
-    }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep, workPeriods]);
+    }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep, workPeriods, isFinalized]);
 
     const loadInitialData = async () => {
         try {
@@ -92,6 +93,33 @@ function InvoiceForm() {
             if (isEdit) {
                 const invoice = await InvoiceService.getInvoiceById(id);
                 if (invoice) {
+                    // Vérifier si la facture est finalisée
+                    if (invoice.isFinalized) {
+                        setIsFinalized(true);
+                        toast.info('Affichage des données figées de la facture finalisée');
+                        
+                        // Charger les données figées au lieu de recalculer
+                        if (invoice.employeesData) {
+                            // Convertir les données sauvegardées au format attendu par l'interface
+                            const convertedGroupedEntries = invoice.employeesData.reduce((acc, empData) => {
+                                acc[empData.employeeId] = {
+                                    employee: empData.employee,
+                                    totals: empData.totals,
+                                    weeklyData: empData.weeklyData,
+                                    entries: [] // Les entrées détaillées sont dans weeklyData
+                                };
+                                return acc;
+                            }, {});
+                            
+                            setGroupedTimeEntries(convertedGroupedEntries);
+                        }
+                        
+                        // Charger les work periods sélectionnés
+                        if (invoice.selectedWorkPeriods) {
+                            setWorkPeriods(invoice.selectedWorkPeriods.map(wp => ({ ...wp, selected: true })));
+                        }
+                    }
+                    
                     setInvoiceData({
                         ...invoice,
                         periodStart: new Date(invoice.periodStart),
@@ -99,8 +127,11 @@ function InvoiceForm() {
                         invoiceDate: new Date(invoice.invoiceDate),
                         dueDate: new Date(invoice.dueDate)
                     });
-                    // Charger les lignes de facture sélectionnées
-                    setSelectedWorkPeriods(invoice.workPeriods || []);
+                    
+                    // Charger les lignes de facture sélectionnées (pour factures non finalisées)
+                    if (!invoice.isFinalized) {
+                        setSelectedWorkPeriods(invoice.workPeriods || []);
+                    }
                 }
             }
         } catch (error) {
@@ -611,18 +642,106 @@ function InvoiceForm() {
             setIsSubmitting(true);
 
             const selectedPeriods = workPeriods.filter(p => p.selected);
-            const totalAmount = selectedPeriods.reduce((sum, period) => sum + period.amount, 0);
+            const client = clients.find(c => c.id === invoiceData.clientId);
 
+            // Calculer les totaux globaux à partir des données de pointage
+            const globalTotals = Object.values(groupedTimeEntries).reduce((acc, employeeData) => ({
+                totalHours: acc.totalHours + (employeeData.totals?.totalHours || 0),
+                normalHours: acc.normalHours + (employeeData.totals?.normalHours || 0),
+                overtime125: acc.overtime125 + (employeeData.totals?.overtime125 || 0),
+                overtime150: acc.overtime150 + (employeeData.totals?.overtime150 || 0),
+                totalAmount: acc.totalAmount + (employeeData.totals?.totalAmount || 0),
+                normalAmount: acc.normalAmount + (employeeData.totals?.normalAmount || 0),
+                overtime125Amount: acc.overtime125Amount + (employeeData.totals?.overtime125Amount || 0),
+                overtime150Amount: acc.overtime150Amount + (employeeData.totals?.overtime150Amount || 0)
+            }), {
+                totalHours: 0, normalHours: 0, overtime125: 0, overtime150: 0,
+                totalAmount: 0, normalAmount: 0, overtime125Amount: 0, overtime150Amount: 0
+            });
+
+            // Préparer les données détaillées par employé (instantané figé)
+            const employeesData = Object.entries(groupedTimeEntries).map(([employeeId, employeeData]) => ({
+                employeeId,
+                employee: employeeData.employee,
+                totals: employeeData.totals,
+                weeklyData: Object.entries(employeeData.weeklyData)
+                    .filter(([weekKey, weekEntries]) => weekEntries.length > 0)
+                    .reduce((acc, [weekKey, weekEntries]) => {
+                        // Calculer les coûts pour cette semaine
+                        const firstEntry = weekEntries[0];
+                        const weekCosts = firstEntry.weekCosts;
+                        
+                        acc[weekKey] = {
+                            weekRange: weekKey,
+                            weekEntries: weekEntries.map(entry => ({
+                                id: entry.id,
+                                date: entry.date,
+                                totalHours: entry.totalHours,
+                                startTime: entry.startTime,
+                                endTime: entry.endTime,
+                                contractId: entry.contractId,
+                                contractTitle: entry.contractTitle,
+                                status: entry.status,
+                                notes: entry.notes
+                            })),
+                            weekCalculation: {
+                                totalWeekHours: weekCosts?.totalWeekHours || 0,
+                                normalHours: weekCosts?.normalHours || 0,
+                                overtime125: weekCosts?.overtime125 || 0,
+                                overtime150: weekCosts?.overtime150 || 0,
+                                averageHourlyRate: weekCosts?.averageHourlyRate || 0,
+                                totalNormalAmount: weekCosts?.totalNormalAmount || 0,
+                                totalOvertime125Amount: weekCosts?.totalOvertime125Amount || 0,
+                                totalOvertime150Amount: weekCosts?.totalOvertime150Amount || 0,
+                                totalWeekAmount: weekCosts?.totalWeekAmount || 0,
+                                weeklyRates: weekCosts?.weeklyRates || []
+                            }
+                        };
+                        return acc;
+                    }, {})
+            }));
+
+            // Payload complet avec toutes les données calculées (instantané figé)
             const invoicePayload = {
                 ...invoiceData,
-                workPeriods: selectedPeriods,
-                totalAmount,
-                clientName: clients.find(c => c.id === invoiceData.clientId)?.contactName || '',
-                clientCompany: clients.find(c => c.id === invoiceData.clientId)?.companyName || '',
+                
+                // Informations client figées
+                clientId: invoiceData.clientId,
+                clientName: client?.contactName || '',
+                clientCompany: client?.companyName || '',
+                clientAddress: client?.address || '',
+                clientZipCode: client?.zipCode || '',
+                clientCity: client?.city || '',
+                clientEmail: client?.email || '',
+                clientPhone: client?.phone || '',
+                
+                // Périodes sélectionnées
+                selectedWorkPeriods: selectedPeriods,
+                
+                // Totaux globaux calculés
+                globalTotals,
+                
+                // Détails par employé avec calculs
+                employeesData,
+                
+                // Statistiques générales
+                stats: {
+                    employeeCount: Object.keys(groupedTimeEntries).length,
+                    workingDaysTotal: Object.values(groupedTimeEntries).reduce((sum, emp) => sum + emp.totals.workingDays, 0),
+                    weeksCount: Object.values(groupedTimeEntries).reduce((total, employeeData) => 
+                        total + Object.keys(employeeData.weeklyData || {}).filter(key => employeeData.weeklyData[key].length > 0).length, 0
+                    )
+                },
+                
+                // Dates en ISO pour cohérence
                 periodStart: invoiceData.periodStart.toISOString(),
                 periodEnd: invoiceData.periodEnd.toISOString(),
                 invoiceDate: invoiceData.invoiceDate.toISOString(),
-                dueDate: invoiceData.dueDate.toISOString()
+                dueDate: invoiceData.dueDate.toISOString(),
+                
+                // Marquer comme finalisée (non modifiable)
+                isFinalized: true,
+                finalizedAt: new Date().toISOString()
             };
 
             if (isEdit) {
@@ -678,6 +797,22 @@ function InvoiceForm() {
     return (
         <div className="min-h-screen bg-gray-50 py-6">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                {/* Bandeau d'information */}
+                <div className="mb-6">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-center">
+                            <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mr-3 flex-shrink-0" />
+                            <div>
+                                <p className="text-amber-800 font-medium">
+                                    Facture - Mode consultation uniquement
+                                </p>
+                                <p className="text-amber-700 text-sm mt-1">
+                                    Cette facture ne peut pas être modifiée.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 {/* Header */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
                     <div className="px-6 py-4 border-b border-gray-200">
@@ -1050,20 +1185,42 @@ function InvoiceForm() {
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.25</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.50</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant total</th>
-                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Détails</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="bg-white divide-y divide-gray-200">
                                                             {Object.entries(employeeData.weeklyData)
-                                                                .filter(([weekKey, weekEntries]) => weekEntries.length > 0)
+                                                                .filter(([weekKey, weekEntries]) => {
+                                                                    if (isFinalized) {
+                                                                        // Pour les factures finalisées, toutes les entrées sont valides
+                                                                        return weekEntries && (weekEntries.weekEntries?.length > 0 || Array.isArray(weekEntries) && weekEntries.length > 0);
+                                                                    } else {
+                                                                        // Pour les factures en cours, filtrer normalement
+                                                                        return weekEntries.length > 0;
+                                                                    }
+                                                                })
                                                                 .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
                                                                 .map(([weekKey, weekEntries], weekIndex) => {
-                                                                    // Récupérer les données de coût de la première entrée (qui contient les calculs hebdomadaires)
-                                                                    const firstEntry = weekEntries[0];
-                                                                    const weekCalculation = firstEntry.weekCosts || calculateWeeklyOvertime(weekEntries);
-                                                                    const weekRange = getWeekRange(new Date(firstEntry.date));
+                                                                    let weekCalculation, weekRange;
+                                                                    
+                                                                    if (isFinalized && weekEntries.weekCalculation) {
+                                                                        // Pour les factures finalisées, utiliser les données sauvegardées
+                                                                        weekCalculation = weekEntries.weekCalculation;
+                                                                        weekRange = { displayKey: weekEntries.weekRange || weekKey };
+                                                                    } else {
+                                                                        // Pour les factures en cours, calculer en temps réel
+                                                                        const firstEntry = Array.isArray(weekEntries) ? weekEntries[0] : weekEntries.weekEntries[0];
+                                                                        if (firstEntry) {
+                                                                            weekCalculation = firstEntry.weekCosts || calculateWeeklyOvertime(Array.isArray(weekEntries) ? weekEntries : weekEntries.weekEntries);
+                                                                            weekRange = getWeekRange(new Date(firstEntry.date));
+                                                                        } else {
+                                                                            weekCalculation = { totalWeekHours: 0, normalHours: 0, overtime125: 0, overtime150: 0 };
+                                                                            weekRange = { displayKey: weekKey };
+                                                                        }
+                                                                    }
+                                                                    
                                                                     const isExpanded = expandedWeeks[`${employeeData.employee.id}-${weekKey}`];
+                                                                    const actualWeekEntries = Array.isArray(weekEntries) ? weekEntries : (weekEntries.weekEntries || []);
                                                                     
                                                                     return (
                                                                         <React.Fragment key={weekKey}>
@@ -1078,7 +1235,7 @@ function InvoiceForm() {
                                                                                 </td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
                                                                                     <div className="font-semibold text-lg text-blue-600">
-                                                                                        {weekEntries.length}
+                                                                                        {actualWeekEntries.length}
                                                                                     </div>
                                                                                     <div className="text-xs text-gray-500">
                                                                                         jour(s)
@@ -1086,7 +1243,7 @@ function InvoiceForm() {
                                                                                 </td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                                                     <div className="space-y-1">
-                                                                                        {[...new Set(weekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
+                                                                                        {[...new Set(actualWeekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
                                                                                             <div key={idx} className="text-xs truncate max-w-32" title={contract}>
                                                                                                 {contract || 'Contrat non trouvé'}
                                                                                             </div>
@@ -1136,23 +1293,6 @@ function InvoiceForm() {
                                                                                         }
                                                                                     </div>
                                                                                 </td>
-                                                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                                                    <div className="space-y-1">
-                                                                                        {[...new Set(weekEntries.map(entry => entry.status))].map((status, idx) => (
-                                                                                            <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                                                                status === 'validated' 
-                                                                                                    ? 'bg-green-100 text-green-800'
-                                                                                                    : status === 'invoiced'
-                                                                                                    ? 'bg-blue-100 text-blue-800'
-                                                                                                    : 'bg-yellow-100 text-yellow-800'
-                                                                                            }`}>
-                                                                                                {status === 'validated' ? 'Validé' : 
-                                                                                                 status === 'invoiced' ? 'Facturé' : 
-                                                                                                 'Brouillon'}
-                                                                                            </span>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                </td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap text-center">
                                                                                     <button className="text-blue-600 hover:text-blue-800">
                                                                                         <ChevronDownIcon className={`h-5 w-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
@@ -1161,7 +1301,7 @@ function InvoiceForm() {
                                                                             </tr>
                                                                             {isExpanded && (
                                                                                 <tr>
-                                                                                    <td colSpan="10" className="px-0 py-0">
+                                                                                    <td colSpan="9" className="px-0 py-0">
                                                                                         <div className="bg-gray-50 border-l-4 border-blue-400">
                                                                                             <div className="px-6 py-4">
                                                                                                 <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
@@ -1169,7 +1309,7 @@ function InvoiceForm() {
                                                                                                     Détail des journées - {weekRange.displayKey}
                                                                                                 </h4>
                                                                                                 <div className="space-y-3">
-                                                                                                    {weekEntries
+                                                                                                    {actualWeekEntries
                                                                                                         .sort((a, b) => new Date(a.date) - new Date(b.date))
                                                                                                         .map((entry, idx) => (
                                                                                                         <div key={idx} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
@@ -1197,19 +1337,6 @@ function InvoiceForm() {
                                                                                                                             <strong>Notes:</strong> {entry.notes}
                                                                                                                         </div>
                                                                                                                     )}
-                                                                                                                </div>
-                                                                                                                <div className="ml-4">
-                                                                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                                                                        entry.status === 'validated' 
-                                                                                                                            ? 'bg-green-100 text-green-800'
-                                                                                                                            : entry.status === 'invoiced'
-                                                                                                                            ? 'bg-blue-100 text-blue-800'
-                                                                                                                            : 'bg-yellow-100 text-yellow-800'
-                                                                                                                    }`}>
-                                                                                                                        {entry.status === 'validated' ? 'Validé' : 
-                                                                                                                         entry.status === 'invoiced' ? 'Facturé' : 
-                                                                                                                         'Brouillon'}
-                                                                                                                    </span>
                                                                                                                 </div>
                                                                                                             </div>
                                                                                                         </div>
@@ -1305,7 +1432,14 @@ function InvoiceForm() {
                                                         <div className="flex flex-col justify-center">
                                                             <div className="text-center p-3 bg-blue-100 rounded-lg">
                                                                 <div className="text-2xl font-bold text-blue-600">
-                                                                    {Object.keys(employeeData.weeklyData).filter(key => employeeData.weeklyData[key].length > 0).length}
+                                                                    {Object.keys(employeeData.weeklyData).filter(key => {
+                                                                        const weekData = employeeData.weeklyData[key];
+                                                                        if (isFinalized) {
+                                                                            return weekData && (weekData.weekEntries?.length > 0 || Array.isArray(weekData) && weekData.length > 0);
+                                                                        } else {
+                                                                            return weekData.length > 0;
+                                                                        }
+                                                                    }).length}
                                                                 </div>
                                                                 <div className="text-xs text-blue-800">semaine(s) travaillée(s)</div>
                                                                 <div className="text-xs text-gray-600 mt-1">
@@ -1367,7 +1501,14 @@ function InvoiceForm() {
                                                 <span className="text-gray-600">Semaines travaillées:</span>
                                                 <span className="font-medium text-gray-900">
                                                     {Object.values(groupedTimeEntries).reduce((total, employeeData) => 
-                                                        total + Object.keys(employeeData.weeklyData || {}).filter(key => employeeData.weeklyData[key].length > 0).length, 0
+                                                        total + Object.keys(employeeData.weeklyData || {}).filter(key => {
+                                                            const weekData = employeeData.weeklyData[key];
+                                                            if (isFinalized) {
+                                                                return weekData && (weekData.weekEntries?.length > 0 || Array.isArray(weekData) && weekData.length > 0);
+                                                            } else {
+                                                                return weekData.length > 0;
+                                                            }
+                                                        }).length, 0
                                                     )}
                                                 </span>
                                             </div>
@@ -1499,24 +1640,11 @@ function InvoiceForm() {
                             ) : (
                                 <button
                                     type="button"
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting}
-                                    className={`flex items-center px-8 py-2 rounded-lg transition-colors ${isSubmitting
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-green-600 text-white hover:bg-green-700'
-                                        }`}
+                                    disabled={true}
+                                    className="flex items-center px-8 py-2 rounded-lg bg-gray-300 text-gray-500 cursor-not-allowed"
                                 >
-                                    {isSubmitting ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
-                                            Enregistrement...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckIcon className="h-5 w-5 mr-2" />
-                                            {isEdit ? 'Mettre à jour' : 'Créer la facture'}
-                                        </>
-                                    )}
+                                    <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+                                    Facture non modifiable
                                 </button>
                             )}
                         </div>

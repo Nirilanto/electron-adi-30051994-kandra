@@ -14,7 +14,8 @@ import {
     UserIcon,
     CalendarIcon,
     BanknotesIcon,
-    DocumentTextIcon
+    DocumentTextIcon,
+    ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -30,6 +31,7 @@ function InvoiceDetail() {
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
     const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+    const [expandedWeeks, setExpandedWeeks] = useState({});
 
     useEffect(() => {
         loadInvoice();
@@ -175,6 +177,14 @@ function InvoiceDetail() {
         return new Date(dateString).toLocaleDateString('fr-FR');
     };
 
+    const toggleWeekExpansion = (employeeId, weekKey) => {
+        const key = `${employeeId}-${weekKey}`;
+        setExpandedWeeks(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -227,40 +237,16 @@ function InvoiceDetail() {
                                         {invoice.clientCompany || invoice.client?.companyName}
                                     </p>
                                 </div>
-                                <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(invoice.status)}`}>
-                                    {getStatusIcon(invoice.status)}
-                                    <span className="ml-2">{getStatusText(invoice.status)}</span>
-                                </div>
                             </div>
 
                             <div className="flex items-center space-x-3">
-                                {/* Actions rapides de statut */}
-                                {invoice.status === 'draft' && (
-                                    <button
-                                        onClick={() => handleStatusChange('sent')}
-                                        disabled={isUpdatingStatus}
-                                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                                    >
-                                        Marquer comme envoyée
-                                    </button>
-                                )}
-
-                                {invoice.status === 'sent' && (
-                                    <button
-                                        onClick={() => handleStatusChange('paid')}
-                                        disabled={isUpdatingStatus}
-                                        className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                                    >
-                                        Marquer comme payée
-                                    </button>
-                                )}
-
                                 <button
-                                    onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                    title="Modifier"
+                                    onClick={handleGeneratePDF}
+                                    disabled={isGeneratingPDF}
+                                    className={`flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${isGeneratingPDF ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
-                                    <PencilSquareIcon className="h-5 w-5" />
+                                    <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
+                                    {isGeneratingPDF ? 'Génération...' : 'Télécharger PDF'}
                                 </button>
 
                                 <button
@@ -316,38 +302,292 @@ function InvoiceDetail() {
                             </div>
                         </div>
 
-                        {/* Détail des prestations */}
+                        {/* Heures de travail hebdomadaires */}
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                             <div className="px-6 py-4 border-b border-gray-200">
                                 <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                                    <DocumentTextIcon className="h-5 w-5 mr-2 text-blue-600" />
-                                    Détail des prestations
+                                    <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                    Heures de travail hebdomadaires
                                 </h2>
                             </div>
                             <div className="p-6">
-                                {invoice.workPeriods && invoice.workPeriods.length > 0 ? (
-                                    <div className="space-y-4">
-                                        {invoice.workPeriods.map((period, index) => (
-                                            <div key={index} className="border border-gray-200 rounded-lg p-4">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h4 className="font-medium text-gray-900">{period.description}</h4>
-                                                        <p className="text-sm text-gray-600 flex items-center mt-1">
-                                                            <UserIcon className="h-4 w-4 mr-1" />
-                                                            {period.employeeName}
-                                                        </p>
-                                                        <p className="text-sm text-gray-500 mt-1">
-                                                            {formatDate(period.startDate)} - {formatDate(period.endDate)}
-                                                            {period.location && ` • ${period.location}`}
-                                                        </p>
-                                                        <div className="mt-2 text-sm text-gray-600">
-                                                            <span>{period.totalHours}h × {formatCurrency(period.hourlyRate)}</span>
+                                {invoice.employeesData && invoice.employeesData.length > 0 ? (
+                                    <div className="space-y-6">
+                                        {invoice.employeesData.map((employeeData) => (
+                                            <div key={employeeData.employeeId} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                                                {/* En-tête employé */}
+                                                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                                                    <div className="flex justify-between items-center">
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 flex items-center">
+                                                                <UserIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                                                {employeeData.employee?.firstName} {employeeData.employee?.lastName}
+                                                            </h4>
+                                                            <p className="text-sm text-gray-600 mt-1">
+                                                                {employeeData.totals?.workingDays} jour(s) travaillé(s)
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-lg font-bold text-blue-600">
+                                                                {employeeData.totals?.totalHours?.toFixed(1)}h
+                                                            </p>
+                                                            <p className="text-sm text-gray-600">
+                                                                Total
+                                                            </p>
                                                         </div>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <p className="font-medium text-gray-900">
-                                                            {formatCurrency(period.amount)}
-                                                        </p>
+                                                </div>
+
+                                                {/* Tableau des pointages */}
+                                                <div className="overflow-x-auto">
+                                                    <table className="min-w-full divide-y divide-gray-200">
+                                                        <thead className="bg-gray-50">
+                                                            <tr>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semaine</th>
+                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours</th>
+                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrat(s)</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total heures</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Normal</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.25</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.50</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant total</th>
+                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Détails</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="bg-white divide-y divide-gray-200">
+                                                            {Object.entries(employeeData.weeklyData || {})
+                                                                .filter(([weekKey, weekData]) => weekData && weekData.weekEntries?.length > 0)
+                                                                .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
+                                                                .map(([weekKey, weekData], weekIndex) => {
+                                                                    const isExpanded = expandedWeeks[`${employeeData.employeeId}-${weekKey}`];
+                                                                    const weekCalculation = weekData.weekCalculation || {};
+                                                                    const weekEntries = weekData.weekEntries || [];
+                                                                    
+                                                                    return (
+                                                                        <React.Fragment key={weekKey}>
+                                                                            <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleWeekExpansion(employeeData.employeeId, weekKey)}>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                                    <div className="font-semibold">
+                                                                                        {weekKey}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                                        Semaine {weekIndex + 1}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                                                                                    <div className="font-semibold text-lg text-blue-600">
+                                                                                        {weekEntries.length}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        jour(s)
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                                    <div className="space-y-1">
+                                                                                        {[...new Set(weekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
+                                                                                            <div key={idx} className="text-xs truncate max-w-32" title={contract}>
+                                                                                                {contract || 'Contrat non trouvé'}
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-semibold text-lg">
+                                                                                        {weekCalculation.totalWeekHours?.toFixed(1) || '0.0'}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        Total
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-semibold">
+                                                                                        {weekCalculation.normalHours?.toFixed(1) || '0.0'}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        x1.00
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 text-right font-medium">
+                                                                                    <div className="font-bold">
+                                                                                        {weekCalculation.overtime125?.toFixed(1) || '0.0'}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-orange-500">
+                                                                                        x1.25
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right font-medium">
+                                                                                    <div className="font-bold">
+                                                                                        {weekCalculation.overtime150?.toFixed(1) || '0.0'}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-red-500">
+                                                                                        x1.50
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-bold text-lg text-green-600">
+                                                                                        {formatCurrency(weekCalculation.totalWeekAmount || 0)}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        {weekCalculation.averageHourlyRate ? 
+                                                                                            `${formatCurrency(weekCalculation.averageHourlyRate)}/h moy.` : 
+                                                                                            'Taux non défini'
+                                                                                        }
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                                                    <button className="text-blue-600 hover:text-blue-800">
+                                                                                        <ChevronDownIcon className={`h-5 w-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                            {isExpanded && (
+                                                                                <tr>
+                                                                                    <td colSpan="9" className="px-0 py-0">
+                                                                                        <div className="bg-gray-50 border-l-4 border-blue-400">
+                                                                                            <div className="px-6 py-4">
+                                                                                                <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                                                                                                    <CalendarIcon className="h-4 w-4 mr-2 text-blue-600" />
+                                                                                                    Détail des journées - {weekKey}
+                                                                                                </h4>
+                                                                                                <div className="space-y-3">
+                                                                                                    {weekEntries
+                                                                                                        .sort((a, b) => new Date(a.date) - new Date(b.date))
+                                                                                                        .map((entry, idx) => (
+                                                                                                        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                                                                                            <div className="flex justify-between items-start">
+                                                                                                                <div className="flex-1">
+                                                                                                                    <div className="flex items-center space-x-3 mb-2">
+                                                                                                                        <span className="font-medium text-gray-900">
+                                                                                                                            {formatDate(entry.date)}
+                                                                                                                        </span>
+                                                                                                                        <span className="text-sm text-gray-500">
+                                                                                                                            {entry.startTime && entry.endTime 
+                                                                                                                                ? `${entry.startTime} - ${entry.endTime}`
+                                                                                                                                : 'Horaires non renseignés'
+                                                                                                                            }
+                                                                                                                        </span>
+                                                                                                                        <span className="text-sm font-medium text-blue-600">
+                                                                                                                            {(entry.totalHours || 0).toFixed(1)}h
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                    <div className="text-sm text-gray-600 mb-1">
+                                                                                                                        <strong>Contrat:</strong> {entry.contractTitle || 'Non renseigné'}
+                                                                                                                    </div>
+                                                                                                                    {entry.notes && (
+                                                                                                                        <div className="text-sm text-gray-600 bg-gray-100 rounded p-2 mt-2">
+                                                                                                                            <strong>Notes:</strong> {entry.notes}
+                                                                                                                        </div>
+                                                                                                                    )}
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Résumé simple de la semaine */}
+                                                                                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                                                                    <div className="flex justify-between items-center text-sm">
+                                                                                                        <span className="font-medium text-blue-900">
+                                                                                                            Résumé semaine: {weekCalculation.totalWeekHours?.toFixed(1) || '0.0'}h travaillées
+                                                                                                        </span>
+                                                                                                        <div className="flex space-x-3 text-xs">
+                                                                                                            <span className="text-gray-700">
+                                                                                                                {weekCalculation.normalHours?.toFixed(1) || '0.0'}h normales
+                                                                                                            </span>
+                                                                                                            {(weekCalculation.overtime125 || 0) > 0 && (
+                                                                                                                <span className="text-orange-600">
+                                                                                                                    {weekCalculation.overtime125.toFixed(1)}h sup (x1.25)
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                            {(weekCalculation.overtime150 || 0) > 0 && (
+                                                                                                                <span className="text-red-600">
+                                                                                                                    {weekCalculation.overtime150.toFixed(1)}h sup (x1.50)
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </React.Fragment>
+                                                                    );
+                                                                })
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                {/* Résumé employé */}
+                                                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                        {/* Heures */}
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 mb-2">Heures totales</h4>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600">Normales (x1.00):</span>
+                                                                    <span className="font-medium">{employeeData.totals?.normalHours?.toFixed(1) || '0.0'}h</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-orange-600">Sup. (x1.25):</span>
+                                                                    <span className="font-medium text-orange-600">{employeeData.totals?.overtime125?.toFixed(1) || '0.0'}h</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-red-600">Sup. (x1.50):</span>
+                                                                    <span className="font-medium text-red-600">{employeeData.totals?.overtime150?.toFixed(1) || '0.0'}h</span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-gray-300 flex justify-between">
+                                                                    <span className="font-bold">Total:</span>
+                                                                    <span className="font-bold text-blue-600">{employeeData.totals?.totalHours?.toFixed(1) || '0.0'}h</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Montants */}
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 mb-2">Montants calculés</h4>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600">Normal:</span>
+                                                                    <span className="font-medium">{formatCurrency(employeeData.totals?.normalAmount || 0)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-orange-600">Sup. (x1.25):</span>
+                                                                    <span className="font-medium text-orange-600">{formatCurrency(employeeData.totals?.overtime125Amount || 0)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-red-600">Sup. (x1.50):</span>
+                                                                    <span className="font-medium text-red-600">{formatCurrency(employeeData.totals?.overtime150Amount || 0)}</span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-gray-300 flex justify-between">
+                                                                    <span className="font-bold">Total:</span>
+                                                                    <span className="font-bold text-green-600 text-lg">{formatCurrency(employeeData.totals?.totalAmount || 0)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Informations */}
+                                                        <div className="flex flex-col justify-center">
+                                                            <div className="text-center p-3 bg-blue-100 rounded-lg">
+                                                                <div className="text-2xl font-bold text-blue-600">
+                                                                    {Object.keys(employeeData.weeklyData || {}).filter(key => employeeData.weeklyData[key]?.weekEntries?.length > 0).length}
+                                                                </div>
+                                                                <div className="text-xs text-blue-800">semaine(s) travaillée(s)</div>
+                                                                <div className="text-xs text-gray-600 mt-1">
+                                                                    {employeeData.totals?.workingDays || 0} jour(s) au total
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                                                        <div className="flex justify-between items-center">
+                                                            <span>Règle: 35h normales/semaine, puis x1.25 jusqu'à 43h, puis x1.50</span>
+                                                            <span className="font-medium">Période: {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -355,7 +595,7 @@ function InvoiceDetail() {
                                     </div>
                                 ) : (
                                     <p className="text-gray-500 text-center py-8">
-                                        Aucune prestation détaillée
+                                        Aucune donnée de pointage disponible
                                     </p>
                                 )}
                             </div>
@@ -416,44 +656,18 @@ function InvoiceDetail() {
                                 <div className="pt-4 border-t border-gray-200">
                                     <p className="text-sm font-medium text-gray-500">Montant total</p>
                                     <p className="text-2xl font-bold text-blue-600">
-                                        {formatCurrency(invoice.totalAmount || invoice.total_amount)}
+                                        {formatCurrency(
+                                            invoice.globalTotals?.totalAmount || 
+                                            (invoice.employeesData ? 
+                                                invoice.employeesData.reduce((sum, emp) => sum + (emp.totals?.totalAmount || 0), 0) :
+                                                invoice.totalAmount || invoice.total_amount
+                                            )
+                                        )}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Actions */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-                            <div className="px-6 py-4 border-b border-gray-200">
-                                <h2 className="text-lg font-semibold text-gray-900">Actions</h2>
-                            </div>
-                            <div className="p-6 space-y-3">
-                                <button
-                                    onClick={handleGeneratePDF}
-                                    disabled={isGeneratingPDF}
-                                    className={`w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors ${isGeneratingPDF ? 'opacity-50 cursor-not-allowed' : ''
-                                        }`}
-                                >
-                                    <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-                                    {isGeneratingPDF ? 'Génération...' : 'Télécharger PDF'}
-                                </button>
-                                <div className="space-y-2">
-                                    <p className="text-sm font-medium text-gray-700">Changer le statut:</p>
-                                    <select
-                                        value={invoice.status}
-                                        onChange={(e) => handleStatusChange(e.target.value)}
-                                        disabled={isUpdatingStatus}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
-                                    >
-                                        <option value="draft">Brouillon</option>
-                                        <option value="sent">Envoyée</option>
-                                        <option value="paid">Payée</option>
-                                        <option value="overdue">En retard</option>
-                                        <option value="rejected">Refusée</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

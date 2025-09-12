@@ -67,10 +67,6 @@ function InvoiceList() {
       );
     }
 
-    // Filtre par statut
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(invoice => invoice.status === statusFilter);
-    }
 
     // Filtre par date
     if (dateFilter !== 'all') {
@@ -220,7 +216,7 @@ function InvoiceList() {
 
           {/* Filtres */}
           <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Recherche */}
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -233,19 +229,6 @@ function InvoiceList() {
                 />
               </div>
 
-              {/* Filtre statut */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Tous les statuts</option>
-                <option value="draft">Brouillon</option>
-                <option value="sent">Envoyée</option>
-                <option value="paid">Payée</option>
-                <option value="overdue">En retard</option>
-                <option value="rejected">Refusée</option>
-              </select>
 
               {/* Filtre date */}
               <select
@@ -274,12 +257,12 @@ function InvoiceList() {
               <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">Aucune facture</h3>
               <p className="mt-1 text-sm text-gray-500">
-                {searchTerm || statusFilter !== 'all' || dateFilter !== 'all' 
+                {searchTerm || dateFilter !== 'all' 
                   ? 'Aucune facture ne correspond à vos critères de recherche.'
                   : 'Commencez par créer votre première facture.'
                 }
               </p>
-              {!searchTerm && statusFilter === 'all' && dateFilter === 'all' && (
+              {!searchTerm && dateFilter === 'all' && (
                 <div className="mt-6">
                   <button
                     onClick={() => navigate('/invoices/new')}
@@ -307,9 +290,6 @@ function InvoiceList() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Montant
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Statut
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date création
@@ -341,12 +321,6 @@ function InvoiceList() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                         {formatCurrency(invoice.totalAmount)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(invoice.status)}`}>
-                          {getStatusIcon(invoice.status)}
-                          <span className="ml-1">{getStatusText(invoice.status)}</span>
-                        </span>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(invoice.invoiceDate)}
                       </td>
@@ -358,13 +332,6 @@ function InvoiceList() {
                             title="Voir"
                           >
                             <EyeIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                            title="Modifier"
-                          >
-                            <PencilSquareIcon className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(invoice.id)}
@@ -385,7 +352,7 @@ function InvoiceList() {
 
         {/* Stats en bas */}
         {filteredInvoices.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -395,34 +362,6 @@ function InvoiceList() {
                   <p className="text-sm font-medium text-gray-500">Total factures</p>
                   <p className="text-2xl font-semibold text-gray-900">
                     {filteredInvoices.length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <CheckCircleIcon className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">Payées</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {filteredInvoices.filter(i => i.status === 'paid').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <ClockIcon className="h-8 w-8 text-orange-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">En attente</p>
-                  <p className="text-2xl font-semibold text-gray-900">
-                    {filteredInvoices.filter(i => i.status === 'sent').length}
                   </p>
                 </div>
               </div>
