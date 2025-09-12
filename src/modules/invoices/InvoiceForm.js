@@ -310,6 +310,64 @@ function InvoiceForm() {
         };
     };
 
+    const calculateWeeklyCosts = async (weekEntries) => {
+        let totalNormalAmount = 0;
+        let totalOvertime125Amount = 0;
+        let totalOvertime150Amount = 0;
+        let weeklyRates = [];
+
+        // Récupérer les taux horaires des contrats
+        for (const entry of weekEntries) {
+            if (entry.contractId && !weeklyRates.some(r => r.contractId === entry.contractId)) {
+                try {
+                    const contract = await ContractService.getContractById(entry.contractId);
+                    if (contract && contract.hourlyRate) {
+                        weeklyRates.push({
+                            contractId: entry.contractId,
+                            contractTitle: contract.title || contract.jobTitle,
+                            hourlyRate: parseFloat(contract.hourlyRate) || 0
+                        });
+                    }
+                } catch (error) {
+                    console.warn(`Impossible de récupérer le taux du contrat ${entry.contractId}`);
+                }
+            }
+        }
+
+        // Si on a plusieurs contrats dans la semaine, on prend le taux moyen pondéré par les heures
+        let averageHourlyRate = 0;
+        if (weeklyRates.length > 0) {
+            const totalHours = weekEntries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
+            let weightedSum = 0;
+            
+            for (const entry of weekEntries) {
+                const rate = weeklyRates.find(r => r.contractId === entry.contractId);
+                if (rate) {
+                    weightedSum += (entry.totalHours || 0) * rate.hourlyRate;
+                }
+            }
+            
+            averageHourlyRate = totalHours > 0 ? weightedSum / totalHours : 0;
+        }
+
+        const weekCalculation = calculateWeeklyOvertime(weekEntries);
+
+        // Calculer les montants par type d'heures
+        totalNormalAmount = weekCalculation.normalHours * averageHourlyRate;
+        totalOvertime125Amount = weekCalculation.overtime125 * averageHourlyRate * 1.25;
+        totalOvertime150Amount = weekCalculation.overtime150 * averageHourlyRate * 1.50;
+
+        return {
+            ...weekCalculation,
+            averageHourlyRate,
+            weeklyRates,
+            totalNormalAmount,
+            totalOvertime125Amount,
+            totalOvertime150Amount,
+            totalWeekAmount: totalNormalAmount + totalOvertime125Amount + totalOvertime150Amount
+        };
+    };
+
     const groupTimeEntriesByEmployee = async (entries, periodStart, periodEnd) => {
         try {
             const grouped = {};
@@ -344,7 +402,11 @@ function InvoiceForm() {
                             normalHours: 0,
                             overtime125: 0,
                             overtime150: 0,
-                            workingDays: 0
+                            workingDays: 0,
+                            totalAmount: 0,
+                            normalAmount: 0,
+                            overtime125Amount: 0,
+                            overtime150Amount: 0
                         }
                     };
 
@@ -389,13 +451,17 @@ function InvoiceForm() {
                 grouped[entry.employeeId].totals.workingDays += 1;
             }
 
-            // Calculer les heures supplémentaires par semaine
+            // Calculer les heures supplémentaires et coûts par semaine
             for (const employeeId in grouped) {
                 const employeeData = grouped[employeeId];
                 let totalNormal = 0;
                 let totalOvertime125 = 0;
                 let totalOvertime150 = 0;
                 let totalHours = 0;
+                let totalNormalAmount = 0;
+                let totalOvertime125Amount = 0;
+                let totalOvertime150Amount = 0;
+                let totalAmount = 0;
 
                 // Calculer pour chaque semaine (y compris celles vides)
                 for (const weekKey in employeeData.weeklyData) {
@@ -416,12 +482,18 @@ function InvoiceForm() {
                         continue;
                     }
 
-                    const weekCalculation = calculateWeeklyOvertime(filteredWeekEntries);
+                    // Calculer les heures et coûts pour cette semaine
+                    const weekCalculation = await calculateWeeklyCosts(filteredWeekEntries);
                     
                     totalNormal += weekCalculation.normalHours;
                     totalOvertime125 += weekCalculation.overtime125;
                     totalOvertime150 += weekCalculation.overtime150;
                     totalHours += weekCalculation.totalWeekHours;
+                    
+                    totalNormalAmount += weekCalculation.totalNormalAmount;
+                    totalOvertime125Amount += weekCalculation.totalOvertime125Amount;
+                    totalOvertime150Amount += weekCalculation.totalOvertime150Amount;
+                    totalAmount += weekCalculation.totalWeekAmount;
 
                     // Enrichir chaque entrée avec les données de semaine
                     weekEntries.forEach(entry => {
@@ -429,6 +501,7 @@ function InvoiceForm() {
                         entry.weekNormalHours = weekCalculation.normalHours;
                         entry.weekOvertime125 = weekCalculation.overtime125;
                         entry.weekOvertime150 = weekCalculation.overtime150;
+                        entry.weekCosts = weekCalculation;
                     });
                 }
 
@@ -437,6 +510,10 @@ function InvoiceForm() {
                 employeeData.totals.normalHours = totalNormal;
                 employeeData.totals.overtime125 = totalOvertime125;
                 employeeData.totals.overtime150 = totalOvertime150;
+                employeeData.totals.totalAmount = totalAmount;
+                employeeData.totals.normalAmount = totalNormalAmount;
+                employeeData.totals.overtime125Amount = totalOvertime125Amount;
+                employeeData.totals.overtime150Amount = totalOvertime150Amount;
             }
 
             return grouped;
@@ -1005,12 +1082,13 @@ function InvoiceForm() {
                                                         <thead className="bg-gray-50">
                                                             <tr>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semaine</th>
-                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours travaillés</th>
+                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours</th>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrat(s)</th>
-                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total semaine</th>
-                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. normales (x1.00)</th>
-                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.25)</th>
-                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.50)</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total heures</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Normal</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.25</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Sup x1.50</th>
+                                                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Montant total</th>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                                                 <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Détails</th>
                                                             </tr>
@@ -1020,8 +1098,9 @@ function InvoiceForm() {
                                                                 .filter(([weekKey, weekEntries]) => weekEntries.length > 0)
                                                                 .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
                                                                 .map(([weekKey, weekEntries], weekIndex) => {
-                                                                    const weekCalculation = calculateWeeklyOvertime(weekEntries);
+                                                                    // Récupérer les données de coût de la première entrée (qui contient les calculs hebdomadaires)
                                                                     const firstEntry = weekEntries[0];
+                                                                    const weekCalculation = firstEntry.weekCosts || calculateWeeklyOvertime(weekEntries);
                                                                     const weekRange = getWeekRange(new Date(firstEntry.date));
                                                                     const isExpanded = expandedWeeks[`${employeeData.employee.id}-${weekKey}`];
                                                                     
@@ -1085,6 +1164,17 @@ function InvoiceForm() {
                                                                                         x1.50
                                                                                     </div>
                                                                                 </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-bold text-lg text-green-600">
+                                                                                        {formatCurrency(weekCalculation.totalWeekAmount || 0)}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        {weekCalculation.averageHourlyRate ? 
+                                                                                            `${formatCurrency(weekCalculation.averageHourlyRate)}/h moy.` : 
+                                                                                            'Taux non défini'
+                                                                                        }
+                                                                                    </div>
+                                                                                </td>
                                                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                                                     <div className="space-y-1">
                                                                                         {[...new Set(weekEntries.map(entry => entry.status))].map((status, idx) => (
@@ -1110,7 +1200,7 @@ function InvoiceForm() {
                                                                             </tr>
                                                                             {isExpanded && (
                                                                                 <tr>
-                                                                                    <td colSpan="9" className="px-0 py-0">
+                                                                                    <td colSpan="10" className="px-0 py-0">
                                                                                         <div className="bg-gray-50 border-l-4 border-blue-400">
                                                                                             <div className="px-6 py-4">
                                                                                                 <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
@@ -1165,28 +1255,79 @@ function InvoiceForm() {
                                                                                                     ))}
                                                                                                 </div>
                                                                                                 
-                                                                                                {/* Résumé de la semaine */}
-                                                                                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                                                                                    <div className="flex justify-between items-center text-sm">
-                                                                                                        <span className="font-medium text-blue-900">
-                                                                                                            Résumé semaine: {weekCalculation.totalWeekHours.toFixed(1)}h
-                                                                                                        </span>
-                                                                                                        <div className="flex space-x-4 text-xs">
-                                                                                                            <span className="text-gray-700">
-                                                                                                                {weekCalculation.normalHours.toFixed(1)}h normales
-                                                                                                            </span>
-                                                                                                            {weekCalculation.overtime125 > 0 && (
-                                                                                                                <span className="text-orange-600">
-                                                                                                                    {weekCalculation.overtime125.toFixed(1)}h sup (x1.25)
-                                                                                                                </span>
-                                                                                                            )}
-                                                                                                            {weekCalculation.overtime150 > 0 && (
-                                                                                                                <span className="text-red-600">
-                                                                                                                    {weekCalculation.overtime150.toFixed(1)}h sup (x1.50)
-                                                                                                                </span>
-                                                                                                            )}
+                                                                                                {/* Résumé de la semaine avec coûts */}
+                                                                                                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                                        {/* Heures et coûts */}
+                                                                                                        <div>
+                                                                                                            <h5 className="font-medium text-blue-900 mb-2">Répartition des heures</h5>
+                                                                                                            <div className="space-y-1 text-sm">
+                                                                                                                <div className="flex justify-between">
+                                                                                                                    <span className="text-gray-700">Heures normales:</span>
+                                                                                                                    <span className="font-medium">{weekCalculation.normalHours.toFixed(1)}h × {formatCurrency(weekCalculation.averageHourlyRate || 0)}</span>
+                                                                                                                </div>
+                                                                                                                {weekCalculation.overtime125 > 0 && (
+                                                                                                                    <div className="flex justify-between">
+                                                                                                                        <span className="text-orange-600">Heures sup (x1.25):</span>
+                                                                                                                        <span className="font-medium text-orange-600">{weekCalculation.overtime125.toFixed(1)}h × {formatCurrency((weekCalculation.averageHourlyRate || 0) * 1.25)}</span>
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                                {weekCalculation.overtime150 > 0 && (
+                                                                                                                    <div className="flex justify-between">
+                                                                                                                        <span className="text-red-600">Heures sup (x1.50):</span>
+                                                                                                                        <span className="font-medium text-red-600">{weekCalculation.overtime150.toFixed(1)}h × {formatCurrency((weekCalculation.averageHourlyRate || 0) * 1.50)}</span>
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                        
+                                                                                                        {/* Totaux */}
+                                                                                                        <div>
+                                                                                                            <h5 className="font-medium text-blue-900 mb-2">Totaux de la semaine</h5>
+                                                                                                            <div className="space-y-1 text-sm">
+                                                                                                                <div className="flex justify-between">
+                                                                                                                    <span className="text-gray-700">Total heures:</span>
+                                                                                                                    <span className="font-bold">{weekCalculation.totalWeekHours.toFixed(1)}h</span>
+                                                                                                                </div>
+                                                                                                                <div className="flex justify-between">
+                                                                                                                    <span className="text-gray-700">Montant normal:</span>
+                                                                                                                    <span className="font-medium">{formatCurrency(weekCalculation.totalNormalAmount || 0)}</span>
+                                                                                                                </div>
+                                                                                                                {weekCalculation.totalOvertime125Amount > 0 && (
+                                                                                                                    <div className="flex justify-between">
+                                                                                                                        <span className="text-orange-600">Montant sup (x1.25):</span>
+                                                                                                                        <span className="font-medium text-orange-600">{formatCurrency(weekCalculation.totalOvertime125Amount)}</span>
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                                {weekCalculation.totalOvertime150Amount > 0 && (
+                                                                                                                    <div className="flex justify-between">
+                                                                                                                        <span className="text-red-600">Montant sup (x1.50):</span>
+                                                                                                                        <span className="font-medium text-red-600">{formatCurrency(weekCalculation.totalOvertime150Amount)}</span>
+                                                                                                                    </div>
+                                                                                                                )}
+                                                                                                                <div className="pt-2 border-t border-blue-300">
+                                                                                                                    <div className="flex justify-between">
+                                                                                                                        <span className="font-bold text-blue-900">Total semaine:</span>
+                                                                                                                        <span className="font-bold text-green-600 text-lg">{formatCurrency(weekCalculation.totalWeekAmount || 0)}</span>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
                                                                                                         </div>
                                                                                                     </div>
+                                                                                                    
+                                                                                                    {/* Contrats utilisés */}
+                                                                                                    {weekCalculation.weeklyRates && weekCalculation.weeklyRates.length > 0 && (
+                                                                                                        <div className="mt-3 pt-3 border-t border-blue-300">
+                                                                                                            <h6 className="text-xs font-medium text-blue-800 mb-1">Contrats de la semaine:</h6>
+                                                                                                            <div className="flex flex-wrap gap-2">
+                                                                                                                {weekCalculation.weeklyRates.map((rate, idx) => (
+                                                                                                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                                                                                                        {rate.contractTitle} - {formatCurrency(rate.hourlyRate)}/h
+                                                                                                                    </span>
+                                                                                                                ))}
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    )}
                                                                                                 </div>
                                                                                             </div>
                                                                                         </div>
@@ -1202,35 +1343,72 @@ function InvoiceForm() {
                                                 </div>
 
                                                 {/* Résumé employé */}
-                                                <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                                        <div className="space-y-1">
-                                                            <div className="flex justify-between">
-                                                                <span className="text-gray-600">Heures normales (x1.00):</span>
-                                                                <span className="font-medium">{employeeData.totals.normalHours.toFixed(1)}h</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-orange-600">Heures sup. (x1.25):</span>
-                                                                <span className="font-medium text-orange-600">{employeeData.totals.overtime125.toFixed(1)}h</span>
-                                                            </div>
-                                                            <div className="flex justify-between">
-                                                                <span className="text-red-600">Heures sup. (x1.50):</span>
-                                                                <span className="font-medium text-red-600">{employeeData.totals.overtime150.toFixed(1)}h</span>
+                                                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                        {/* Heures */}
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 mb-2">Heures totales</h4>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600">Normales (x1.00):</span>
+                                                                    <span className="font-medium">{employeeData.totals.normalHours.toFixed(1)}h</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-orange-600">Sup. (x1.25):</span>
+                                                                    <span className="font-medium text-orange-600">{employeeData.totals.overtime125.toFixed(1)}h</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-red-600">Sup. (x1.50):</span>
+                                                                    <span className="font-medium text-red-600">{employeeData.totals.overtime150.toFixed(1)}h</span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-gray-300 flex justify-between">
+                                                                    <span className="font-bold">Total:</span>
+                                                                    <span className="font-bold text-blue-600">{employeeData.totals.totalHours.toFixed(1)}h</span>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex flex-col justify-center items-end">
-                                                            <div className="text-right">
-                                                                <span className="text-lg font-bold text-blue-600">
-                                                                    {employeeData.totals.totalHours.toFixed(1)}h
-                                                                </span>
-                                                                <div className="text-xs text-gray-500">Total période</div>
+
+                                                        {/* Montants */}
+                                                        <div>
+                                                            <h4 className="font-medium text-gray-900 mb-2">Montants calculés</h4>
+                                                            <div className="space-y-1 text-sm">
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-600">Normal:</span>
+                                                                    <span className="font-medium">{formatCurrency(employeeData.totals.normalAmount)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-orange-600">Sup. (x1.25):</span>
+                                                                    <span className="font-medium text-orange-600">{formatCurrency(employeeData.totals.overtime125Amount)}</span>
+                                                                </div>
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-red-600">Sup. (x1.50):</span>
+                                                                    <span className="font-medium text-red-600">{formatCurrency(employeeData.totals.overtime150Amount)}</span>
+                                                                </div>
+                                                                <div className="pt-2 border-t border-gray-300 flex justify-between">
+                                                                    <span className="font-bold">Total:</span>
+                                                                    <span className="font-bold text-green-600 text-lg">{formatCurrency(employeeData.totals.totalAmount)}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Informations */}
+                                                        <div className="flex flex-col justify-center">
+                                                            <div className="text-center p-3 bg-blue-100 rounded-lg">
+                                                                <div className="text-2xl font-bold text-blue-600">
+                                                                    {Object.keys(employeeData.weeklyData).filter(key => employeeData.weeklyData[key].length > 0).length}
+                                                                </div>
+                                                                <div className="text-xs text-blue-800">semaine(s) travaillée(s)</div>
+                                                                <div className="text-xs text-gray-600 mt-1">
+                                                                    {employeeData.totals.workingDays} jour(s) au total
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
+                                                    
                                                     <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
-                                                        <div className="flex justify-between">
-                                                            <span>Règle: 35h normales, puis x1.25 jusqu'à 43h, puis x1.50</span>
-                                                            <span>{Object.keys(employeeData.weeklyData).length} semaine(s)</span>
+                                                        <div className="flex justify-between items-center">
+                                                            <span>Règle: 35h normales/semaine, puis x1.25 jusqu'à 43h, puis x1.50</span>
+                                                            <span className="font-medium">Période: {formatDate(invoiceData.periodStart)} - {formatDate(invoiceData.periodEnd)}</span>
                                                         </div>
                                                     </div>
                                                 </div>
