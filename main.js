@@ -451,21 +451,21 @@ function getClientInvoiceTemplate() {
         
         .invoice-number-big {
             font-size: 22px;
-            color: #007bff;
+            color: #000;
         }
         
         .client-box {
-            border: 1px solid #333;
+            border: 1px solid #000;
             padding: 4px;
             font-size: 11px;
-            background-color: #f5f5f5;
+            background-color: white;
         }
         
         .project-info {
-            border: 1px solid #666;
+            border: 1px solid #000;
             padding: 4px;
             margin: 4px 0;
-            background-color: #f1f3f4;
+            background-color: white;
             font-size: 11px;
         }
         
@@ -493,29 +493,35 @@ function getClientInvoiceTemplate() {
         }
         
         .items-table th {
-            background: #f8f9fa;
-            color: #333;
+            background: white;
+            color: #000;
             padding: 6px 4px;
             text-align: left;
             font-weight: bold;
-            border: 1px solid #dee2e6;
+            border: 1px solid #000;
             font-size: 10px;
         }
         
         .items-table td {
             padding: 3px 4px;
-            border: 1px solid #dee2e6;
+            border: 1px solid #000;
             vertical-align: top;
             font-size: 9px;
-        }
-        
-        .items-table tr:nth-child(even) {
-            background: #f8f9fa;
+            background: white;
         }
         
         .employee-group {
-            background: #fff3cd;
+            background: white;
             font-weight: bold;
+            border: 2px solid #000 !important;
+        }
+        
+        .employee-group td {
+            border-top: 2px solid #000 !important;
+            border-bottom: 2px solid #000 !important;
+            border-left: 2px solid #000 !important;
+            border-right: 2px solid #000 !important;
+            background: white !important;
         }
         
         .amount {
@@ -537,25 +543,28 @@ function getClientInvoiceTemplate() {
         
         .totals-table td {
             padding: 4px 6px;
-            border: 1px solid #dee2e6;
+            border: 1px solid #000;
+            background: white;
         }
         
         .totals-table .label {
-            background: #f8f9fa;
+            background: white;
             font-weight: bold;
         }
         
         .totals-table .total-final {
-            background: #e9ecef;
-            color: #333;
+            background: white;
+            color: #000;
             font-weight: bold;
             font-size: 11px;
+            border: 2px solid #000;
         }
         
         .items-table td[rowspan] {
             vertical-align: middle;
-            border-right: 2px solid #333;
+            border-right: 2px solid #000;
             font-weight: bold;
+            background: white;
         }
         
         .footer {
@@ -568,7 +577,8 @@ function getClientInvoiceTemplate() {
         }
         
         .payment-conditions {
-            background: #fff3cd;
+            background: white;
+            border: 1px solid #000;
             padding: 4px;
             margin-top: 6px;
             font-weight: bold;
