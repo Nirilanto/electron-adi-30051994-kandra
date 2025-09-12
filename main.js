@@ -398,11 +398,11 @@ function getClientInvoiceTemplate() {
         
         body {
             font-family: Arial, sans-serif;
-            font-size: 10px;
-            line-height: 1.2;
+            font-size: 11px;
+            line-height: 1.3;
             color: #333;
             background-color: white;
-            padding: 8mm;
+            padding: 5mm 6mm;
             margin: 0;
         }
         
@@ -427,15 +427,15 @@ function getClientInvoiceTemplate() {
         }
         
         .company-name {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 3px;
         }
         
         .company-details {
-            font-size: 11px;
-            line-height: 1.6;
+            font-size: 10px;
+            line-height: 1.3;
         }
         
         .invoice-number-cell {
@@ -444,23 +444,29 @@ function getClientInvoiceTemplate() {
         }
         
         .invoice-number {
-            font-size: 18px;
+            font-size: 13px;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 4px;
+        }
+        
+        .invoice-number-big {
+            font-size: 22px;
+            color: #007bff;
         }
         
         .client-box {
-            border: 2px solid #333;
-            padding: 10px;
-            font-size: 14px;
+            border: 1px solid #333;
+            padding: 4px;
+            font-size: 11px;
             background-color: #f5f5f5;
         }
         
         .project-info {
-            border: 2px solid #666;
-            padding: 10px;
-            margin: 10px 0;
+            border: 1px solid #666;
+            padding: 4px;
+            margin: 4px 0;
             background-color: #f1f3f4;
+            font-size: 11px;
         }
         
         .project-info table {
@@ -482,23 +488,25 @@ function getClientInvoiceTemplate() {
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 7px 0;
-            font-size: 11px;
+            margin: 4px 0;
+            font-size: 10px;
         }
         
         .items-table th {
             background: #f8f9fa;
             color: #333;
-            padding: 12px 8px;
+            padding: 6px 4px;
             text-align: left;
             font-weight: bold;
             border: 1px solid #dee2e6;
+            font-size: 10px;
         }
         
         .items-table td {
-            padding: 5px;
+            padding: 3px 4px;
             border: 1px solid #dee2e6;
             vertical-align: top;
+            font-size: 9px;
         }
         
         .items-table tr:nth-child(even) {
@@ -516,18 +524,19 @@ function getClientInvoiceTemplate() {
         }
         
         .totals {
-            margin-top: 30px;
+            margin-top: 8px;
             text-align: right;
         }
         
         .totals-table {
-            width: 300px;
+            width: 200px;
             border-collapse: collapse;
             margin-left: auto;
+            font-size: 10px;
         }
         
         .totals-table td {
-            padding: 8px 12px;
+            padding: 4px 6px;
             border: 1px solid #dee2e6;
         }
         
@@ -540,7 +549,7 @@ function getClientInvoiceTemplate() {
             background: #e9ecef;
             color: #333;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 11px;
         }
         
         .items-table td[rowspan] {
@@ -550,25 +559,25 @@ function getClientInvoiceTemplate() {
         }
         
         .footer {
-            margin-top: 40px;
-            padding-top: 20px;
+            margin-top: 8px;
+            padding-top: 6px;
             border-top: 1px solid #dee2e6;
-            font-size: 10px;
+            font-size: 8px;
             color: #6c757d;
-            line-height: 1.6;
+            line-height: 1.3;
         }
         
         .payment-conditions {
             background: #fff3cd;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 20px;
+            padding: 4px;
+            margin-top: 6px;
             font-weight: bold;
+            font-size: 10px;
         }
         
         @media print {
             body {
-                padding: 15mm;
+                padding: 5mm 6mm;
             }
         }
         
@@ -731,7 +740,7 @@ function getClientInvoiceTemplate() {
                     <td class="invoice-number-cell">
                         <div class="invoice-number">
                             FACTURE N°<br>
-                            <span style="font-size: 32px; color: #007bff;">{{invoiceNumber}}</span>
+                            <span class="invoice-number-big">{{invoiceNumber}}</span>
                         </div>
                         <div class="client-box">
                             <strong>{{client.companyName}}</strong><br>
@@ -748,11 +757,11 @@ function getClientInvoiceTemplate() {
             <table>
                 <tr>
                     <td class="project-left">
-                        <strong style="font-size: 14px;">Chantier : {{description}}</strong><br>
+                        <strong>Chantier : {{description}}</strong><br>
                         <span style="color: #555;">{{client.city}}</span>
                     </td>
                     <td class="project-right">
-                        <strong style="font-size: 14px;">LE {{invoiceDate}}</strong>
+                        <strong>LE {{invoiceDate}}</strong>
                     </td>
                 </tr>
             </table>
