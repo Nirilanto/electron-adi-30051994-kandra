@@ -1255,79 +1255,28 @@ function InvoiceForm() {
                                                                                                     ))}
                                                                                                 </div>
                                                                                                 
-                                                                                                {/* Résumé de la semaine avec coûts */}
-                                                                                                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                                                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                                                        {/* Heures et coûts */}
-                                                                                                        <div>
-                                                                                                            <h5 className="font-medium text-blue-900 mb-2">Répartition des heures</h5>
-                                                                                                            <div className="space-y-1 text-sm">
-                                                                                                                <div className="flex justify-between">
-                                                                                                                    <span className="text-gray-700">Heures normales:</span>
-                                                                                                                    <span className="font-medium">{weekCalculation.normalHours.toFixed(1)}h × {formatCurrency(weekCalculation.averageHourlyRate || 0)}</span>
-                                                                                                                </div>
-                                                                                                                {weekCalculation.overtime125 > 0 && (
-                                                                                                                    <div className="flex justify-between">
-                                                                                                                        <span className="text-orange-600">Heures sup (x1.25):</span>
-                                                                                                                        <span className="font-medium text-orange-600">{weekCalculation.overtime125.toFixed(1)}h × {formatCurrency((weekCalculation.averageHourlyRate || 0) * 1.25)}</span>
-                                                                                                                    </div>
-                                                                                                                )}
-                                                                                                                {weekCalculation.overtime150 > 0 && (
-                                                                                                                    <div className="flex justify-between">
-                                                                                                                        <span className="text-red-600">Heures sup (x1.50):</span>
-                                                                                                                        <span className="font-medium text-red-600">{weekCalculation.overtime150.toFixed(1)}h × {formatCurrency((weekCalculation.averageHourlyRate || 0) * 1.50)}</span>
-                                                                                                                    </div>
-                                                                                                                )}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                        
-                                                                                                        {/* Totaux */}
-                                                                                                        <div>
-                                                                                                            <h5 className="font-medium text-blue-900 mb-2">Totaux de la semaine</h5>
-                                                                                                            <div className="space-y-1 text-sm">
-                                                                                                                <div className="flex justify-between">
-                                                                                                                    <span className="text-gray-700">Total heures:</span>
-                                                                                                                    <span className="font-bold">{weekCalculation.totalWeekHours.toFixed(1)}h</span>
-                                                                                                                </div>
-                                                                                                                <div className="flex justify-between">
-                                                                                                                    <span className="text-gray-700">Montant normal:</span>
-                                                                                                                    <span className="font-medium">{formatCurrency(weekCalculation.totalNormalAmount || 0)}</span>
-                                                                                                                </div>
-                                                                                                                {weekCalculation.totalOvertime125Amount > 0 && (
-                                                                                                                    <div className="flex justify-between">
-                                                                                                                        <span className="text-orange-600">Montant sup (x1.25):</span>
-                                                                                                                        <span className="font-medium text-orange-600">{formatCurrency(weekCalculation.totalOvertime125Amount)}</span>
-                                                                                                                    </div>
-                                                                                                                )}
-                                                                                                                {weekCalculation.totalOvertime150Amount > 0 && (
-                                                                                                                    <div className="flex justify-between">
-                                                                                                                        <span className="text-red-600">Montant sup (x1.50):</span>
-                                                                                                                        <span className="font-medium text-red-600">{formatCurrency(weekCalculation.totalOvertime150Amount)}</span>
-                                                                                                                    </div>
-                                                                                                                )}
-                                                                                                                <div className="pt-2 border-t border-blue-300">
-                                                                                                                    <div className="flex justify-between">
-                                                                                                                        <span className="font-bold text-blue-900">Total semaine:</span>
-                                                                                                                        <span className="font-bold text-green-600 text-lg">{formatCurrency(weekCalculation.totalWeekAmount || 0)}</span>
-                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                            </div>
+                                                                                                {/* Résumé simple de la semaine */}
+                                                                                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                                                                    <div className="flex justify-between items-center text-sm">
+                                                                                                        <span className="font-medium text-blue-900">
+                                                                                                            Résumé semaine: {weekCalculation.totalWeekHours.toFixed(1)}h travaillées
+                                                                                                        </span>
+                                                                                                        <div className="flex space-x-3 text-xs">
+                                                                                                            <span className="text-gray-700">
+                                                                                                                {weekCalculation.normalHours.toFixed(1)}h normales
+                                                                                                            </span>
+                                                                                                            {weekCalculation.overtime125 > 0 && (
+                                                                                                                <span className="text-orange-600">
+                                                                                                                    {weekCalculation.overtime125.toFixed(1)}h sup (x1.25)
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                            {weekCalculation.overtime150 > 0 && (
+                                                                                                                <span className="text-red-600">
+                                                                                                                    {weekCalculation.overtime150.toFixed(1)}h sup (x1.50)
+                                                                                                                </span>
+                                                                                                            )}
                                                                                                         </div>
                                                                                                     </div>
-                                                                                                    
-                                                                                                    {/* Contrats utilisés */}
-                                                                                                    {weekCalculation.weeklyRates && weekCalculation.weeklyRates.length > 0 && (
-                                                                                                        <div className="mt-3 pt-3 border-t border-blue-300">
-                                                                                                            <h6 className="text-xs font-medium text-blue-800 mb-1">Contrats de la semaine:</h6>
-                                                                                                            <div className="flex flex-wrap gap-2">
-                                                                                                                {weekCalculation.weeklyRates.map((rate, idx) => (
-                                                                                                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                                                                                                                        {rate.contractTitle} - {formatCurrency(rate.hourlyRate)}/h
-                                                                                                                    </span>
-                                                                                                                ))}
-                                                                                                            </div>
-                                                                                                        </div>
-                                                                                                    )}
                                                                                                 </div>
                                                                                             </div>
                                                                                         </div>
