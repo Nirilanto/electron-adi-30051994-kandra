@@ -750,7 +750,7 @@ function getClientInvoiceTemplate() {
 
         <!-- Tableau des prestations -->
         <div class="section">
-            <div class="section-title">DÉTAIL DES PRESTATIONS</div>
+            <div class="section-title">DÉTAIL DES PRESTATIONS 000xxxxx1</div>
             <div class="section-content">
                 <table class="prestations-table">
                     <thead>

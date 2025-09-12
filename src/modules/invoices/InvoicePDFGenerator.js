@@ -184,15 +184,101 @@ class InvoicePDFGenerator {
       }).format(amount);
     };
 
+    // Préparer les données des employés pour le PDF
+    const employeesData = invoice.employeesData || [];
+    const workLines = [];
+
+    employeesData.forEach(employeeData => {
+      const employeeName = `${employeeData.employee?.firstName || ''} ${employeeData.employee?.lastName || ''}`.trim();
+      
+      // Pour chaque semaine de l'employé
+      Object.entries(employeeData.weeklyData || {})
+        .filter(([weekKey, weekData]) => weekData && weekData.weekEntries?.length > 0)
+        .sort(([weekKeyA], [weekKeyB]) => weekKeyA.localeCompare(weekKeyB))
+        .forEach(([weekKey, weekData]) => {
+          const weekCalculation = weekData.weekCalculation || {};
+          
+          // Ligne heures normales
+          if (weekCalculation.normalHours > 0) {
+            workLines.push({
+              employeeName,
+              weekPeriod: weekKey,
+              type: 'HEURE NORMALE',
+              hours: weekCalculation.normalHours,
+              coefficient: 1.00,
+              unitPrice: weekCalculation.averageHourlyRate || 0,
+              amount: weekCalculation.normalAmount || 0
+            });
+          }
+          
+          // Ligne heures sup x1.25
+          if (weekCalculation.overtime125 > 0) {
+            workLines.push({
+              employeeName,
+              weekPeriod: weekKey,
+              type: 'HEURE SUP 1',
+              hours: weekCalculation.overtime125,
+              coefficient: 1.25,
+              unitPrice: weekCalculation.averageHourlyRate || 0,
+              amount: weekCalculation.overtime125Amount || 0
+            });
+          }
+          
+          // Ligne heures sup x1.50
+          if (weekCalculation.overtime150 > 0) {
+            workLines.push({
+              employeeName,
+              weekPeriod: weekKey,
+              type: 'HEURE SUP 2',
+              hours: weekCalculation.overtime150,
+              coefficient: 1.50,
+              unitPrice: weekCalculation.averageHourlyRate || 0,
+              amount: weekCalculation.overtime150Amount || 0
+            });
+          }
+        });
+    });
+
+    // Si pas de données employées, utiliser les anciennes workPeriods comme fallback
+    if (workLines.length === 0 && invoice.workPeriods) {
+      invoice.workPeriods.forEach(period => {
+        workLines.push({
+          employeeName: period.employeeName || 'Employé',
+          weekPeriod: `${formatDate(period.startDate)} Au ${formatDate(period.endDate)}`,
+          type: 'HEURE NORMALE',
+          hours: period.totalHours || 0,
+          coefficient: 1.00,
+          unitPrice: period.hourlyRate || 0,
+          amount: period.amount || 0
+        });
+      });
+    }
+
+    // Si toujours pas de données, créer une ligne par défaut
+    if (workLines.length === 0) {
+      workLines.push({
+        employeeName: 'Aucune donnée disponible',
+        weekPeriod: 'N/A',
+        type: 'AUCUNE DONNÉE',
+        hours: 0,
+        coefficient: 1.00,
+        unitPrice: 0,
+        amount: 0
+      });
+    }
+
     // Calculer les totaux
-    const workPeriods = invoice.workPeriods || [];
-    const subtotalHT = workPeriods.reduce((sum, period) => sum + (period.amount || 0), 0);
+    const subtotalHT = invoice.globalTotals?.totalAmount || 
+                      employeesData.reduce((sum, emp) => sum + (emp.totals?.totalAmount || 0), 0) ||
+                      (invoice.workPeriods ? invoice.workPeriods.reduce((sum, period) => sum + (period.amount || 0), 0) : 0);
     const tvaRate = 0.20; // 20% de TVA
     const tvaAmount = subtotalHT * tvaRate;
     const totalTTC = subtotalHT + tvaAmount;
 
     // Calculer les totaux d'heures
-    const totalHours = workPeriods.reduce((sum, period) => sum + (period.totalHours || 0), 0);
+    const totalHours = invoice.globalTotals?.totalHours || 
+                       employeesData.reduce((sum, emp) => sum + (emp.totals?.totalHours || 0), 0) ||
+                       (invoice.workPeriods ? invoice.workPeriods.reduce((sum, period) => sum + (period.totalHours || 0), 0) : 0);
 
     return {
       // Informations de base de la facture
@@ -232,20 +318,26 @@ class InvoicePDFGenerator {
         phone: client?.phone || "",
       },
 
-      // Lignes de facture
-      workPeriods: workPeriods.map(period => ({
-        description: period.description || "",
-        employeeName: period.employeeName || "",
-        startDate: formatDate(period.startDate),
-        endDate: formatDate(period.endDate),
-        location: period.location || "",
-        quantity: period.totalHours || 0,
+      // Lignes de facture - compatible avec le template main.js
+      workPeriods: workLines.map(line => ({
+        employeeName: line.employeeName,
+        description: `${line.weekPeriod} - ${line.type}`,
+        startDate: '',
+        endDate: '',
+        location: '',
+        quantity: line.hours,
         unit: "heures",
-        unitPrice: period.hourlyRate || 0,
-        amount: period.amount || 0,
-        formattedUnitPrice: formatCurrency(period.hourlyRate || 0),
-        formattedAmount: formatCurrency(period.amount || 0),
+        unitPrice: line.unitPrice,
+        amount: line.amount,
+        hourlyRate: line.unitPrice,
+        totalHours: line.hours,
+        formattedUnitPrice: formatCurrency(line.unitPrice),
+        formattedAmount: formatCurrency(line.amount),
       })),
+
+      // Lignes de facture - groupées par employé  
+      workLines: workLines,
+      employeeGroups: this.groupWorkLinesByEmployee(workLines),
 
       // Totaux
       totals: {
@@ -273,6 +365,25 @@ class InvoicePDFGenerator {
   }
 
   /**
+   * Groupe les lignes de travail par employé pour l'affichage
+   */
+  static groupWorkLinesByEmployee(workLines) {
+    const groups = {};
+    
+    workLines.forEach(line => {
+      if (!groups[line.employeeName]) {
+        groups[line.employeeName] = [];
+      }
+      groups[line.employeeName].push(line);
+    });
+    
+    return Object.entries(groups).map(([employeeName, lines]) => ({
+      employeeName,
+      lines
+    }));
+  }
+
+  /**
    * Prépare les données du devis pour le PDF
    */
   static prepareQuoteData(invoice, client, company) {
@@ -290,7 +401,7 @@ class InvoicePDFGenerator {
 
   /**
    * Génère le HTML pour la prévisualisation de la facture
-   * Style Atlantis adapté pour les factures
+   * Format identique au modèle PDF Atlantis
    */
   static generateInvoiceHTML(data) {
     return `
@@ -299,22 +410,8 @@ class InvoicePDFGenerator {
       <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${data.documentType} ${data.invoiceNumber}</title>
+          <title>${data.documentType} N° ${data.invoiceNumber}</title>
           <style>
-              :root {
-                  --primary: #333333;
-                  --secondary: #666666;
-                  --light-gray: #f8f9fa;
-                  --medium-gray: #dee2e6;
-                  --dark-gray: #495057;
-                  --text: #212529;
-                  --white: #ffffff;
-                  --blue: #007bff;
-                  --green: #28a745;
-                  --success: #d4edda;
-                  --border: #e9ecef;
-              }
-              
               * {
                   box-sizing: border-box;
                   margin: 0;
@@ -322,21 +419,18 @@ class InvoicePDFGenerator {
               }
               
               body {
-                  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-                  font-size: 11px;
-                  line-height: 1.4;
-                  color: var(--text);
-                  background-color: var(--white);
-                  padding: 0;
+                  font-family: Arial, sans-serif;
+                  font-size: 10px;
+                  line-height: 1.2;
+                  color: #000;
+                  background-color: #fff;
+                  padding: 20px;
               }
               
               .container {
                   width: 100%;
                   max-width: 210mm;
                   margin: 0 auto;
-                  background-color: var(--white);
-                  border: 1px solid var(--border);
-                  padding: 20px;
               }
               
               .header {
@@ -344,280 +438,115 @@ class InvoicePDFGenerator {
                   justify-content: space-between;
                   align-items: flex-start;
                   margin-bottom: 20px;
-                  padding-bottom: 15px;
-                  border-bottom: 2px solid var(--blue);
-              }
-              
-              .logo-section {
-                  flex: 1;
-              }
-              
-              .company-logo {
-                  font-weight: 700;
-                  font-size: 24px;
-                  color: var(--blue);
-                  margin-bottom: 5px;
               }
               
               .company-info {
-                  font-size: 10px;
-                  color: var(--secondary);
-                  line-height: 1.3;
+                  font-size: 11px;
+                  font-weight: bold;
               }
               
-              .document-info {
+              .invoice-info {
                   text-align: right;
-                  flex: 1;
+                  border: 1px solid #000;
+                  padding: 10px;
+                  background-color: #f5f5f5;
               }
               
-              .document-title {
-                  font-size: 28px;
-                  font-weight: 700;
-                  color: var(--blue);
-                  margin-bottom: 5px;
+              .client-info {
+                  border: 1px solid #000;
+                  padding: 10px;
+                  margin: 20px 0;
+                  background-color: #f5f5f5;
               }
               
-              .document-number {
-                  font-size: 14px;
-                  font-weight: 600;
-                  color: var(--primary);
-                  margin-bottom: 10px;
-              }
-              
-              .document-dates {
-                  font-size: 10px;
-                  color: var(--secondary);
-              }
-              
-              .parties-section {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 30px;
-                  margin-bottom: 25px;
-              }
-              
-              .party-box {
-                  border: 1px solid var(--border);
-                  border-radius: 5px;
-                  overflow: hidden;
-              }
-              
-              .party-header {
-                  background-color: var(--light-gray);
-                  padding: 8px 12px;
-                  font-weight: 600;
-                  font-size: 12px;
-                  color: var(--primary);
-                  border-bottom: 1px solid var(--border);
-              }
-              
-              .party-content {
-                  padding: 12px;
-              }
-              
-              .party-name {
-                  font-weight: 600;
-                  font-size: 12px;
-                  color: var(--primary);
-                  margin-bottom: 5px;
-              }
-              
-              .party-details {
-                  font-size: 10px;
-                  color: var(--secondary);
-                  line-height: 1.4;
-              }
-              
-              .invoice-details {
-                  background-color: var(--light-gray);
-                  border: 1px solid var(--border);
-                  border-radius: 5px;
-                  padding: 15px;
-                  margin-bottom: 25px;
-              }
-              
-              .details-grid {
-                  display: grid;
-                  grid-template-columns: 1fr 1fr;
-                  gap: 15px;
-              }
-              
-              .detail-item {
+              .chantier-info {
+                  border: 1px solid #000;
+                  padding: 10px;
+                  margin: 10px 0;
                   display: flex;
                   justify-content: space-between;
                   align-items: center;
               }
               
-              .detail-label {
-                  font-weight: 600;
-                  color: var(--secondary);
-                  font-size: 10px;
-              }
-              
-              .detail-value {
-                  font-weight: 600;
-                  color: var(--primary);
-                  font-size: 11px;
-              }
-              
-              .items-table {
+              .work-table {
                   width: 100%;
                   border-collapse: collapse;
-                  margin-bottom: 20px;
-                  border: 1px solid var(--border);
-                  border-radius: 5px;
-                  overflow: hidden;
+                  border: 1px solid #000;
+                  margin: 20px 0;
               }
               
-              .items-table th {
-                  background-color: var(--dark-gray);
-                  color: var(--white);
-                  padding: 10px 8px;
-                  text-align: left;
-                  font-weight: 600;
-                  font-size: 10px;
-                  text-transform: uppercase;
-              }
-              
-              .items-table td {
-                  padding: 8px;
-                  border-bottom: 1px solid var(--border);
-                  font-size: 10px;
-                  vertical-align: top;
-              }
-              
-              .items-table tr:nth-child(even) {
-                  background-color: var(--light-gray);
-              }
-              
-              .items-table tr:last-child td {
-                  border-bottom: none;
-              }
-              
-              .text-right {
-                  text-align: right;
-              }
-              
-              .text-center {
+              .work-table th,
+              .work-table td {
+                  border: 1px solid #000;
+                  padding: 5px;
                   text-align: center;
+                  font-size: 9px;
               }
               
-              .font-medium {
-                  font-weight: 600;
+              .work-table th {
+                  background-color: #f0f0f0;
+                  font-weight: bold;
               }
               
-              .totals-section {
-                  display: flex;
-                  justify-content: flex-end;
-                  margin-bottom: 25px;
+              .employee-name {
+                  font-weight: bold;
+                  background-color: #e8e8e8;
+                  text-align: left;
+                  padding-left: 10px;
+              }
+              
+              .week-period {
+                  text-align: left;
+                  padding-left: 15px;
+                  font-size: 8px;
+              }
+              
+              .work-type {
+                  text-align: left;
+                  padding-left: 20px;
               }
               
               .totals-table {
-                  width: 300px;
+                  float: right;
                   border-collapse: collapse;
-                  border: 1px solid var(--border);
-                  border-radius: 5px;
-                  overflow: hidden;
+                  border: 1px solid #000;
+                  margin: 20px 0;
               }
               
               .totals-table td {
-                  padding: 8px 12px;
-                  border-bottom: 1px solid var(--border);
-                  font-size: 11px;
+                  border: 1px solid #000;
+                  padding: 8px 15px;
+                  font-size: 10px;
               }
               
-              .totals-table tr:last-child td {
-                  border-bottom: none;
-                  background-color: var(--success);
-                  font-weight: 700;
-                  font-size: 12px;
+              .totals-table .total-label {
+                  text-align: left;
+                  font-weight: bold;
+              }
+              
+              .totals-table .total-amount {
+                  text-align: right;
+                  font-weight: bold;
               }
               
               .payment-conditions {
-                  background-color: var(--light-gray);
-                  border: 1px solid var(--border);
-                  border-radius: 5px;
-                  padding: 15px;
-                  margin-bottom: 20px;
-              }
-              
-              .conditions-title {
-                  font-weight: 600;
-                  font-size: 12px;
-                  color: var(--primary);
-                  margin-bottom: 8px;
-              }
-              
-              .conditions-text {
-                  font-size: 10px;
-                  color: var(--secondary);
-                  line-height: 1.4;
-              }
-              
-              .notes-section {
-                  margin-bottom: 20px;
-              }
-              
-              .notes-title {
-                  font-weight: 600;
-                  font-size: 12px;
-                  color: var(--primary);
-                  margin-bottom: 8px;
-              }
-              
-              .notes-content {
-                  font-size: 10px;
-                  color: var(--secondary);
-                  line-height: 1.4;
-                  padding: 10px;
-                  background-color: var(--light-gray);
-                  border-radius: 3px;
-              }
-              
-              .footer {
+                  clear: both;
+                  margin-top: 40px;
                   text-align: center;
                   font-size: 8px;
-                  color: var(--secondary);
-                  padding-top: 15px;
-                  border-top: 1px solid var(--border);
+                  line-height: 1.3;
               }
               
-              .status-badge {
-                  display: inline-block;
-                  padding: 3px 8px;
-                  border-radius: 12px;
-                  font-size: 9px;
-                  font-weight: 600;
-                  text-transform: uppercase;
-              }
-              
-              .status-draft {
-                  background-color: #f8f9fa;
-                  color: #6c757d;
-              }
-              
-              .status-sent {
-                  background-color: #cce5ff;
-                  color: #0066cc;
-              }
-              
-              .status-paid {
-                  background-color: #d4edda;
-                  color: #155724;
+              .footer-text {
+                  font-size: 7px;
+                  line-height: 1.2;
+                  margin-top: 10px;
+                  text-align: justify;
               }
               
               @media print {
                   body {
-                      background-color: white;
                       padding: 0;
-                  }
-                  
-                  .container {
-                      box-shadow: none;
-                      max-width: none;
-                      width: 100%;
-                      border: none;
-                      padding: 15px;
                   }
               }
           </style>
@@ -626,155 +555,105 @@ class InvoicePDFGenerator {
           <div class="container">
               <!-- Header -->
               <div class="header">
-                  <div class="logo-section">
-                      <div class="company-logo">${data.company.name}</div>
-                      <div class="company-info">
-                          ${data.company.address}<br>
-                          ${data.company.postalCode} ${data.company.city}<br>
-                          ${data.company.email}<br>
-                          SIRET: ${data.company.siret} - APE: ${data.company.ape}
-                      </div>
+                  <div class="company-info">
+                      <strong>${data.company.name}</strong><br>
+                      ${data.company.address} ${data.company.postalCode} ${data.company.city}<br>
+                      ${data.company.siret} - APE : ${data.company.ape}<br>
+                      ${data.company.email}
                   </div>
-                  <div class="document-info">
-                      <div class="document-title">${data.documentType}</div>
-                      <div class="document-number">N° ${data.invoiceNumber}</div>
-                      <div class="document-dates">
-                          Date: ${data.invoiceDate}<br>
-                          Échéance: ${data.dueDate}
-                      </div>
+                  <div class="invoice-info">
+                      <strong>FACTURE N° ${data.invoiceNumber}</strong>
                   </div>
               </div>
 
-              <!-- Parties -->
-              <div class="parties-section">
-                  <div class="party-box">
-                      <div class="party-header">VENDEUR</div>
-                      <div class="party-content">
-                          <div class="party-name">${data.company.name}</div>
-                          <div class="party-details">
-                              ${data.company.address}<br>
-                              ${data.company.postalCode} ${data.company.city}<br>
-                              ${data.company.phone ? `Tél: ${data.company.phone}<br>` : ''}
-                              Email: ${data.company.email}<br>
-                              SIRET: ${data.company.siret}
-                          </div>
-                      </div>
+              <!-- Client Info -->
+              <div class="client-info">
+                  <strong>${data.client.companyName}</strong><br>
+                  ${data.client.address}<br>
+                  ${data.client.postalCode} ${data.client.city}
+              </div>
+
+              <!-- Chantier Info -->
+              <div class="chantier-info">
+                  <div>
+                      <strong>Chantier : ${data.description || 'Non spécifié'}</strong><br>
+                      ${data.client.city}
                   </div>
-                  
-                  <div class="party-box">
-                      <div class="party-header">FACTURÉ À</div>
-                      <div class="party-content">
-                          <div class="party-name">${data.client.companyName}</div>
-                          <div class="party-details">
-                              ${data.client.contactName ? `${data.client.contactName}<br>` : ''}
-                              ${data.client.address}<br>
-                              ${data.client.addressComplement ? `${data.client.addressComplement}<br>` : ''}
-                              ${data.client.postalCode} ${data.client.city}<br>
-                              ${data.client.country !== 'France' ? `${data.client.country}<br>` : ''}
-                              ${data.client.siret ? `SIRET: ${data.client.siret}<br>` : ''}
-                              ${data.client.email ? `Email: ${data.client.email}` : ''}
-                          </div>
-                      </div>
+                  <div>
+                      <strong>LE ${data.invoiceDate}</strong>
                   </div>
               </div>
 
-              <!-- Détails de la facture -->
-              <div class="invoice-details">
-                  <div class="details-grid">
-                      <div class="detail-item">
-                          <span class="detail-label">Période de facturation:</span>
-                          <span class="detail-value">${data.periodStart} - ${data.periodEnd}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="detail-label">Total heures:</span>
-                          <span class="detail-value">${data.totals.totalHours}h</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="detail-label">Conditions de paiement:</span>
-                          <span class="detail-value">${data.paymentTerms}</span>
-                      </div>
-                      <div class="detail-item">
-                          <span class="detail-label">Mode de paiement:</span>
-                          <span class="detail-value">${data.paymentMethod}</span>
-                      </div>
-                  </div>
-              </div>
-
-              <!-- Tableau des prestations -->
-              <table class="items-table">
+              <!-- Work Table -->
+              <!-- DEBUG: employeeGroups = ${JSON.stringify(data.employeeGroups)} -->
+              <table class="work-table">
                   <thead>
                       <tr>
-                          <th style="width: 40%;">Prestation</th>
-                          <th style="width: 15%;">Période</th>
-                          <th style="width: 10%;" class="text-center">Qté</th>
-                          <th style="width: 10%;" class="text-center">Unité</th>
-                          <th style="width: 12%;" class="text-right">Prix unit.</th>
-                          <th style="width: 13%;" class="text-right">Montant</th>
+                          <th style="width: 20%;">Semaine du</th>
+                          <th style="width: 25%;">Type</th>
+                          <th style="width: 8%;">Unité</th>
+                          <th style="width: 8%;">Coéf.</th>
+                          <th style="width: 12%;">P.U. H.T</th>
+                          <th style="width: 12%;">Montant H.T</th>
                       </tr>
                   </thead>
                   <tbody>
-                      ${data.workPeriods.map(period => `
+                      ${data.employeeGroups && data.employeeGroups.length > 0 ? data.employeeGroups.map(group => {
+                        return `
                           <tr>
-                              <td>
-                                  <div class="font-medium">${period.description}</div>
-                                  <div style="font-size: 9px; color: var(--secondary); margin-top: 2px;">
-                                      ${period.employeeName}${period.location ? ` • ${period.location}` : ''}
-                                  </div>
-                              </td>
-                              <td style="font-size: 9px;">
-                                  ${period.startDate}<br>
-                                  ${period.endDate}
-                              </td>
-                              <td class="text-center font-medium">${period.quantity}</td>
-                              <td class="text-center">${period.unit}</td>
-                              <td class="text-right">${period.formattedUnitPrice}</td>
-                              <td class="text-right font-medium">${period.formattedAmount}</td>
+                              <td colspan="6" class="employee-name">${group.employeeName}</td>
                           </tr>
-                      `).join('')}
+                          ${group.lines.map(line => `
+                            <tr>
+                                <td class="week-period">${line.weekPeriod}</td>
+                                <td class="work-type">${line.type}</td>
+                                <td style="text-align: right;">${line.hours.toFixed(0)}</td>
+                                <td style="text-align: center;">${line.coefficient.toFixed(2)}</td>
+                                <td style="text-align: right;">${line.formattedUnitPrice}</td>
+                                <td style="text-align: right;">${line.formattedAmount}</td>
+                            </tr>
+                          `).join('')}
+                        `;
+                      }).join('') : '<tr><td colspan="6">Aucune donnée disponible</td></tr>'}
                   </tbody>
               </table>
 
-              <!-- Totaux -->
-              <div class="totals-section">
-                  <table class="totals-table">
-                      <tr>
-                          <td>Sous-total HT</td>
-                          <td class="text-right font-medium">${data.totals.formattedSubtotalHT}</td>
-                      </tr>
-                      <tr>
-                          <td>TVA (${data.totals.tvaRate}%)</td>
-                          <td class="text-right font-medium">${data.totals.formattedTvaAmount}</td>
-                      </tr>
-                      <tr>
-                          <td>TOTAL TTC</td>
-                          <td class="text-right">${data.totals.formattedTotalTTC}</td>
-                      </tr>
-                  </table>
-              </div>
+              <!-- Totals -->
+              <table class="totals-table">
+                  <tr>
+                      <td class="total-label">Total H.T (€)</td>
+                      <td class="total-amount">${data.totals.formattedSubtotalHT}</td>
+                  </tr>
+                  <tr>
+                      <td class="total-label">TVA (${data.totals.tvaRate.toFixed(2)}%)</td>
+                      <td class="total-amount">${data.totals.formattedTvaAmount}</td>
+                  </tr>
+                  <tr>
+                      <td class="total-label">Total T.T.C (€)</td>
+                      <td class="total-amount">${data.totals.formattedTotalTTC}</td>
+                  </tr>
+                  <tr>
+                      <td class="total-label">NET À PAYER (€)</td>
+                      <td class="total-amount">${data.totals.formattedTotalTTC}</td>
+                  </tr>
+              </table>
 
-              <!-- Conditions de paiement -->
+              <!-- Payment Conditions -->
               <div class="payment-conditions">
-                  <div class="conditions-title">Conditions de paiement</div>
-                  <div class="conditions-text">
-                      Paiement à réception de facture par ${data.paymentMethod.toLowerCase()}.<br>
-                      Délai de paiement : ${data.paymentTerms}.<br>
-                      En cas de retard de paiement, des pénalités de 3 fois le taux de l'intérêt légal seront appliquées.
-                  </div>
+                  <strong>CONDITIONS DE PAIEMENT : CHÈQUE/VIREMENT ÉCHÉANCE ${data.dueDate}</strong><br>
+                  Tous les montants sont en EUROS (€)
               </div>
 
-              <!-- Notes -->
-              ${data.notes ? `
-                  <div class="notes-section">
-                      <div class="notes-title">Notes</div>
-                      <div class="notes-content">${data.notes}</div>
-                  </div>
-              ` : ''}
-
-              <!-- Footer -->
-              <div class="footer">
-                  ${data.company.name} - ${data.company.address}, ${data.company.postalCode} ${data.company.city}<br>
-                  SIRET: ${data.company.siret} - APE: ${data.company.ape}<br>
-                  Document généré le ${data.generationDate}
+              <!-- Footer Text -->
+              <div class="footer-text">
+                  Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de prestations. 
+                  Toutes contestations, quels que soient l'origine des ordres et le mode de règlement sont exclusivement de la compétence 
+                  des tribunaux du lieu de E.T.T. L'acceptation des règlements avec l'émission de nos traites ne modifie pas cette clause 
+                  attributive de juridiction. Taxe acquittée sur les encaissements.<br><br>
+                  
+                  En cas de retard de paiement, seront exigibles, conformément à l'article L441-6 du code du commerce, une indemnité 
+                  calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une indemnité forfaitaire pour frais 
+                  de recouvrement de 40 euros.
               </div>
           </div>
       </body>
