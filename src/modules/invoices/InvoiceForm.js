@@ -80,7 +80,7 @@ function InvoiceForm() {
         if (invoiceData.clientId && currentStep === 3) {
             loadTimeTrackingData();
         }
-    }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep]);
+    }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep, workPeriods]);
 
     const loadInitialData = async () => {
         try {
@@ -238,10 +238,28 @@ function InvoiceForm() {
 
             setTimeEntries(timeEntriesData);
 
-            // Filtrer selon l'intervalle sélectionné et grouper par employé
+            // Filtrer selon l'intervalle sélectionné ET les work periods sélectionnés
+            const selectedWorkPeriodIds = workPeriods.filter(p => p.selected).map(p => p.id);
+            
             const filtered = timeEntriesData.filter(entry => {
                 const entryDate = new Date(entry.date);
-                return entryDate >= invoiceData.periodStart && entryDate <= invoiceData.periodEnd;
+                const dateInRange = entryDate >= invoiceData.periodStart && entryDate <= invoiceData.periodEnd;
+                
+                // Si aucune période de travail n'est sélectionnée, on prend tout dans la période
+                if (selectedWorkPeriodIds.length === 0) {
+                    return dateInRange;
+                }
+                
+                // Sinon, il faut que l'entrée soit liée à une période sélectionnée
+                // Pour cela, on vérifie si l'entrée correspond à un contrat et employé d'une période sélectionnée
+                const matchesSelectedPeriod = selectedWorkPeriodIds.some(periodId => {
+                    const workPeriod = workPeriods.find(p => p.id === periodId);
+                    return workPeriod && 
+                           workPeriod.employeeId === entry.employeeId && 
+                           workPeriod.contractId === entry.contractId;
+                });
+                
+                return dateInRange && matchesSelectedPeriod;
             });
 
             const grouped = await groupTimeEntriesByEmployee(filtered, invoiceData.periodStart, invoiceData.periodEnd);
