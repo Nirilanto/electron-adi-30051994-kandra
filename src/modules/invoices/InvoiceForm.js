@@ -25,7 +25,6 @@ import 'react-datepicker/dist/react-datepicker.css';
 import InvoiceService from './InvoiceService';
 import ClientService from '../clients/ClientService';
 import ContractService from '../contracts/ContractService';
-import InvoicePDFGenerator from './InvoicePDFGenerator';
 import TimeTrackingService from '../timetracking/TimeTrackingService';
 import EmployeeService from '../employees/EmployeeService';
 
@@ -62,7 +61,6 @@ function InvoiceForm() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
-    const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
     const [expandedWeeks, setExpandedWeeks] = useState({});
 
     // Chargement initial
@@ -646,61 +644,6 @@ function InvoiceForm() {
         return date.toLocaleDateString('fr-FR');
     };
 
-    const handlePreviewInvoice = async () => {
-        try {
-            setIsGeneratingPreview(true);
-
-            // Préparer les données de la facture
-            const selectedPeriods = workPeriods.filter(p => p.selected);
-            const totalAmount = selectedPeriods.reduce((sum, period) => sum + period.amount, 0);
-            
-            const invoiceForPreview = {
-                ...invoiceData,
-                workPeriods: selectedPeriods,
-                totalAmount,
-                clientName: clients.find(c => c.id === invoiceData.clientId)?.contactName || '',
-                clientCompany: clients.find(c => c.id === invoiceData.clientId)?.companyName || '',
-                periodStart: invoiceData.periodStart.toISOString(),
-                periodEnd: invoiceData.periodEnd.toISOString(),
-                invoiceDate: invoiceData.invoiceDate.toISOString(),
-                dueDate: invoiceData.dueDate.toISOString(),
-                invoiceNumber: 'APERCU-' + Date.now() // Numéro temporaire pour l'aperçu
-            };
-
-            // Récupérer les données du client complet
-            const client = clients.find(c => c.id === invoiceData.clientId);
-
-            // Données de l'entreprise
-            const company = {
-                name: "ATLANTIS",
-                address: "221 RUE DE LAFAYETTE",
-                zipCode: "75010",
-                city: "PARIS",
-                siret: "948 396 973 R.C.S. PARIS",
-                ape: "7820Z",
-                email: "CONTACTATLANTIS75@GMAIL.COM",
-                phone: ""
-            };
-
-            // Générer l'aperçu
-            const result = await InvoicePDFGenerator.generateInvoicePDF(
-                invoiceForPreview,
-                client,
-                company
-            );
-
-            if (result.success) {
-                toast.success('Aperçu ouvert avec succès');
-            } else {
-                toast.error('Erreur lors de la génération de l\'aperçu');
-            }
-        } catch (error) {
-            console.error('Erreur lors de la génération de l\'aperçu:', error);
-            toast.error('Erreur lors de la génération de l\'aperçu');
-        } finally {
-            setIsGeneratingPreview(false);
-        }
-    };
 
     if (isLoading && !isEdit) {
         return (
@@ -1367,90 +1310,143 @@ function InvoiceForm() {
                                 )}
                             </div>
 
-                            {/* Bouton d'aperçu */}
-                            <div className="mb-6">
-                                <button
-                                    type="button"
-                                    onClick={handlePreviewInvoice}
-                                    disabled={isGeneratingPreview || workPeriods.filter(p => p.selected).length === 0}
-                                    className={`w-full flex items-center justify-center px-6 py-3 rounded-lg border-2 border-dashed transition-colors ${
-                                        isGeneratingPreview || workPeriods.filter(p => p.selected).length === 0
-                                            ? 'border-gray-300 text-gray-400 cursor-not-allowed'
-                                            : 'border-blue-300 text-blue-600 hover:border-blue-400 hover:bg-blue-50'
-                                    }`}
-                                >
-                                    {isGeneratingPreview ? (
-                                        <>
-                                            <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent mr-2"></div>
-                                            Génération de l'aperçu...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <DocumentTextIcon className="h-5 w-5 mr-2" />
-                                            Aperçu de la facture
-                                        </>
-                                    )}
-                                </button>
-                                {workPeriods.filter(p => p.selected).length === 0 && (
-                                    <p className="text-sm text-gray-500 text-center mt-2">
-                                        Sélectionnez au moins une prestation pour voir l'aperçu
-                                    </p>
-                                )}
-                            </div>
 
                             {/* Récapitulatif final */}
                             <div className="bg-gray-50 rounded-lg p-6">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Récapitulatif de la facture</h3>
+                                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                                    <BanknotesIcon className="h-5 w-5 mr-2 text-green-600" />
+                                    Récapitulatif de la facture
+                                </h3>
 
-                                <div className="space-y-3">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Client:</span>
-                                        <span className="font-medium">
-                                            {clients.find(c => c.id === invoiceData.clientId)?.companyName}
-                                        </span>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Informations générales */}
+                                    <div>
+                                        <h4 className="font-medium text-gray-900 mb-3">Informations générales</h4>
+                                        <div className="space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Client:</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {(() => {
+                                                        const client = clients.find(c => c.id === invoiceData.clientId);
+                                                        if (!client) return 'Non sélectionné';
+                                                        return client.companyName || client.contactName || `Client ${client.id}`;
+                                                    })()}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Période de facturation:</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {formatDate(invoiceData.periodStart)} - {formatDate(invoiceData.periodEnd)}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Employés concernés:</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {Object.keys(groupedTimeEntries).length}
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Semaines travaillées:</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {Object.values(groupedTimeEntries).reduce((total, employeeData) => 
+                                                        total + Object.keys(employeeData.weeklyData || {}).filter(key => employeeData.weeklyData[key].length > 0).length, 0
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Période:</span>
-                                        <span className="font-medium">
-                                            {formatDate(invoiceData.periodStart)} - {formatDate(invoiceData.periodEnd)}
-                                        </span>
-                                    </div>
+                                    {/* Totaux calculés */}
+                                    <div>
+                                        <h4 className="font-medium text-gray-900 mb-3">Totaux calculés</h4>
+                                        <div className="space-y-2 text-sm">
+                                            {(() => {
+                                                const totals = Object.values(groupedTimeEntries).reduce((acc, employeeData) => ({
+                                                    totalHours: acc.totalHours + (employeeData.totals?.totalHours || 0),
+                                                    normalHours: acc.normalHours + (employeeData.totals?.normalHours || 0),
+                                                    overtime125: acc.overtime125 + (employeeData.totals?.overtime125 || 0),
+                                                    overtime150: acc.overtime150 + (employeeData.totals?.overtime150 || 0),
+                                                    totalAmount: acc.totalAmount + (employeeData.totals?.totalAmount || 0),
+                                                    normalAmount: acc.normalAmount + (employeeData.totals?.normalAmount || 0),
+                                                    overtime125Amount: acc.overtime125Amount + (employeeData.totals?.overtime125Amount || 0),
+                                                    overtime150Amount: acc.overtime150Amount + (employeeData.totals?.overtime150Amount || 0)
+                                                }), {
+                                                    totalHours: 0, normalHours: 0, overtime125: 0, overtime150: 0,
+                                                    totalAmount: 0, normalAmount: 0, overtime125Amount: 0, overtime150Amount: 0
+                                                });
 
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Nombre de lignes:</span>
-                                        <span className="font-medium">
-                                            {workPeriods.filter(p => p.selected).length}
-                                        </span>
+                                                return (
+                                                    <>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">Heures totales:</span>
+                                                            <span className="font-medium text-gray-900">{totals.totalHours.toFixed(1)}h</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-600">- Heures normales:</span>
+                                                            <span className="text-gray-700">{totals.normalHours.toFixed(1)}h</span>
+                                                        </div>
+                                                        {totals.overtime125 > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-orange-600">- Heures sup (x1.25):</span>
+                                                                <span className="text-orange-600">{totals.overtime125.toFixed(1)}h</span>
+                                                            </div>
+                                                        )}
+                                                        {totals.overtime150 > 0 && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-red-600">- Heures sup (x1.50):</span>
+                                                                <span className="text-red-600">{totals.overtime150.toFixed(1)}h</span>
+                                                            </div>
+                                                        )}
+                                                        <div className="pt-2 border-t border-gray-300">
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-600">Montant normal:</span>
+                                                                <span className="font-medium">{formatCurrency(totals.normalAmount)}</span>
+                                                            </div>
+                                                            {totals.overtime125Amount > 0 && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-orange-600">Montant sup (x1.25):</span>
+                                                                    <span className="text-orange-600 font-medium">{formatCurrency(totals.overtime125Amount)}</span>
+                                                                </div>
+                                                            )}
+                                                            {totals.overtime150Amount > 0 && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-red-600">Montant sup (x1.50):</span>
+                                                                    <span className="text-red-600 font-medium">{formatCurrency(totals.overtime150Amount)}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
                                     </div>
+                                </div>
 
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-600">Total heures:</span>
-                                        <span className="font-medium">
-                                            {workPeriods.filter(p => p.selected).reduce((sum, p) => sum + p.totalHours, 0).toFixed(1)}h
-                                        </span>
-                                    </div>
-
-                                    <div className="border-t pt-3 flex justify-between items-center">
-                                        <span className="text-lg font-medium text-gray-900">Total HT:</span>
-                                        <span className="text-2xl font-bold text-blue-600">
-                                            {formatCurrency(getSelectedTotal())}
+                                {/* Total final */}
+                                <div className="mt-6 pt-4 border-t border-gray-300">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xl font-bold text-gray-900">Montant total de la facture:</span>
+                                        <span className="text-2xl font-bold text-green-600">
+                                            {formatCurrency(Object.values(groupedTimeEntries).reduce((total, employeeData) => 
+                                                total + (employeeData.totals?.totalAmount || 0), 0
+                                            ))}
                                         </span>
                                     </div>
                                 </div>
 
-                                {/* Détail des lignes */}
-                                <div className="mt-6">
-                                    <h4 className="font-medium text-gray-900 mb-3">Détail des prestations</h4>
-                                    <div className="space-y-2">
-                                        {workPeriods.filter(p => p.selected).map(period => (
-                                            <div key={period.id} className="flex justify-between text-sm">
-                                                <span className="text-gray-600">
-                                                    {period.description} ({period.totalHours}h × {formatCurrency(period.hourlyRate).replace(' €', '€')})
-                                                </span>
-                                                <span className="font-medium">{formatCurrency(period.amount)}</span>
-                                            </div>
-                                        ))}
+                                {/* Informations facture */}
+                                <div className="mt-6 pt-4 border-t border-gray-300">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                                        <div>
+                                            <p><strong>Numéro de facture:</strong> {invoiceData.invoiceNumber}</p>
+                                            <p><strong>Date de facture:</strong> {formatDate(invoiceData.invoiceDate)}</p>
+                                        </div>
+                                        <div>
+                                            <p><strong>Date d'échéance:</strong> {formatDate(invoiceData.dueDate)}</p>
+                                            {invoiceData.notes && (
+                                                <p><strong>Notes:</strong> {invoiceData.notes}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
