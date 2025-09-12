@@ -198,6 +198,18 @@ class InvoicePDFGenerator {
         .forEach(([weekKey, weekData]) => {
           const weekCalculation = weekData.weekCalculation || {};
           
+          // IMPORTANT: Utiliser le billingRate (taux de facturation CLIENT) 
+          // Récupérer le billingRate depuis les données de pointage
+          const weekEntries = weekData.weekEntries || [];
+          
+          // Prendre le billingRate de la première entrée de la semaine (devrait être le même pour toutes)
+          const clientBillingRate = weekEntries.length > 0 ? 
+                                    (weekEntries[0].billingRate || weekEntries[0].billing_rate) : 
+                                    weekCalculation.averageBillingRate ||
+                                    27.50; // Valeur par défaut basée sur le modèle
+                                   
+          console.log('DEBUG - clientBillingRate utilisé:', clientBillingRate, 'pour', employeeName);
+          
           // Ligne heures normales
           if (weekCalculation.normalHours > 0) {
             workLines.push({
@@ -206,12 +218,12 @@ class InvoicePDFGenerator {
               type: 'HEURE NORMALE',
               hours: weekCalculation.normalHours,
               coefficient: 1.00,
-              unitPrice: weekCalculation.averageHourlyRate || 0,
-              amount: weekCalculation.normalAmount || 0
+              unitPrice: clientBillingRate,
+              amount: weekCalculation.normalHours * clientBillingRate * 1.00
             });
           }
           
-          // Ligne heures sup x1.25
+          // Ligne heures sup x1.25  
           if (weekCalculation.overtime125 > 0) {
             workLines.push({
               employeeName,
@@ -219,8 +231,8 @@ class InvoicePDFGenerator {
               type: 'HEURE SUP 1',
               hours: weekCalculation.overtime125,
               coefficient: 1.25,
-              unitPrice: weekCalculation.averageHourlyRate || 0,
-              amount: weekCalculation.overtime125Amount || 0
+              unitPrice: clientBillingRate,
+              amount: weekCalculation.overtime125 * clientBillingRate * 1.25
             });
           }
           
@@ -232,8 +244,8 @@ class InvoicePDFGenerator {
               type: 'HEURE SUP 2',
               hours: weekCalculation.overtime150,
               coefficient: 1.50,
-              unitPrice: weekCalculation.averageHourlyRate || 0,
-              amount: weekCalculation.overtime150Amount || 0
+              unitPrice: clientBillingRate,
+              amount: weekCalculation.overtime150 * clientBillingRate * 1.50
             });
           }
         });
@@ -267,18 +279,14 @@ class InvoicePDFGenerator {
       });
     }
 
-    // Calculer les totaux
-    const subtotalHT = invoice.globalTotals?.totalAmount || 
-                      employeesData.reduce((sum, emp) => sum + (emp.totals?.totalAmount || 0), 0) ||
-                      (invoice.workPeriods ? invoice.workPeriods.reduce((sum, period) => sum + (period.amount || 0), 0) : 0);
+    // Calculer les totaux basés sur les taux horaires CLIENT
+    const subtotalHT = workLines.reduce((sum, line) => sum + line.amount, 0);
     const tvaRate = 0.20; // 20% de TVA
     const tvaAmount = subtotalHT * tvaRate;
     const totalTTC = subtotalHT + tvaAmount;
 
     // Calculer les totaux d'heures
-    const totalHours = invoice.globalTotals?.totalHours || 
-                       employeesData.reduce((sum, emp) => sum + (emp.totals?.totalHours || 0), 0) ||
-                       (invoice.workPeriods ? invoice.workPeriods.reduce((sum, period) => sum + (period.totalHours || 0), 0) : 0);
+    const totalHours = workLines.reduce((sum, line) => sum + line.hours, 0);
 
     return {
       // Informations de base de la facture

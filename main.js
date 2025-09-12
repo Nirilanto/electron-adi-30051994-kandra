@@ -555,6 +555,26 @@ function getClientInvoiceTemplate() {
             margin-bottom: 3px;
         }
         
+        .employee-header {
+            font-weight: bold;
+            background-color: #e8e8e8;
+            text-align: left;
+            padding-left: 10px;
+            font-size: 11px;
+        }
+        
+        .week-period {
+            text-align: left;
+            padding-left: 15px;
+            font-size: 9px;
+        }
+        
+        .work-type {
+            text-align: left;
+            padding-left: 20px;
+            font-size: 9px;
+        }
+        
         .hours-info {
             font-size: 8px;
             color: #666;
@@ -750,37 +770,34 @@ function getClientInvoiceTemplate() {
 
         <!-- Tableau des prestations -->
         <div class="section">
-            <div class="section-title">DÉTAIL DES PRESTATIONS 000xxxxx1</div>
+            <div class="section-title">DÉTAIL DES PRESTATIONS</div>
             <div class="section-content">
                 <table class="prestations-table">
                     <thead>
                         <tr>
-                            <th style="width: 25%;">Nom/Prénom</th>
-                            <th style="width: 25%;">Période</th>
-                            <th style="width: 10%;">Unité</th>
+                            <th style="width: 20%;">Semaine du</th>
+                            <th style="width: 25%;">Type</th>
+                            <th style="width: 8%;">Unité</th>
                             <th style="width: 8%;">Coéf.</th>
                             <th style="width: 12%;">P.U. H.T</th>
-                            <th style="width: 14%;">Montant H.T</th>
+                            <th style="width: 12%;">Montant H.T</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {{#each workPeriods}}
+                        {{#each employeeGroups}}
                         <tr>
-                            <td>
-                                <div class="employee-name">{{this.employeeName}}</div>
-                                <div class="hours-info">{{this.quantity}}h</div>
-                            </td>
-                            <td>
-                                <div class="period-details">
-                                    Semaine du {{this.startDate}} Au {{this.endDate}}<br>
-                                    <span class="week-number">{{this.weekNumber}}/{{this.year}}</span> {{this.unit}}
-                                </div>
-                            </td>
-                            <td class="text-center">{{this.unit}}</td>
+                            <td colspan="6" class="employee-header">{{this.employeeName}}</td>
+                        </tr>
+                        {{#each this.lines}}
+                        <tr>
+                            <td class="week-period">{{this.weekPeriod}}</td>
+                            <td class="work-type">{{this.type}}</td>
+                            <td class="text-center">{{this.hours}}</td>
                             <td class="text-center">{{this.coefficient}}</td>
                             <td class="text-right">{{this.formattedUnitPrice}}</td>
                             <td class="text-right font-bold">{{this.formattedAmount}}</td>
                         </tr>
+                        {{/each}}
                         {{/each}}
                     </tbody>
                 </table>

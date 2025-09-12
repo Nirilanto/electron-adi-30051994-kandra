@@ -363,16 +363,30 @@ function InvoiceForm() {
         let totalOvertime150Amount = 0;
         let weeklyRates = [];
 
-        // Récupérer les taux horaires des contrats
+        // Récupérer les taux de facturation (billingRate) des contrats/entrées
         for (const entry of weekEntries) {
             if (entry.contractId && !weeklyRates.some(r => r.contractId === entry.contractId)) {
                 try {
-                    const contract = await ContractService.getContractById(entry.contractId);
-                    if (contract && contract.hourlyRate) {
+                    // Priorité 1: billingRate depuis l'entrée de pointage
+                    let billingRate = entry.billingRate || entry.billing_rate;
+                    
+                    // Priorité 2: billingRate depuis le contrat
+                    if (!billingRate) {
+                        const contract = await ContractService.getContractById(entry.contractId);
+                        billingRate = contract?.billingRate || contract?.billing_rate;
+                    }
+                    
+                    // Priorité 3: hourlyRate du contrat (fallback)
+                    if (!billingRate) {
+                        const contract = await ContractService.getContractById(entry.contractId);
+                        billingRate = contract?.hourlyRate;
+                    }
+                    
+                    if (billingRate) {
                         weeklyRates.push({
                             contractId: entry.contractId,
-                            contractTitle: contract.title || contract.jobTitle,
-                            hourlyRate: parseFloat(contract.hourlyRate) || 0
+                            contractTitle: entry.contractTitle || 'Contrat',
+                            billingRate: parseFloat(billingRate) || 0
                         });
                     }
                 } catch (error) {
@@ -382,31 +396,34 @@ function InvoiceForm() {
         }
 
         // Si on a plusieurs contrats dans la semaine, on prend le taux moyen pondéré par les heures
-        let averageHourlyRate = 0;
+        let averageBillingRate = 0;
         if (weeklyRates.length > 0) {
             const totalHours = weekEntries.reduce((sum, entry) => sum + (entry.totalHours || 0), 0);
             let weightedSum = 0;
             
             for (const entry of weekEntries) {
-                const rate = weeklyRates.find(r => r.contractId === entry.contractId);
-                if (rate) {
-                    weightedSum += (entry.totalHours || 0) * rate.hourlyRate;
-                }
+                // Utiliser billingRate depuis l'entrée d'abord, puis depuis weeklyRates
+                const entryBillingRate = entry.billingRate || entry.billing_rate;
+                const contractRate = weeklyRates.find(r => r.contractId === entry.contractId);
+                const billingRate = entryBillingRate || contractRate?.billingRate || 0;
+                
+                weightedSum += (entry.totalHours || 0) * billingRate;
             }
             
-            averageHourlyRate = totalHours > 0 ? weightedSum / totalHours : 0;
+            averageBillingRate = totalHours > 0 ? weightedSum / totalHours : 0;
         }
 
         const weekCalculation = calculateWeeklyOvertime(weekEntries);
 
-        // Calculer les montants par type d'heures
-        totalNormalAmount = weekCalculation.normalHours * averageHourlyRate;
-        totalOvertime125Amount = weekCalculation.overtime125 * averageHourlyRate * 1.25;
-        totalOvertime150Amount = weekCalculation.overtime150 * averageHourlyRate * 1.50;
+        // Calculer les montants par type d'heures basés sur les taux de facturation CLIENT
+        totalNormalAmount = weekCalculation.normalHours * averageBillingRate;
+        totalOvertime125Amount = weekCalculation.overtime125 * averageBillingRate * 1.25;
+        totalOvertime150Amount = weekCalculation.overtime150 * averageBillingRate * 1.50;
 
         return {
             ...weekCalculation,
-            averageHourlyRate,
+            averageHourlyRate: averageBillingRate, // Garder le même nom pour compatibilité
+            averageBillingRate, // Nouveau nom plus explicite
             weeklyRates,
             totalNormalAmount,
             totalOvertime125Amount,
@@ -797,22 +814,24 @@ function InvoiceForm() {
     return (
         <div className="min-h-screen bg-gray-50 py-6">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Bandeau d'information */}
-                <div className="mb-6">
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                        <div className="flex items-center">
-                            <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mr-3 flex-shrink-0" />
-                            <div>
-                                <p className="text-amber-800 font-medium">
-                                    Facture - Mode consultation uniquement
-                                </p>
-                                <p className="text-amber-700 text-sm mt-1">
-                                    Cette facture ne peut pas être modifiée.
-                                </p>
+                {/* Bandeau d'information pour les factures existantes */}
+                {isEdit && (
+                    <div className="mb-6">
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                            <div className="flex items-center">
+                                <ExclamationTriangleIcon className="h-5 w-5 text-amber-600 mr-3 flex-shrink-0" />
+                                <div>
+                                    <p className="text-amber-800 font-medium">
+                                        Facture - Mode consultation uniquement
+                                    </p>
+                                    <p className="text-amber-700 text-sm mt-1">
+                                        Cette facture ne peut pas être modifiée.
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
                 {/* Header */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
                     <div className="px-6 py-4 border-b border-gray-200">
@@ -1640,11 +1659,30 @@ function InvoiceForm() {
                             ) : (
                                 <button
                                     type="button"
-                                    disabled={true}
-                                    className="flex items-center px-8 py-2 rounded-lg bg-gray-300 text-gray-500 cursor-not-allowed"
+                                    onClick={handleSubmit}
+                                    disabled={isSubmitting || isEdit}
+                                    className={`flex items-center px-8 py-2 rounded-lg transition-colors ${
+                                        isSubmitting || isEdit
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-green-600 text-white hover:bg-green-700'
+                                        }`}
                                 >
-                                    <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
-                                    Facture non modifiable
+                                    {isEdit ? (
+                                        <>
+                                            <ExclamationTriangleIcon className="h-5 w-5 mr-2" />
+                                            Facture non modifiable
+                                        </>
+                                    ) : isSubmitting ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                                            Enregistrement...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckIcon className="h-5 w-5 mr-2" />
+                                            Créer la facture
+                                        </>
+                                    )}
                                 </button>
                             )}
                         </div>
