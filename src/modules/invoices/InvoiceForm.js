@@ -14,7 +14,8 @@ import {
     ClockIcon,
     UserIcon,
     ExclamationTriangleIcon,
-    InformationCircleIcon
+    InformationCircleIcon,
+    ChevronDownIcon
 } from '@heroicons/react/24/outline';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -62,6 +63,7 @@ function InvoiceForm() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
     const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+    const [expandedWeeks, setExpandedWeeks] = useState({});
 
     // Chargement initial
     useEffect(() => {
@@ -442,6 +444,14 @@ function InvoiceForm() {
             console.error('Erreur lors du groupement des pointages:', error);
             return {};
         }
+    };
+
+    const toggleWeekExpansion = (employeeId, weekKey) => {
+        const key = `${employeeId}-${weekKey}`;
+        setExpandedWeeks(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
     };
 
     const handleWorkPeriodToggle = (periodId) => {
@@ -995,14 +1005,14 @@ function InvoiceForm() {
                                                         <thead className="bg-gray-50">
                                                             <tr>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Semaine</th>
-                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dates travaillées</th>
+                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Jours travaillés</th>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contrat(s)</th>
-                                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Horaires par jour</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total semaine</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. normales (x1.00)</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.25)</th>
                                                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">H. sup (x1.50)</th>
                                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Détails</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="bg-white divide-y divide-gray-200">
@@ -1013,97 +1023,177 @@ function InvoiceForm() {
                                                                     const weekCalculation = calculateWeeklyOvertime(weekEntries);
                                                                     const firstEntry = weekEntries[0];
                                                                     const weekRange = getWeekRange(new Date(firstEntry.date));
+                                                                    const isExpanded = expandedWeeks[`${employeeData.employee.id}-${weekKey}`];
                                                                     
                                                                     return (
-                                                                        <tr key={weekKey} className="hover:bg-gray-50">
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                                                                <div className="font-semibold">
-                                                                                    {weekRange.displayKey}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500 mt-1">
-                                                                                    {weekEntries.length} jour(s) travaillé(s)
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                                                                <div className="space-y-1">
-                                                                                    {weekEntries.map((entry, idx) => (
-                                                                                        <div key={idx} className="text-xs">
-                                                                                            {formatDate(new Date(entry.date))}
+                                                                        <React.Fragment key={weekKey}>
+                                                                            <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleWeekExpansion(employeeData.employee.id, weekKey)}>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                                                    <div className="font-semibold">
+                                                                                        {weekRange.displayKey}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                                        Semaine {weekIndex + 1}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                                                                                    <div className="font-semibold text-lg text-blue-600">
+                                                                                        {weekEntries.length}
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        jour(s)
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                                                    <div className="space-y-1">
+                                                                                        {[...new Set(weekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
+                                                                                            <div key={idx} className="text-xs truncate max-w-32" title={contract}>
+                                                                                                {contract || 'Contrat non trouvé'}
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-semibold text-lg">
+                                                                                        {weekCalculation.totalWeekHours.toFixed(1)}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        Total
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
+                                                                                    <div className="font-semibold">
+                                                                                        {weekCalculation.normalHours.toFixed(1)}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-gray-500">
+                                                                                        x1.00
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 text-right font-medium">
+                                                                                    <div className="font-bold">
+                                                                                        {weekCalculation.overtime125.toFixed(1)}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-orange-500">
+                                                                                        x1.25
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right font-medium">
+                                                                                    <div className="font-bold">
+                                                                                        {weekCalculation.overtime150.toFixed(1)}h
+                                                                                    </div>
+                                                                                    <div className="text-xs text-red-500">
+                                                                                        x1.50
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                                                    <div className="space-y-1">
+                                                                                        {[...new Set(weekEntries.map(entry => entry.status))].map((status, idx) => (
+                                                                                            <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                                                                status === 'validated' 
+                                                                                                    ? 'bg-green-100 text-green-800'
+                                                                                                    : status === 'invoiced'
+                                                                                                    ? 'bg-blue-100 text-blue-800'
+                                                                                                    : 'bg-yellow-100 text-yellow-800'
+                                                                                            }`}>
+                                                                                                {status === 'validated' ? 'Validé' : 
+                                                                                                 status === 'invoiced' ? 'Facturé' : 
+                                                                                                 'Brouillon'}
+                                                                                            </span>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </td>
+                                                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                                                    <button className="text-blue-600 hover:text-blue-800">
+                                                                                        <ChevronDownIcon className={`h-5 w-5 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                            {isExpanded && (
+                                                                                <tr>
+                                                                                    <td colSpan="9" className="px-0 py-0">
+                                                                                        <div className="bg-gray-50 border-l-4 border-blue-400">
+                                                                                            <div className="px-6 py-4">
+                                                                                                <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center">
+                                                                                                    <CalendarIcon className="h-4 w-4 mr-2 text-blue-600" />
+                                                                                                    Détail des journées - {weekRange.displayKey}
+                                                                                                </h4>
+                                                                                                <div className="space-y-3">
+                                                                                                    {weekEntries
+                                                                                                        .sort((a, b) => new Date(a.date) - new Date(b.date))
+                                                                                                        .map((entry, idx) => (
+                                                                                                        <div key={idx} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+                                                                                                            <div className="flex justify-between items-start">
+                                                                                                                <div className="flex-1">
+                                                                                                                    <div className="flex items-center space-x-3 mb-2">
+                                                                                                                        <span className="font-medium text-gray-900">
+                                                                                                                            {formatDate(new Date(entry.date))}
+                                                                                                                        </span>
+                                                                                                                        <span className="text-sm text-gray-500">
+                                                                                                                            {entry.startTime && entry.endTime 
+                                                                                                                                ? `${entry.startTime} - ${entry.endTime}`
+                                                                                                                                : 'Horaires non renseignés'
+                                                                                                                            }
+                                                                                                                        </span>
+                                                                                                                        <span className="text-sm font-medium text-blue-600">
+                                                                                                                            {(entry.totalHours || 0).toFixed(1)}h
+                                                                                                                        </span>
+                                                                                                                    </div>
+                                                                                                                    <div className="text-sm text-gray-600 mb-1">
+                                                                                                                        <strong>Contrat:</strong> {entry.contractTitle || 'Non renseigné'}
+                                                                                                                    </div>
+                                                                                                                    {entry.notes && (
+                                                                                                                        <div className="text-sm text-gray-600 bg-gray-100 rounded p-2 mt-2">
+                                                                                                                            <strong>Notes:</strong> {entry.notes}
+                                                                                                                        </div>
+                                                                                                                    )}
+                                                                                                                </div>
+                                                                                                                <div className="ml-4">
+                                                                                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                                                                                        entry.status === 'validated' 
+                                                                                                                            ? 'bg-green-100 text-green-800'
+                                                                                                                            : entry.status === 'invoiced'
+                                                                                                                            ? 'bg-blue-100 text-blue-800'
+                                                                                                                            : 'bg-yellow-100 text-yellow-800'
+                                                                                                                    }`}>
+                                                                                                                        {entry.status === 'validated' ? 'Validé' : 
+                                                                                                                         entry.status === 'invoiced' ? 'Facturé' : 
+                                                                                                                         'Brouillon'}
+                                                                                                                    </span>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        </div>
+                                                                                                    ))}
+                                                                                                </div>
+                                                                                                
+                                                                                                {/* Résumé de la semaine */}
+                                                                                                <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                                                                                    <div className="flex justify-between items-center text-sm">
+                                                                                                        <span className="font-medium text-blue-900">
+                                                                                                            Résumé semaine: {weekCalculation.totalWeekHours.toFixed(1)}h
+                                                                                                        </span>
+                                                                                                        <div className="flex space-x-4 text-xs">
+                                                                                                            <span className="text-gray-700">
+                                                                                                                {weekCalculation.normalHours.toFixed(1)}h normales
+                                                                                                            </span>
+                                                                                                            {weekCalculation.overtime125 > 0 && (
+                                                                                                                <span className="text-orange-600">
+                                                                                                                    {weekCalculation.overtime125.toFixed(1)}h sup (x1.25)
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                            {weekCalculation.overtime150 > 0 && (
+                                                                                                                <span className="text-red-600">
+                                                                                                                    {weekCalculation.overtime150.toFixed(1)}h sup (x1.50)
+                                                                                                                </span>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            </div>
                                                                                         </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                                <div className="space-y-1">
-                                                                                    {[...new Set(weekEntries.map(entry => entry.contractTitle))].map((contract, idx) => (
-                                                                                        <div key={idx} className="text-xs">
-                                                                                            {contract || 'Contrat non trouvé'}
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                                                <div className="space-y-1">
-                                                                                    {weekEntries.map((entry, idx) => (
-                                                                                        <div key={idx} className="text-xs">
-                                                                                            {entry.startTime && entry.endTime 
-                                                                                                ? `${entry.startTime} - ${entry.endTime}`
-                                                                                                : 'Non renseigné'
-                                                                                            }
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                                                                                <div className="font-semibold">
-                                                                                    {weekCalculation.totalWeekHours.toFixed(1)}h
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500">
-                                                                                    Total semaine
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                                                                                <div className="font-semibold">
-                                                                                    {weekCalculation.normalHours.toFixed(1)}h
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-500">
-                                                                                    x1.00
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600 text-right font-medium">
-                                                                                <div className="font-bold">
-                                                                                    {weekCalculation.overtime125.toFixed(1)}h
-                                                                                </div>
-                                                                                <div className="text-xs text-orange-500">
-                                                                                    x1.25
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 text-right font-medium">
-                                                                                <div className="font-bold">
-                                                                                    {weekCalculation.overtime150.toFixed(1)}h
-                                                                                </div>
-                                                                                <div className="text-xs text-red-500">
-                                                                                    x1.50
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                                                <div className="space-y-1">
-                                                                                    {[...new Set(weekEntries.map(entry => entry.status))].map((status, idx) => (
-                                                                                        <span key={idx} className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                                                            status === 'validated' 
-                                                                                                ? 'bg-green-100 text-green-800'
-                                                                                                : status === 'invoiced'
-                                                                                                ? 'bg-blue-100 text-blue-800'
-                                                                                                : 'bg-yellow-100 text-yellow-800'
-                                                                                        }`}>
-                                                                                            {status === 'validated' ? 'Validé' : 
-                                                                                             status === 'invoiced' ? 'Facturé' : 
-                                                                                             'Brouillon'}
-                                                                                        </span>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            )}
+                                                                        </React.Fragment>
                                                                     );
                                                                 })
                                                             }
