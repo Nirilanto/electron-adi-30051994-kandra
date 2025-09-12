@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture ALDO SERVICE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .company-details {
+            font-size: 11px;
+            line-height: 1.6;
+        }
+        
+        .invoice-number {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .client-section {
+            display: none;
+        }
+        
+        .client-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            flex: 1;
+            margin-left: 20px;
+        }
+        
+        .project-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            flex: 1;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 7px 0;
+            font-size: 11px;
+        }
+        
+        .items-table th {
+            background: #f8f9fa;
+            color: #333;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #dee2e6;
+        }
+        
+        .items-table td {
+            padding: 5px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .items-table tr:hover {
+            background: #e9ecef;
+        }
+        
+        .employee-group {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .amount {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .totals {
+            margin-top: 30px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .totals-table .label {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .totals-table .total-final {
+            background: #e9ecef;
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .items-table td[rowspan] {
+            vertical-align: middle;
+            border-right: 2px solid #333;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 10px;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        
+        .payment-conditions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        
+        small {
+            color: #666;
+            font-size: 10px;
+        }
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .invoice-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="company-info">
+                <div class="company-name">ATLANTIS</div>
+                <div class="company-details">
+                    221 RUE DE LAFAYETTE 75010 PARIS<br>
+                    948 396 973 R.C.S. PARIS - APE : 7820Z<br>
+                    CONTACTATLANTIS75@GMAIL.COM
+                </div>
+            </div>
+            <div class="invoice-number">
+                FACTURE N°
+                <span style="font-size: 32px; color: #007bff;">100010</span><br>
+                <div style="font-size: 14px; border: 2px solid #333; padding: 5px;">
+                    <strong>C.E.B</strong><br>
+                    63 AV DE VALENTON<br>
+                    94450 Limeil-Brévannes
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations projet -->
+        <div style="border: 2px solid #666; padding: 7px; margin: 7px 0; background: #f1f3f4;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 14px;">Chantier : 7 - DRANCY</strong><br>
+                    <span style="color: #555; margin-top: 5px; display: inline-block;">DRANCY</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong style="font-size: 14px;">LE 31/07/2025</strong>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tableau des prestations -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Semaine du</th>
+                    <th>Type</th>
+                    <th>Unité</th>
+                    <th>Coéf.</th>
+                    <th>P.U. H.T</th>
+                    <th>Montant H.T</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- ALLAOUA NACIR -->
+                <tr class="employee-group">
+                    <td colspan="6">ALLAOUA NACIR</td>
+                </tr>
+                <tr>
+                    <td rowspan="3">07/07/2025 Au 13/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">27,50 €</td>
+                    <td class="amount">962,50 €</td>
+                </tr>
+                <tr>
+                    <td>HEURE SUP 1</td>
+                    <td>4</td>
+                    <td>1,25</td>
+                    <td class="amount">27,50 €</td>
+                    <td class="amount">137,50 €</td>
+                </tr>
+                <tr>
+                    <td>HEURE SUP 2</td>
+                    <td>5</td>
+                    <td>1,50</td>
+                    <td class="amount">27,50 €</td>
+                    <td class="amount">206,25 €</td>
+                </tr>
+                <tr>
+                    <td>14/07/2025 Au 20/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">27,50 €</td>
+                    <td class="amount">962,50 €</td>
+                </tr>
+                
+                <!-- Séparateur entre employés -->
+                <tr>
+                    <td colspan="6" style="border: none;"></td>
+                </tr>
+                
+                <!-- MARTIN PIERRE -->
+                <tr class="employee-group">
+                    <td colspan="6">MARTIN PIERRE</td>
+                </tr>
+                <tr>
+                    <td>07/07/2025 Au 13/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">24,50 €</td>
+                    <td class="amount">857,50 €</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">14/07/2025 Au 20/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">24,50 €</td>
+                    <td class="amount">857,50 €</td>
+                </tr>
+                <tr>
+                    <td>HEURE SUP 1</td>
+                    <td>3</td>
+                    <td>1,25</td>
+                    <td class="amount">24,50 €</td>
+                    <td class="amount">91,88 €</td>
+                </tr>
+                <tr>
+                    <td>21/07/2025 Au 27/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>32</td>
+                    <td>1,00</td>
+                    <td class="amount">24,50 €</td>
+                    <td class="amount">784,00 €</td>
+                </tr>
+                
+                <!-- Séparateur entre employés -->
+                <tr>
+                    <td colspan="6" style="border: none;"></td>
+                </tr>
+                
+                <!-- DURAND SOPHIE -->
+                <tr class="employee-group">
+                    <td colspan="6">DURAND SOPHIE</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">07/07/2025 Au 13/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">26,00 €</td>
+                    <td class="amount">910,00 €</td>
+                </tr>
+                <tr>
+                    <td>HEURE SUP 1</td>
+                    <td>2</td>
+                    <td>1,25</td>
+                    <td class="amount">26,00 €</td>
+                    <td class="amount">65,00 €</td>
+                </tr>
+                <tr>
+                    <td>14/07/2025 Au 20/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">26,00 €</td>
+                    <td class="amount">910,00 €</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">21/07/2025 Au 27/07/2025</td>
+                    <td>HEURE NORMALE</td>
+                    <td>35</td>
+                    <td>1,00</td>
+                    <td class="amount">26,00 €</td>
+                    <td class="amount">910,00 €</td>
+                </tr>
+                <tr>
+                    <td>Jour Férié<br><small>23/07/2025</small></td>
+                    <td>8</td>
+                    <td>2,00</td>
+                    <td class="amount">26,00 €</td>
+                    <td class="amount">416,00 €</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <!-- Totaux -->
+        <div class="totals">
+            <table class="totals-table">
+                <tr>
+                    <td class="label">Total H.T (€)</td>
+                    <td class="amount">7 792,63 €</td>
+                </tr>
+                <tr>
+                    <td class="label">TVA (20,00%)</td>
+                    <td class="amount">1 558,53 €</td>
+                </tr>
+                <tr>
+                    <td class="label">Total T.T.C (€)</td>
+                    <td class="amount">9 351,16 €</td>
+                </tr>
+                <tr class="total-final">
+                    <td>NET À PAYER (€)</td>
+                    <td class="amount">9 351,16 €</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Conditions de paiement -->
+        <div class="payment-conditions">
+            CONDITIONS DE PAIEMENT : CHÈQUE/VIREMENT ÉCHÉANCE 01/04/2023
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <p><strong>Tous les montants sont en EUROS (€)</strong></p>
+            
+            <p style="margin-top: 15px;">
+                Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de prestations. 
+                Toutes contestations, quels que soient l'origine des ordres et le mode de règlement sont exclusivement 
+                de la compétence des tribunaux du lieu de E.T.T. L'acceptation des règlements avec l'émission de nos 
+                traites ne modifie pas cette clause attributive de juridiction. Taxe acquittée sur les encaissements.
+            </p>
+            
+            <p style="margin-top: 15px;">
+                En cas de retard de paiement, seront exigibles, conformément à l'article L441-6 du code du commerce, 
+                une indemnité calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une 
+                indemnité forfaitaire pour frais de recouvrement de 40 euros.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

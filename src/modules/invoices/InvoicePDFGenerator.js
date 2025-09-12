@@ -381,7 +381,7 @@ class InvoicePDFGenerator {
   }
 
   /**
-   * Groupe les lignes de travail par employé pour l'affichage
+   * Groupe les lignes de travail par employé pour l'affichage avec tri chronologique et weekGroups
    */
   static groupWorkLinesByEmployee(workLines) {
     // Fonction locale pour formater les montants
@@ -395,6 +395,17 @@ class InvoicePDFGenerator {
       }).format(amount);
     };
 
+    // Fonction pour convertir une période de semaine en date pour le tri
+    const getWeekStartDate = (weekPeriod) => {
+      // Format attendu: "08/09/2025 Au 14/09/2025" ou "08/09/2025-14/09/2025"
+      const match = weekPeriod.match(/(\d{2}\/\d{2}\/\d{4})/);
+      if (match) {
+        const [day, month, year] = match[1].split('/');
+        return new Date(year, month - 1, day);
+      }
+      return new Date(0); // Fallback
+    };
+
     const groups = {};
     
     workLines.forEach(line => {
@@ -402,33 +413,48 @@ class InvoicePDFGenerator {
         groups[line.employeeName] = [];
       }
       
-      // Debug: voir les valeurs avant formatage
-      console.log('DEBUG - Line avant formatage:', {
-        employeeName: line.employeeName,
-        unitPrice: line.unitPrice,
-        amount: line.amount,
-        type: line.type
-      });
-      
       // Ajouter les versions formatées pour le template Handlebars
       const lineWithFormatting = {
         ...line,
         formattedUnitPrice: formatCurrency(line.unitPrice),
-        formattedAmount: formatCurrency(line.amount)
+        formattedAmount: formatCurrency(line.amount),
+        weekStartDate: getWeekStartDate(line.weekPeriod) // Pour le tri
       };
-      
-      console.log('DEBUG - Line après formatage:', {
-        formattedUnitPrice: lineWithFormatting.formattedUnitPrice,
-        formattedAmount: lineWithFormatting.formattedAmount
-      });
       
       groups[line.employeeName].push(lineWithFormatting);
     });
     
-    return Object.entries(groups).map(([employeeName, lines]) => ({
-      employeeName,
-      lines
-    }));
+    return Object.entries(groups).map(([employeeName, lines]) => {
+      // Trier les lignes par date de début de semaine
+      const sortedLines = lines.sort((a, b) => a.weekStartDate - b.weekStartDate);
+      
+      // Grouper par semaine pour créer les weekGroups avec rowspan
+      const weekGroups = {};
+      sortedLines.forEach(line => {
+        if (!weekGroups[line.weekPeriod]) {
+          weekGroups[line.weekPeriod] = [];
+        }
+        weekGroups[line.weekPeriod].push(line);
+      });
+      
+      // Convertir weekGroups en array trié par date
+      const sortedWeekGroups = Object.entries(weekGroups)
+        .sort(([weekA], [weekB]) => getWeekStartDate(weekA) - getWeekStartDate(weekB))
+        .map(([weekPeriod, weekLines]) => ({
+          weekPeriod,
+          lines: weekLines.sort((a, b) => {
+            // Trier par type d'heure : NORMALE, SUP 1, SUP 2
+            const typeOrder = { 'HEURE NORMALE': 1, 'HEURE SUP 1': 2, 'HEURE SUP 2': 3 };
+            return (typeOrder[a.type] || 99) - (typeOrder[b.type] || 99);
+          })
+        }));
+
+      return {
+        employeeName,
+        lines: sortedLines, // Garde l'ancien format pour compatibilité
+        weekGroups: sortedWeekGroups // Nouveau format avec groupement par semaine
+      };
+    });
   }
 
   /**
@@ -453,259 +479,306 @@ class InvoicePDFGenerator {
    */
   static generateInvoiceHTML(data) {
     return `
-      <!DOCTYPE html>
-      <html lang="fr">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>${data.documentType} N° ${data.invoiceNumber}</title>
-          <style>
-              * {
-                  box-sizing: border-box;
-                  margin: 0;
-                  padding: 0;
-              }
-              
-              body {
-                  font-family: Arial, sans-serif;
-                  font-size: 10px;
-                  line-height: 1.2;
-                  color: #000;
-                  background-color: #fff;
-                  padding: 20px;
-              }
-              
-              .container {
-                  width: 100%;
-                  max-width: 210mm;
-                  margin: 0 auto;
-              }
-              
-              .header {
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: flex-start;
-                  margin-bottom: 20px;
-              }
-              
-              .company-info {
-                  font-size: 11px;
-                  font-weight: bold;
-              }
-              
-              .invoice-info {
-                  text-align: right;
-                  border: 1px solid #000;
-                  padding: 10px;
-                  background-color: #f5f5f5;
-              }
-              
-              .client-info {
-                  border: 1px solid #000;
-                  padding: 10px;
-                  margin: 20px 0;
-                  background-color: #f5f5f5;
-              }
-              
-              .chantier-info {
-                  border: 1px solid #000;
-                  padding: 10px;
-                  margin: 10px 0;
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
-              }
-              
-              .work-table {
-                  width: 100%;
-                  border-collapse: collapse;
-                  border: 1px solid #000;
-                  margin: 20px 0;
-              }
-              
-              .work-table th,
-              .work-table td {
-                  border: 1px solid #000;
-                  padding: 5px;
-                  text-align: center;
-                  font-size: 9px;
-              }
-              
-              .work-table th {
-                  background-color: #f0f0f0;
-                  font-weight: bold;
-              }
-              
-              .employee-name {
-                  font-weight: bold;
-                  background-color: #e8e8e8;
-                  text-align: left;
-                  padding-left: 10px;
-              }
-              
-              .week-period {
-                  text-align: left;
-                  padding-left: 15px;
-                  font-size: 8px;
-              }
-              
-              .work-type {
-                  text-align: left;
-                  padding-left: 20px;
-              }
-              
-              .totals-table {
-                  float: right;
-                  border-collapse: collapse;
-                  border: 1px solid #000;
-                  margin: 20px 0;
-              }
-              
-              .totals-table td {
-                  border: 1px solid #000;
-                  padding: 8px 15px;
-                  font-size: 10px;
-              }
-              
-              .totals-table .total-label {
-                  text-align: left;
-                  font-weight: bold;
-              }
-              
-              .totals-table .total-amount {
-                  text-align: right;
-                  font-weight: bold;
-              }
-              
-              .payment-conditions {
-                  clear: both;
-                  margin-top: 40px;
-                  text-align: center;
-                  font-size: 8px;
-                  line-height: 1.3;
-              }
-              
-              .footer-text {
-                  font-size: 7px;
-                  line-height: 1.2;
-                  margin-top: 10px;
-                  text-align: justify;
-              }
-              
-              @media print {
-                  body {
-                      padding: 0;
-                  }
-              }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <!-- Header -->
-              <div class="header">
-                  <div class="company-info">
-                      <strong>${data.company.name}</strong><br>
-                      ${data.company.address} ${data.company.postalCode} ${data.company.city}<br>
-                      ${data.company.siret} - APE : ${data.company.ape}<br>
-                      ${data.company.email}
-                  </div>
-                  <div class="invoice-info">
-                      <strong>FACTURE N° ${data.invoiceNumber}</strong>
-                  </div>
-              </div>
-
-              <!-- Client Info -->
-              <div class="client-info">
-                  <strong>${data.client.companyName}</strong><br>
-                  ${data.client.address}<br>
-                  ${data.client.postalCode} ${data.client.city}
-              </div>
-
-              <!-- Chantier Info -->
-              <div class="chantier-info">
-                  <div>
-                      <strong>Chantier : ${data.description || 'Non spécifié'}</strong><br>
-                      ${data.client.city}
-                  </div>
-                  <div>
-                      <strong>LE ${data.invoiceDate}</strong>
-                  </div>
-              </div>
-
-              <!-- Work Table -->
-              <!-- DEBUG: employeeGroups = ${JSON.stringify(data.employeeGroups)} -->
-              <table class="work-table">
-                  <thead>
-                      <tr>
-                          <th style="width: 20%;">Semaine du</th>
-                          <th style="width: 25%;">Type</th>
-                          <th style="width: 8%;">Unité</th>
-                          <th style="width: 8%;">Coéf.</th>
-                          <th style="width: 12%;">P.U. H.T</th>
-                          <th style="width: 12%;">Montant H.T</th>
-                      </tr>
-                  </thead>
-                  <tbody>
-                      ${data.employeeGroups && data.employeeGroups.length > 0 ? data.employeeGroups.map(group => {
-                        return `
-                          <tr>
-                              <td colspan="6" class="employee-name">${group.employeeName}</td>
-                          </tr>
-                          ${group.lines.map(line => `
-                            <tr>
-                                <td class="week-period">${line.weekPeriod}</td>
-                                <td class="work-type">${line.type}</td>
-                                <td style="text-align: right;">${line.hours.toFixed(0)}</td>
-                                <td style="text-align: center;">${line.coefficient.toFixed(2)}</td>
-                                <td style="text-align: right;">${line.formattedUnitPrice}</td>
-                                <td style="text-align: right;">${line.formattedAmount}</td>
-                            </tr>
-                          `).join('')}
-                        `;
-                      }).join('') : '<tr><td colspan="6">Aucune donnée disponible</td></tr>'}
-                  </tbody>
-              </table>
-
-              <!-- Totals -->
-              <table class="totals-table">
-                  <tr>
-                      <td class="total-label">Total H.T (€)</td>
-                      <td class="total-amount">${data.totals.formattedSubtotalHT}</td>
-                  </tr>
-                  <tr>
-                      <td class="total-label">TVA (${data.totals.tvaRate.toFixed(2)}%)</td>
-                      <td class="total-amount">${data.totals.formattedTvaAmount}</td>
-                  </tr>
-                  <tr>
-                      <td class="total-label">Total T.T.C (€)</td>
-                      <td class="total-amount">${data.totals.formattedTotalTTC}</td>
-                  </tr>
-                  <tr>
-                      <td class="total-label">NET À PAYER (€)</td>
-                      <td class="total-amount">${data.totals.formattedTotalTTC}</td>
-                  </tr>
-              </table>
-
-              <!-- Payment Conditions -->
-              <div class="payment-conditions">
-                  <strong>CONDITIONS DE PAIEMENT : CHÈQUE/VIREMENT ÉCHÉANCE ${data.dueDate}</strong><br>
-                  Tous les montants sont en EUROS (€)
-              </div>
-
-              <!-- Footer Text -->
-              <div class="footer-text">
-                  Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de prestations. 
-                  Toutes contestations, quels que soient l'origine des ordres et le mode de règlement sont exclusivement de la compétence 
-                  des tribunaux du lieu de E.T.T. L'acceptation des règlements avec l'émission de nos traites ne modifie pas cette clause 
-                  attributive de juridiction. Taxe acquittée sur les encaissements.<br><br>
-                  
-                  En cas de retard de paiement, seront exigibles, conformément à l'article L441-6 du code du commerce, une indemnité 
-                  calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une indemnité forfaitaire pour frais 
-                  de recouvrement de 40 euros.
-              </div>
-          </div>
-      </body>
-      </html>`;
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture ${data.company.name}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .company-info {
+            flex: 1;
+        }
+        
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .company-details {
+            font-size: 11px;
+            line-height: 1.6;
+        }
+        
+        .invoice-number {
+            text-align: right;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 7px 0;
+            font-size: 11px;
+        }
+        
+        .items-table th {
+            background: #f8f9fa;
+            color: #333;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #dee2e6;
+        }
+        
+        .items-table td {
+            padding: 5px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .employee-group {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .amount {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .totals {
+            margin-top: 30px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .totals-table {
+            width: 300px;
+            border-collapse: collapse;
+        }
+        
+        .totals-table td {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .totals-table .label {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        .totals-table .total-final {
+            background: #e9ecef;
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .items-table td[rowspan] {
+            vertical-align: middle;
+            border-right: 2px solid #333;
+            font-weight: bold;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 10px;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        
+        .payment-conditions {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            
+            .invoice-container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="company-info">
+                <div class="company-name">${data.company.name}</div>
+                <div class="company-details">
+                    ${data.company.address} ${data.company.postalCode} ${data.company.city}<br>
+                    ${data.company.siret} - APE : ${data.company.ape}<br>
+                    ${data.company.email}
+                </div>
+            </div>
+            <div class="invoice-number">
+                FACTURE N°
+                <span style="font-size: 32px; color: #007bff;">${data.invoiceNumber}</span><br>
+                <div style="font-size: 14px; border: 2px solid #333; padding: 5px;">
+                    <strong>${data.client.companyName}</strong><br>
+                    ${data.client.address}<br>
+                    ${data.client.postalCode} ${data.client.city}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations projet -->
+        <div style="border: 2px solid #666; padding: 7px; margin: 7px 0; background: #f1f3f4;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="font-size: 14px;">Chantier : ${data.description || 'Non spécifié'}</strong><br>
+                    <span style="color: #555; margin-top: 5px; display: inline-block;">${data.client.city}</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong style="font-size: 14px;">LE ${data.invoiceDate}</strong>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tableau des prestations -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th>Semaine du</th>
+                    <th>Type</th>
+                    <th>Unité</th>
+                    <th>Coéf.</th>
+                    <th>P.U. H.T</th>
+                    <th>Montant H.T</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${data.employeeGroups && data.employeeGroups.length > 0 ? 
+                  data.employeeGroups.map((group, groupIndex) => {
+                    let html = `<tr class="employee-group">
+                        <td colspan="6">${group.employeeName}</td>
+                    </tr>`;
+                    
+                    // Grouper les lignes par semaine pour utiliser rowspan
+                    const weekGroups = {};
+                    group.lines.forEach(line => {
+                      if (!weekGroups[line.weekPeriod]) {
+                        weekGroups[line.weekPeriod] = [];
+                      }
+                      weekGroups[line.weekPeriod].push(line);
+                    });
+                    
+                    Object.entries(weekGroups).forEach(([weekPeriod, weekLines]) => {
+                      weekLines.forEach((line, lineIndex) => {
+                        html += `<tr>`;
+                        if (lineIndex === 0 && weekLines.length > 1) {
+                          html += `<td rowspan="${weekLines.length}">${weekPeriod}</td>`;
+                        } else if (weekLines.length === 1) {
+                          html += `<td>${weekPeriod}</td>`;
+                        }
+                        html += `
+                            <td>${line.type}</td>
+                            <td>${Math.round(line.hours)}</td>
+                            <td>${line.coefficient.toFixed(2)}</td>
+                            <td class="amount">${line.formattedUnitPrice}</td>
+                            <td class="amount">${line.formattedAmount}</td>
+                        </tr>`;
+                      });
+                    });
+                    
+                    // Ajouter séparateur entre employés (sauf le dernier)
+                    if (groupIndex < data.employeeGroups.length - 1) {
+                      html += `<tr><td colspan="6" style="border: none;"></td></tr>`;
+                    }
+                    
+                    return html;
+                  }).join('')
+                  : '<tr><td colspan="6">Aucune donnée disponible</td></tr>'
+                }
+            </tbody>
+        </table>
+        
+        <!-- Totaux -->
+        <div class="totals">
+            <table class="totals-table">
+                <tr>
+                    <td class="label">Total H.T (€)</td>
+                    <td class="amount">${data.totals.formattedSubtotalHT}</td>
+                </tr>
+                <tr>
+                    <td class="label">TVA (${data.totals.tvaRate.toFixed(2)}%)</td>
+                    <td class="amount">${data.totals.formattedTvaAmount}</td>
+                </tr>
+                <tr>
+                    <td class="label">Total T.T.C (€)</td>
+                    <td class="amount">${data.totals.formattedTotalTTC}</td>
+                </tr>
+                <tr class="total-final">
+                    <td>NET À PAYER (€)</td>
+                    <td class="amount">${data.totals.formattedTotalTTC}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- Conditions de paiement -->
+        <div class="payment-conditions">
+            CONDITIONS DE PAIEMENT : CHÈQUE/VIREMENT ÉCHÉANCE ${data.dueDate}
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <p><strong>Tous les montants sont en EUROS (€)</strong></p>
+            
+            <p style="margin-top: 15px;">
+                Nos factures sont soumises aux conditions portées sur nos bons d'heures et nos contrats de prestations. 
+                Toutes contestations, quels que soient l'origine des ordres et le mode de règlement sont exclusivement 
+                de la compétence des tribunaux du lieu de E.T.T. L'acceptation des règlements avec l'émission de nos 
+                traites ne modifie pas cette clause attributive de juridiction. Taxe acquittée sur les encaissements.
+            </p>
+            
+            <p style="margin-top: 15px;">
+                En cas de retard de paiement, seront exigibles, conformément à l'article L441-6 du code du commerce, 
+                une indemnité calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une 
+                indemnité forfaitaire pour frais de recouvrement de 40 euros.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
   }
 
   /**
