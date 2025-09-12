@@ -319,7 +319,13 @@ function InvoiceList() {
                         {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                        {formatCurrency(invoice.totalAmount)}
+                        {formatCurrency(
+                          invoice.globalTotals?.totalAmount || 
+                          (invoice.employeesData ? 
+                            invoice.employeesData.reduce((sum, emp) => sum + (emp.totals?.totalAmount || 0), 0) :
+                            invoice.totalAmount || 0
+                          )
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {formatDate(invoice.invoiceDate)}
@@ -376,7 +382,14 @@ function InvoiceList() {
                   <p className="text-sm font-medium text-gray-500">Montant total</p>
                   <p className="text-2xl font-semibold text-gray-900">
                     {formatCurrency(
-                      filteredInvoices.reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0)
+                      filteredInvoices.reduce((sum, invoice) => {
+                        const amount = invoice.globalTotals?.totalAmount || 
+                                     (invoice.employeesData ? 
+                                       invoice.employeesData.reduce((empSum, emp) => empSum + (emp.totals?.totalAmount || 0), 0) :
+                                       invoice.totalAmount || 0
+                                     );
+                        return sum + amount;
+                      }, 0)
                     )}
                   </p>
                 </div>
