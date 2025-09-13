@@ -592,11 +592,17 @@ function getClientInvoiceTemplate() {
         }
 
         .totals-table .total-final {
-            background: #333 !important; /* Gris foncé économique */
+            background-color: #333 !important; /* Gris foncé économique */
             color: white !important; /* Texte blanc */
-            font-weight: bold;
+            font-weight: bold !important;
             font-size: 12px; /* Taille standard */
-            border: 1px solid #333; /* Bordure simple */
+            border: 1px solid #333 !important; /* Bordure simple */
+        }
+
+        .totals-table .total-final td {
+            background-color: #333 !important; /* Gris foncé pour les cellules */
+            color: white !important; /* Texte blanc pour les cellules */
+            font-weight: bold !important;
         }
         
         .items-table td[rowspan] {
@@ -914,11 +920,11 @@ function getClientInvoiceTemplate() {
             <table>
                 <tr>
                     <td class="project-left">
-                        <strong>Chantier : {{description}}</strong><br>
-                        <span style="color: #555;">{{client.city}}</span>
+                        <strong>Chantier :</strong><br>
+                        <span style="color: #555;">{{#if chantier}}{{chantier}}{{else}}{{client.city}}{{/if}}</span>
                     </td>
                     <td class="project-right">
-                        <strong>LE {{invoiceDate}}</strong>
+                        <strong>LE {{#if workSiteDate}}{{workSiteDate}}{{else}}{{invoiceDate}}{{/if}}</strong>
                     </td>
                 </tr>
             </table>

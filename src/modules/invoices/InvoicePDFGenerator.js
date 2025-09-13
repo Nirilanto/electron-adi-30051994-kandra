@@ -288,6 +288,8 @@ class InvoicePDFGenerator {
       periodEnd: formatDate(invoice.periodEnd || invoice.period_end),
       description: invoice.description || "",
       status: invoice.status || "draft",
+      chantier: invoice.chantier || "",
+      workSiteDate: formatDate(invoice.workSiteDate),
 
       // Informations sur l'entreprise émettrice
       company: {

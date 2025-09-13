@@ -55,7 +55,9 @@ function InvoiceForm() {
         status: 'draft',
         invoiceDate: new Date(),
         dueDate: new Date(new Date().setDate(new Date().getDate() + 30)), // 30 jours
-        notes: ''
+        notes: '',
+        chantier: 'SARCELLES', // Nouveau champ pour le chantier avec valeur par défaut
+        workSiteDate: new Date() // Nouvelle date pour le chantier
     });
 
     // États de l'interface
@@ -126,7 +128,9 @@ function InvoiceForm() {
                         periodStart: new Date(invoice.periodStart),
                         periodEnd: new Date(invoice.periodEnd),
                         invoiceDate: new Date(invoice.invoiceDate),
-                        dueDate: new Date(invoice.dueDate)
+                        dueDate: new Date(invoice.dueDate),
+                        chantier: invoice.chantier || '',
+                        workSiteDate: invoice.workSiteDate ? new Date(invoice.workSiteDate) : new Date()
                     });
                     
                     // Charger les lignes de facture sélectionnées (pour factures non finalisées)
@@ -640,6 +644,14 @@ function InvoiceForm() {
         );
     };
 
+    // Toggle sélection/désélection de tous les travaux
+    const toggleAllWorkPeriods = () => {
+        const allSelected = workPeriods.every(period => period.selected);
+        setWorkPeriods(prev =>
+            prev.map(period => ({ ...period, selected: !allSelected }))
+        );
+    };
+
 
     const validateStep = (step) => {
         const newErrors = {};
@@ -1049,10 +1061,30 @@ function InvoiceForm() {
                     {/* Étape 2: Sélection des travaux */}
                     {currentStep === 2 && (
                         <div className="p-6">
-                            <h2 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
-                                <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
-                                Sélection des travaux à facturer
-                            </h2>
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                                    <ClockIcon className="h-5 w-5 mr-2 text-blue-600" />
+                                    Sélection des travaux à facturer
+                                </h2>
+
+                                {workPeriods.length > 0 && !isLoading && (
+                                    <button
+                                        type="button"
+                                        onClick={toggleAllWorkPeriods}
+                                        className={`px-3 py-1.5 text-sm rounded-md transition-colors flex items-center ${
+                                            workPeriods.every(period => period.selected)
+                                                ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                        }`}
+                                    >
+                                        <CheckIcon className="h-4 w-4 mr-1" />
+                                        {workPeriods.every(period => period.selected)
+                                            ? 'Désélectionner tout'
+                                            : 'Sélectionner tout'
+                                        }
+                                    </button>
+                                )}
+                            </div>
 
                             {isLoading ? (
                                 <div className="text-center py-8">
@@ -1135,7 +1167,7 @@ function InvoiceForm() {
                                 Finalisation de la facture
                             </h2>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-1">
                                     <label className="block text-sm font-medium text-gray-700">
                                         Date de facture
@@ -1163,22 +1195,31 @@ function InvoiceForm() {
 
                                 <div className="space-y-1">
                                     <label className="block text-sm font-medium text-gray-700">
-                                        Statut
+                                        Nom du chantier
                                     </label>
-                                    <select
-                                        name="status"
-                                        value={invoiceData.status}
+                                    <input
+                                        type="text"
+                                        name="chantier"
+                                        value={invoiceData.chantier}
                                         onChange={handleInputChange}
+                                        placeholder="Ex: SARCELLES - Chantier principal"
                                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                    >
-                                        <option value="draft">Brouillon</option>
-                                        <option value="sent">Envoyée</option>
-                                        <option value="paid">Payée</option>
-                                        <option value="rejected">Refusée</option>
-                                    </select>
+                                    />
                                 </div>
 
-                                <div className="lg:col-span-2 space-y-1">
+                                <div className="space-y-1">
+                                    <label className="block text-sm font-medium text-gray-700">
+                                        Date du chantier
+                                    </label>
+                                    <DatePicker
+                                        selected={invoiceData.workSiteDate}
+                                        onChange={(date) => handleDateChange(date, 'workSiteDate')}
+                                        dateFormat="dd/MM/yyyy"
+                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div className="lg:col-span-3 space-y-1">
                                     <label className="block text-sm font-medium text-gray-700">
                                         Notes
                                     </label>
