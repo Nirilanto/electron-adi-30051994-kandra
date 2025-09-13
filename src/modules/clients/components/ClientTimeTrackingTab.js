@@ -31,6 +31,8 @@ const ClientTimeTrackingTab = ({ client }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState({});
   const [viewMode, setViewMode] = useState('detailed'); // 'detailed' ou 'simple'
+  const [editMode, setEditMode] = useState(false); // Mode édition pour le tableau
+  const [pendingChanges, setPendingChanges] = useState({}); // Changements en attente
 
   // Statistiques globales de la semaine
   const [weeklyStats, setWeeklyStats] = useState({
@@ -205,6 +207,89 @@ const ClientTimeTrackingTab = ({ client }) => {
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       throw error;
+    }
+  };
+
+  // Gérer les changements en mode édition
+  const handlePendingChange = (employeeId, contractId, day, hours) => {
+    const dayKey = day.toISOString().split('T')[0];
+    const changeKey = `${employeeId}_${contractId}_${dayKey}`;
+
+    setPendingChanges(prev => ({
+      ...prev,
+      [changeKey]: {
+        employeeId,
+        contractId,
+        day,
+        hours: parseFloat(hours) || 0,
+        dayKey
+      }
+    }));
+  };
+
+  // Sauvegarder tous les changements en attente
+  const savePendingChanges = async () => {
+    const changes = Object.values(pendingChanges);
+    if (changes.length === 0) {
+      toast.info('Aucun changement à sauvegarder');
+      return;
+    }
+
+    setIsSaving(prev => ({ ...prev, batchSaving: true }));
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      for (const change of changes) {
+        try {
+          await handleSaveTimeEntry(change.employeeId, change.contractId, change.day, {
+            totalHours: change.hours,
+            status: 'pending'
+          });
+          successCount++;
+        } catch (error) {
+          console.error('Erreur pour un changement:', error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} modification(s) sauvegardée(s)`);
+        setPendingChanges({});
+        await loadWeeklyTimeEntries();
+      }
+
+      if (errorCount > 0) {
+        toast.warning(`${errorCount} erreur(s) lors de la sauvegarde`);
+      }
+
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde en lot:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    } finally {
+      setIsSaving(prev => ({ ...prev, batchSaving: false }));
+    }
+  };
+
+  // Annuler tous les changements en attente
+  const cancelPendingChanges = () => {
+    setPendingChanges({});
+    toast.info('Modifications annulées');
+  };
+
+  // Entrer/sortir du mode édition
+  const toggleEditMode = () => {
+    if (editMode && Object.keys(pendingChanges).length > 0) {
+      // Demander confirmation si il y a des changements non sauvegardés
+      if (window.confirm('Vous avez des modifications non sauvegardées. Voulez-vous les perdre ?')) {
+        setPendingChanges({});
+        setEditMode(false);
+      }
+    } else {
+      setEditMode(!editMode);
+      if (!editMode) {
+        setPendingChanges({});
+      }
     }
   };
 
@@ -483,6 +568,10 @@ const ClientTimeTrackingTab = ({ client }) => {
     const [tempHours, setTempHours] = useState({});
 
     const handleCellEdit = (dayIndex, currentHours) => {
+      if (editMode) {
+        // En mode édition, on n'ouvre pas d'input, on modifie directement la valeur affichée
+        return;
+      }
       setEditingCell(dayIndex);
       setTempHours({ ...tempHours, [dayIndex]: currentHours || '' });
     };
@@ -508,10 +597,19 @@ const ClientTimeTrackingTab = ({ client }) => {
 
     const handleKeyPress = (e, dayIndex) => {
       if (e.key === 'Enter') {
+        if (editMode) {
+          // En mode édition, ne pas sauvegarder immédiatement
+          return;
+        }
         handleSave(dayIndex);
       } else if (e.key === 'Escape') {
         setEditingCell(null);
       }
+    };
+
+    const handleEditModeChange = (dayIndex, value) => {
+      const day = weekDays[dayIndex];
+      handlePendingChange(employee.id, contract.id, day, value);
     };
 
     const getEntryForDay = (day) => {
@@ -547,7 +645,39 @@ const ClientTimeTrackingTab = ({ client }) => {
 
           return (
             <td key={dayIndex} className="px-2 py-2 text-center border-r border-gray-100">
-              {isCurrentlyEditing ? (
+              {editMode ? (
+                // Mode édition : input toujours visible
+                <div className="flex flex-col items-center">
+                  <input
+                    type="number"
+                    value={(() => {
+                      const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
+                      const pendingChange = pendingChanges[changeKey];
+                      return pendingChange ? pendingChange.hours : (entry?.totalHours || '');
+                    })()}
+                    onChange={(e) => handleEditModeChange(dayIndex, e.target.value)}
+                    className={`w-12 px-1 py-1 border rounded text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                      pendingChanges[`${employee.id}_${contract.id}_${dayKey}`]
+                        ? 'border-orange-300 bg-orange-50'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder="0"
+                    step="0.5"
+                    min="0"
+                  />
+                  {entry?.status && (
+                    <div className={`text-xs mt-1 ${
+                      entry.status === 'validated' ? 'text-green-600' :
+                      entry.status === 'invoiced' ? 'text-blue-600' :
+                      'text-yellow-600'
+                    }`}>
+                      {entry.status === 'validated' ? '✓' :
+                       entry.status === 'invoiced' ? '€' : '•'}
+                    </div>
+                  )}
+                </div>
+              ) : isCurrentlyEditing ? (
+                // Mode normal : édition cellule par cellule
                 <input
                   type="number"
                   value={tempHours[dayIndex] || ''}
@@ -561,23 +691,26 @@ const ClientTimeTrackingTab = ({ client }) => {
                   autoFocus
                 />
               ) : (
-                <div
-                  onClick={() => handleCellEdit(dayIndex, entry?.totalHours)}
-                  className={`cursor-pointer hover:bg-blue-50 px-1 py-1 rounded text-xs min-h-[20px] flex items-center justify-center ${
-                    entry?.totalHours ? 'font-medium text-blue-700' : 'text-gray-400'
-                  } ${cellIsSaving ? 'opacity-50' : ''}`}
-                >
-{cellIsSaving ? '...' : (entry?.totalHours ? `${entry.totalHours}h` : '-')}
-                </div>
-              )}
-              {entry?.status && (
-                <div className={`text-xs mt-1 ${
-                  entry.status === 'validated' ? 'text-green-600' :
-                  entry.status === 'invoiced' ? 'text-blue-600' :
-                  'text-yellow-600'
-                }`}>
-                  {entry.status === 'validated' ? '✓' :
-                   entry.status === 'invoiced' ? '€' : '•'}
+                // Mode normal : affichage simple
+                <div>
+                  <div
+                    onClick={() => handleCellEdit(dayIndex, entry?.totalHours)}
+                    className={`cursor-pointer hover:bg-blue-50 px-1 py-1 rounded text-xs min-h-[20px] flex items-center justify-center ${
+                      entry?.totalHours ? 'font-medium text-blue-700' : 'text-gray-400'
+                    } ${cellIsSaving ? 'opacity-50' : ''}`}
+                  >
+                    {cellIsSaving ? '...' : (entry?.totalHours ? `${entry.totalHours}h` : '-')}
+                  </div>
+                  {entry?.status && (
+                    <div className={`text-xs mt-1 ${
+                      entry.status === 'validated' ? 'text-green-600' :
+                      entry.status === 'invoiced' ? 'text-blue-600' :
+                      'text-yellow-600'
+                    }`}>
+                      {entry.status === 'validated' ? '✓' :
+                       entry.status === 'invoiced' ? '€' : '•'}
+                    </div>
+                  )}
                 </div>
               )}
             </td>
@@ -904,6 +1037,41 @@ const ClientTimeTrackingTab = ({ client }) => {
                     Vue tableau
                   </button>
                 </div>
+
+                {/* Contrôles du mode édition (uniquement en vue tableau) */}
+                {viewMode === 'simple' && (
+                  <div className="flex space-x-2 mr-4 border-l border-gray-200 pl-4">
+                    <button
+                      onClick={toggleEditMode}
+                      className={`px-3 py-2 text-xs rounded-md transition-colors ${
+                        editMode
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
+                    >
+                      {editMode ? 'Sortir édition' : 'Mode édition'}
+                    </button>
+
+                    {editMode && (
+                      <>
+                        <button
+                          onClick={savePendingChanges}
+                          disabled={Object.keys(pendingChanges).length === 0 || isSaving.batchSaving}
+                          className="px-3 py-2 text-xs bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md transition-colors"
+                        >
+                          {isSaving.batchSaving ? 'Sauvegarde...' : `Sauvegarder (${Object.keys(pendingChanges).length})`}
+                        </button>
+                        <button
+                          onClick={cancelPendingChanges}
+                          disabled={Object.keys(pendingChanges).length === 0}
+                          className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-md transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}</div>
                 <button
                   onClick={() => setExpandedEmployees(new Set(employeesWithContracts.map(emp => emp.id)))}
                   className="text-sm text-blue-600 hover:text-blue-700"
@@ -919,8 +1087,31 @@ const ClientTimeTrackingTab = ({ client }) => {
                 </button>
               </div>
             </div>
-            
-{viewMode === 'detailed' ? (
+
+            {/* Indicateur du mode édition */}
+            {editMode && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-orange-800">
+                      Mode édition activé
+                    </span>
+                    <span className="text-xs text-orange-600">
+                      {Object.keys(pendingChanges).length > 0
+                        ? `${Object.keys(pendingChanges).length} modification(s) en attente`
+                        : 'Aucune modification en attente'
+                      }
+                    </span>
+                  </div>
+                  <div className="text-xs text-orange-600">
+                    Modifiez les valeurs et cliquez "Sauvegarder" pour confirmer
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'detailed' ? (
               employeesWithContracts.map((employee) => (
                 <EmployeeAccordion
                   key={employee.id}
@@ -928,7 +1119,9 @@ const ClientTimeTrackingTab = ({ client }) => {
                 />
               ))
             ) : (
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className={`bg-white border border-gray-200 rounded-lg overflow-hidden ${
+                editMode ? 'ring-2 ring-orange-200' : ''
+              }`}>
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -991,7 +1184,6 @@ const ClientTimeTrackingTab = ({ client }) => {
                 )}
               </div>
             )}
-          </div>
         </>
       )}
     </div>
