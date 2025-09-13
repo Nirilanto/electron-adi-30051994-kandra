@@ -337,17 +337,35 @@ ipcMain.handle("generate-pdf", async (_, args) => {
     });
     console.log("Images détectées:", imagesCheck);
 
-    // Générer le PDF avec les options appropriées
+    // Générer le PDF avec les options appropriées incluant la gestion des pages
     await page.pdf({
       path: outputPath,
       format: "A4",
       printBackground: true,
       margin: {
-        top: "10mm",
+        top: "12mm", // Réduit de 15mm à 12mm
         right: "10mm",
-        bottom: "10mm",
+        bottom: "18mm", // Réduit de 20mm à 18mm pour les numéros de page
         left: "10mm",
       },
+      // Options avancées pour la gestion des pages
+      preferCSSPageSize: false,
+      displayHeaderFooter: true,
+      headerTemplate: '<div></div>', // Header vide
+      footerTemplate: `
+        <div style="font-size: 10px; width: 100%; text-align: center; margin: 0; padding: 5px 0;">
+          <span style="float: left; margin-left: 10mm;">
+            ${data.company?.name || 'ATLANTIS'} -
+            ${data.documentType || 'FACTURE'} N°
+            ${data.invoiceNumber || 'N/A'}
+          </span>
+          <span style="float: right; margin-right: 10mm;">
+            Page <span class="pageNumber"></span> sur <span class="totalPages"></span>
+          </span>
+        </div>
+      `,
+      // Contrôle plus fin des sauts de page
+      scale: 0.95, // Léger rétrécissement pour plus de contenu par page
     });
 
     await browser.close();
@@ -399,10 +417,10 @@ function getClientInvoiceTemplate() {
         body {
             font-family: Arial, sans-serif;
             font-size: 11px;
-            line-height: 1.3;
+            line-height: 1.2; /* Réduit de 1.3 à 1.2 */
             color: #333;
             background-color: white;
-            padding: 5mm 6mm;
+            padding: 3mm 6mm; /* Réduit le padding vertical de 5mm à 3mm */
             margin: 0;
         }
         
@@ -427,15 +445,15 @@ function getClientInvoiceTemplate() {
         }
         
         .company-name {
-            font-size: 20px;
+            font-size: 18px; /* Réduit de 20px à 18px */
             font-weight: bold;
             color: #333;
-            margin-bottom: 3px;
+            margin-bottom: 2px; /* Réduit de 3px à 2px */
         }
-        
+
         .company-details {
             font-size: 10px;
-            line-height: 1.3;
+            line-height: 1.2; /* Réduit de 1.3 à 1.2 */
         }
         
         .invoice-number-cell {
@@ -444,29 +462,29 @@ function getClientInvoiceTemplate() {
         }
         
         .invoice-number {
-            font-size: 13px;
+            font-size: 12px; /* Réduit de 13px à 12px */
             font-weight: bold;
-            margin-bottom: 4px;
+            margin-bottom: 2px; /* Réduit de 4px à 2px */
         }
-        
+
         .invoice-number-big {
-            font-size: 22px;
+            font-size: 20px; /* Réduit de 22px à 20px */
             color: #000;
         }
-        
+
         .client-box {
             border: 1px solid #000;
-            padding: 4px;
-            font-size: 11px;
+            padding: 3px; /* Réduit de 4px à 3px */
+            font-size: 10px; /* Réduit de 11px à 10px */
             background-color: white;
         }
         
         .project-info {
             border: 1px solid #000;
-            padding: 4px;
-            margin: 4px 0;
+            padding: 2px; /* Réduit de 4px à 2px */
+            margin: 1px 0 0 0; /* Pas de marge bottom */
             background-color: white;
-            font-size: 11px;
+            font-size: 10px; /* Réduit de 11px à 10px */
         }
         
         .project-info table {
@@ -488,7 +506,7 @@ function getClientInvoiceTemplate() {
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 4px 0;
+            margin: 0; /* Suppression des marges */
             font-size: 10px;
         }
         
@@ -566,10 +584,104 @@ function getClientInvoiceTemplate() {
             font-weight: bold;
             background: white;
         }
-        
+
+        /* Règles de pagination optimisées pour garder le tableau sur la première page */
+        .items-table {
+            page-break-inside: auto;
+            page-break-before: avoid; /* JAMAIS de saut de page avant le tableau */
+        }
+
+        .items-table thead {
+            page-break-after: avoid;
+            page-break-before: avoid; /* Pas de saut avant l'en-tête */
+        }
+
+        .items-table tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto; /* Permet les sauts entre lignes si nécessaire */
+        }
+
+        .employee-group {
+            page-break-after: avoid;
+            page-break-inside: avoid;
+            page-break-before: avoid; /* Pas de saut avant les groupes d'employés */
+        }
+
+        /* Éviter de couper les groupes d'employés mais permettre les sauts naturels */
+        .employee-group + tr {
+            page-break-before: avoid;
+        }
+
+        /* S'assurer que rien ne force un saut avant le tableau */
+        .project-info + .items-table,
+        .project-info + * + .items-table {
+            page-break-before: avoid !important;
+        }
+
+        /* Forcer l'élément qui précède le tableau à ne pas créer de saut */
+        .project-info {
+            page-break-after: avoid !important;
+        }
+
+        /* Contenu principal collé ensemble */
+        .invoice-container > * {
+            page-break-before: avoid;
+        }
+
+        /* Totaux et footer sans saut forcé */
+        .totals {
+            page-break-before: auto; /* Changé de avoid à auto */
+        }
+
+        .footer-section {
+            page-break-inside: avoid;
+            page-break-before: auto; /* Changé de avoid à auto */
+        }
+
+        /* Optimisation de l'espace pour plus de contenu par page */
+        .header {
+            margin-bottom: 3px; /* Réduit davantage de 6px à 3px */
+        }
+
+        .project-info {
+            margin: 1px 0 0 0; /* Pas de marge bottom pour coller au tableau */
+            padding: 2px; /* Réduit de 3px à 2px */
+            font-size: 10px; /* Réduction de la taille de police */
+        }
+
+        .items-table {
+            margin: 0; /* Suppression complète des marges */
+            page-break-before: avoid !important; /* Force à rester sur la même page */
+        }
+
+        .items-table th {
+            padding: 5px 4px; /* Réduit de 6px à 5px */
+        }
+
+        .items-table td {
+            padding: 2px 4px; /* Réduit de 3px à 2px */
+        }
+
+        .totals {
+            margin-top: 6px; /* Réduit de 8px à 6px */
+        }
+
         .footer {
-            margin-top: 8px;
-            padding-top: 6px;
+            margin-top: 6px; /* Réduit de 8px à 6px */
+            padding-top: 4px; /* Réduit de 6px à 4px */
+        }
+
+        /* Réduction de l'espacement des paragraphes dans le footer */
+        .footer p {
+            margin-top: 10px !important; /* Réduit de 15px à 10px */
+        }
+
+        /* Optimisation pour les tableaux longs */
+        .items-table tbody tr:last-child {
+            page-break-after: auto;
+        }
+
+        .footer {
             border-top: 1px solid #dee2e6;
             font-size: 8px;
             color: #6c757d;
@@ -587,7 +699,27 @@ function getClientInvoiceTemplate() {
         
         @media print {
             body {
-                padding: 5mm 6mm;
+                padding: 2mm 6mm; /* Réduit encore plus pour l'impression */
+            }
+
+            /* Optimisation supplémentaire pour l'impression */
+            .header {
+                margin-bottom: 2px;
+            }
+
+            .company-name {
+                font-size: 16px;
+                margin-bottom: 1px;
+            }
+
+            .project-info {
+                margin: 0 0 0 0; /* Pas de marge bottom du tout */
+                padding: 1px;
+            }
+
+            .items-table {
+                margin: 0 !important;
+                page-break-before: avoid !important;
             }
         }
         
@@ -849,6 +981,7 @@ function getClientInvoiceTemplate() {
         </div>
         
         <!-- Pied de page -->
+        <div class="footer-section">
         <div class="footer">
             <p><strong>Tous les montants sont en EUROS (€)</strong></p>
             
@@ -864,6 +997,7 @@ function getClientInvoiceTemplate() {
                 une indemnité calculée sur la base de trois fois le taux de l'intérêt légal en vigueur ainsi qu'une 
                 indemnité forfaitaire pour frais de recouvrement de 40 euros.
             </p>
+        </div>
         </div>
     </div>
 </body>
