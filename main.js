@@ -431,7 +431,8 @@ function getClientInvoiceTemplate() {
         
         .header {
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 16px; /* Plus d'espace entre titre et contenu */
+            padding-bottom: 4px; /* Espacement réduit */
         }
         
         .header table {
@@ -445,10 +446,11 @@ function getClientInvoiceTemplate() {
         }
         
         .company-name {
-            font-size: 18px; /* Réduit de 20px à 18px */
+            font-size: 32px; /* Titre très gros et imposant */
             font-weight: bold;
-            color: #333;
-            margin-bottom: 2px; /* Réduit de 3px à 2px */
+            color: #000; /* Noir pour économie d'encre */
+            margin-bottom: 6px; /* Plus d'espace */
+            letter-spacing: 1px; /* Espacement pour la lisibilité */
         }
 
         .company-details {
@@ -462,29 +464,34 @@ function getClientInvoiceTemplate() {
         }
         
         .invoice-number {
-            font-size: 12px; /* Réduit de 13px à 12px */
+            font-size: 12px; /* Taille réduite */
             font-weight: bold;
-            margin-bottom: 2px; /* Réduit de 4px à 2px */
+            margin-bottom: 3px;
+            color: #333; /* Gris foncé économique */
         }
 
         .invoice-number-big {
-            font-size: 20px; /* Réduit de 22px à 20px */
-            color: #000;
+            font-size: 18px; /* Réduit pour économie */
+            color: #000; /* Noir pour économie d'encre */
+            font-weight: bold;
         }
 
         .client-box {
-            border: 1px solid #000;
-            padding: 3px; /* Réduit de 4px à 3px */
-            font-size: 10px; /* Réduit de 11px à 10px */
-            background-color: white;
+            border: 1px solid #ccc; /* Bordure simple économique */
+            padding: 6px; /* Espacement réduit */
+            font-size: 11px;
+            background-color: white; /* Fond blanc pour économie */
+            border-radius: 3px; /* Coins légèrement arrondis */
         }
         
         .project-info {
-            border: 1px solid #000;
-            padding: 2px; /* Réduit de 4px à 2px */
-            margin: 1px 0 0 0; /* Pas de marge bottom */
-            background-color: white;
-            font-size: 10px; /* Réduit de 11px à 10px */
+            border: 1px solid #666; /* Bordure grise économique */
+            padding: 6px; /* Espacement réduit */
+            margin: 8px 0 12px 0; /* Plus d'espace avant le tableau */
+            background-color: #f8f8f8; /* Gris très léger économique */
+            font-size: 11px; /* Taille standard */
+            border-radius: 3px; /* Coins légèrement arrondis */
+            font-weight: bold; /* Poids standard */
         }
         
         .project-info table {
@@ -506,40 +513,49 @@ function getClientInvoiceTemplate() {
         .items-table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0; /* Suppression des marges */
+            margin: 16px 0 8px 0; /* Plus d'espace avant le tableau */
             font-size: 10px;
+            border: 1px solid #333; /* Bordure simple noire */
         }
         
         .items-table th {
-            background: white;
-            color: #000;
-            padding: 6px 4px;
+            background: #e8e8e8; /* Gris léger économique */
+            color: #000; /* Texte noir */
+            padding: 8px 6px; /* Espacement standard */
             text-align: left;
             font-weight: bold;
-            border: 1px solid #000;
+            border: 1px solid #333; /* Bordures simples */
             font-size: 10px;
+            text-transform: uppercase;
         }
         
         .items-table td {
-            padding: 3px 4px;
-            border: 1px solid #000;
+            padding: 6px 4px; /* Espacement économique */
+            border: 1px solid #ccc; /* Bordures grises économiques */
             vertical-align: top;
-            font-size: 9px;
+            font-size: 9px; /* Taille compacte */
             background: white;
+        }
+
+        /* Alternance légère pour économie d'encre */
+        .items-table tbody tr:nth-child(even) {
+            background-color: #f5f5f5; /* Gris très très léger */
         }
         
         .employee-group {
-            background: white;
+            background: #d0d0d0 !important; /* Gris moyen économique */
             font-weight: bold;
-            border: 2px solid #000 !important;
+            border: 1px solid #333 !important;
         }
-        
+
         .employee-group td {
-            border-top: 2px solid #000 !important;
-            border-bottom: 2px solid #000 !important;
-            border-left: 2px solid #000 !important;
-            border-right: 2px solid #000 !important;
-            background: white !important;
+            border: 1px solid #333 !important; /* Bordures simples */
+            background: #d0d0d0 !important; /* Gris moyen */
+            color: #000 !important; /* Texte noir */
+            padding: 6px 4px !important; /* Espacement standard */
+            font-size: 10px !important; /* Taille standard */
+            text-transform: uppercase;
+            font-weight: bold;
         }
         
         .amount {
@@ -548,34 +564,39 @@ function getClientInvoiceTemplate() {
         }
         
         .totals {
-            margin-top: 8px;
+            margin-top: 12px; /* Espacement simple */
             text-align: right;
+            padding: 6px; /* Espacement réduit */
+            background: white; /* Fond blanc économique */
+            border: 1px solid #333; /* Bordure simple */
         }
         
         .totals-table {
-            width: 200px;
+            width: 200px; /* Taille standard */
             border-collapse: collapse;
             margin-left: auto;
-            font-size: 10px;
+            font-size: 11px; /* Taille économique */
+            border: 1px solid #333; /* Bordure simple */
         }
         
         .totals-table td {
-            padding: 4px 6px;
-            border: 1px solid #000;
+            padding: 6px 8px; /* Espacement économique */
+            border: 1px solid #ccc; /* Bordures grises économiques */
             background: white;
         }
-        
+
         .totals-table .label {
-            background: white;
+            background: #f0f0f0; /* Gris très léger économique */
             font-weight: bold;
+            color: #333; /* Couleur grise économique */
         }
-        
+
         .totals-table .total-final {
-            background: white;
-            color: #000;
+            background: #333 !important; /* Gris foncé économique */
+            color: white !important; /* Texte blanc */
             font-weight: bold;
-            font-size: 11px;
-            border: 2px solid #000;
+            font-size: 12px; /* Taille standard */
+            border: 1px solid #333; /* Bordure simple */
         }
         
         .items-table td[rowspan] {
@@ -638,21 +659,12 @@ function getClientInvoiceTemplate() {
             page-break-before: auto; /* Changé de avoid à auto */
         }
 
-        /* Optimisation de l'espace pour plus de contenu par page */
-        .header {
-            margin-bottom: 3px; /* Réduit davantage de 6px à 3px */
+        /* Optimisation moderne de l'espace */
+        .invoice-container {
+            padding: 8px 0; /* Espacement moderne du conteneur */
         }
 
-        .project-info {
-            margin: 1px 0 0 0; /* Pas de marge bottom pour coller au tableau */
-            padding: 2px; /* Réduit de 3px à 2px */
-            font-size: 10px; /* Réduction de la taille de police */
-        }
-
-        .items-table {
-            margin: 0; /* Suppression complète des marges */
-            page-break-before: avoid !important; /* Force à rester sur la même page */
-        }
+        /* Les nouvelles marges modernes sont déjà appliquées dans les styles principaux */
 
         .items-table th {
             padding: 5px 4px; /* Réduit de 6px à 5px */
@@ -689,12 +701,15 @@ function getClientInvoiceTemplate() {
         }
         
         .payment-conditions {
-            background: white;
-            border: 1px solid #000;
-            padding: 4px;
-            margin-top: 6px;
+            background: #f0f0f0; /* Gris léger économique */
+            border: 1px solid #666; /* Bordure grise économique */
+            padding: 8px; /* Espacement standard */
+            margin-top: 12px; /* Espacement standard */
             font-weight: bold;
-            font-size: 10px;
+            font-size: 11px; /* Taille économique */
+            border-radius: 3px; /* Coins légèrement arrondis */
+            color: #000; /* Texte noir */
+            text-align: center;
         }
         
         @media print {
@@ -708,8 +723,8 @@ function getClientInvoiceTemplate() {
             }
 
             .company-name {
-                font-size: 16px;
-                margin-bottom: 1px;
+                font-size: 28px; /* Grande taille même en impression */
+                margin-bottom: 4px;
             }
 
             .project-info {
