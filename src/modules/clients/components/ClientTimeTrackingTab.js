@@ -30,6 +30,7 @@ const ClientTimeTrackingTab = ({ client }) => {
   const [expandedEmployees, setExpandedEmployees] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState({});
+  const [viewMode, setViewMode] = useState('detailed'); // 'detailed' ou 'simple'
 
   // Statistiques globales de la semaine
   const [weeklyStats, setWeeklyStats] = useState({
@@ -195,6 +196,16 @@ const ClientTimeTrackingTab = ({ client }) => {
     stats.totalEmployees = employeesWithContracts.length;
     stats.totalContracts = clientContracts.length;
     setWeeklyStats(stats);
+  };
+
+  // Handler pour sauvegarder les pointages depuis le tableau
+  const handleSaveTimeEntry = async (employeeId, contractId, date, entryData) => {
+    try {
+      await saveTimeEntry(employeeId, contractId, date, entryData.totalHours, entryData.notes || '');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      throw error;
+    }
   };
 
   // Vérifier si une date est dans la période du contrat d'un employé
@@ -463,6 +474,124 @@ const ClientTimeTrackingTab = ({ client }) => {
           </div>
         </div>
       </div>
+    );
+  };
+
+  // Composant ligne pour l'emploi du temps hebdomadaire
+  const WeeklyScheduleRow = ({ employee, contract, weekDays, onSave, isSaving }) => {
+    const [editingCell, setEditingCell] = useState(null);
+    const [tempHours, setTempHours] = useState({});
+
+    const handleCellEdit = (dayIndex, currentHours) => {
+      setEditingCell(dayIndex);
+      setTempHours({ ...tempHours, [dayIndex]: currentHours || '' });
+    };
+
+    const handleSave = async (dayIndex) => {
+      const hours = tempHours[dayIndex];
+      if (!hours || parseFloat(hours) < 0) {
+        toast.error('Veuillez entrer un nombre d\'heures valide');
+        return;
+      }
+
+      try {
+        const hoursNum = parseFloat(hours);
+        const day = weekDays[dayIndex];
+        await onSave(employee.id, contract.id, day, hoursNum);
+        setEditingCell(null);
+        toast.success(`Heures sauvegardées pour ${employee.firstName} ${employee.lastName}`);
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        toast.error('Erreur lors de la sauvegarde');
+      }
+    };
+
+    const handleKeyPress = (e, dayIndex) => {
+      if (e.key === 'Enter') {
+        handleSave(dayIndex);
+      } else if (e.key === 'Escape') {
+        setEditingCell(null);
+      }
+    };
+
+    const getEntryForDay = (day) => {
+      const dayKey = day.toISOString().split('T')[0];
+      return weeklyTimeEntries[employee.id]?.[dayKey];
+    };
+
+    return (
+      <tr className="border-b border-gray-100 hover:bg-gray-50">
+        <td className="px-3 py-2 border-r border-gray-200 bg-gray-50">
+          <div className="flex items-center space-x-2">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+              <span className="text-blue-600 font-medium text-xs">
+                {employee.firstName?.[0]}{employee.lastName?.[0]}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-medium text-xs">
+                {employee.firstName} {employee.lastName}
+              </span>
+              <span className="text-xs text-gray-500">
+                {contract.title}
+              </span>
+            </div>
+          </div>
+        </td>
+        {weekDays.map((day, dayIndex) => {
+          const entry = getEntryForDay(day);
+          const dayKey = day.toISOString().split('T')[0];
+          const savingKey = `${employee.id}_${contract.id}_${dayKey}`;
+          const isCurrentlyEditing = editingCell === dayIndex;
+          const cellIsSaving = isSaving[savingKey];
+
+          return (
+            <td key={dayIndex} className="px-2 py-2 text-center border-r border-gray-100">
+              {isCurrentlyEditing ? (
+                <input
+                  type="number"
+                  value={tempHours[dayIndex] || ''}
+                  onChange={(e) => setTempHours({ ...tempHours, [dayIndex]: e.target.value })}
+                  onKeyPress={(e) => handleKeyPress(e, dayIndex)}
+                  onBlur={() => setEditingCell(null)}
+                  className="w-12 px-1 py-1 border border-blue-300 rounded text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0"
+                  step="0.5"
+                  min="0"
+                  autoFocus
+                />
+              ) : (
+                <div
+                  onClick={() => handleCellEdit(dayIndex, entry?.totalHours)}
+                  className={`cursor-pointer hover:bg-blue-50 px-1 py-1 rounded text-xs min-h-[20px] flex items-center justify-center ${
+                    entry?.totalHours ? 'font-medium text-blue-700' : 'text-gray-400'
+                  } ${cellIsSaving ? 'opacity-50' : ''}`}
+                >
+{cellIsSaving ? '...' : (entry?.totalHours ? `${entry.totalHours}h` : '-')}
+                </div>
+              )}
+              {entry?.status && (
+                <div className={`text-xs mt-1 ${
+                  entry.status === 'validated' ? 'text-green-600' :
+                  entry.status === 'invoiced' ? 'text-blue-600' :
+                  'text-yellow-600'
+                }`}>
+                  {entry.status === 'validated' ? '✓' :
+                   entry.status === 'invoiced' ? '€' : '•'}
+                </div>
+              )}
+            </td>
+          );
+        })}
+        <td className="px-3 py-2 text-center">
+          <div className="text-xs font-medium text-gray-700">
+            {weekDays.reduce((total, day) => {
+              const entry = getEntryForDay(day);
+              return total + (parseFloat(entry?.totalHours) || 0);
+            }, 0).toFixed(1)}h
+          </div>
+        </td>
+      </tr>
     );
   };
 
@@ -753,6 +882,28 @@ const ClientTimeTrackingTab = ({ client }) => {
                 Employés et leurs missions ({employeesWithContracts.length})
               </h3>
               <div className="flex space-x-2">
+                <div className="flex space-x-2 mr-4">
+                  <button
+                    onClick={() => setViewMode('detailed')}
+                    className={`px-3 py-2 text-xs rounded-md transition-colors ${
+                      viewMode === 'detailed'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Vue détaillée
+                  </button>
+                  <button
+                    onClick={() => setViewMode('simple')}
+                    className={`px-3 py-2 text-xs rounded-md transition-colors ${
+                      viewMode === 'simple'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Vue tableau
+                  </button>
+                </div>
                 <button
                   onClick={() => setExpandedEmployees(new Set(employeesWithContracts.map(emp => emp.id)))}
                   className="text-sm text-blue-600 hover:text-blue-700"
@@ -769,12 +920,77 @@ const ClientTimeTrackingTab = ({ client }) => {
               </div>
             </div>
             
-            {employeesWithContracts.map((employee) => (
-              <EmployeeAccordion
-                key={employee.id}
-                employee={employee}
-              />
-            ))}
+{viewMode === 'detailed' ? (
+              employeesWithContracts.map((employee) => (
+                <EmployeeAccordion
+                  key={employee.id}
+                  employee={employee}
+                />
+              ))
+            ) : (
+              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-200">
+                          Employé
+                        </th>
+                        {getWeekDays(currentWeekStart).map((day, index) => (
+                          <th key={index} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-r border-gray-100">
+                            <div className="flex flex-col">
+                              <span className="text-xs">
+                                {day.toLocaleDateString('fr-FR', { weekday: 'short' })}
+                              </span>
+                              <span className="text-xs font-normal text-gray-400">
+                                {day.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+                              </span>
+                            </div>
+                          </th>
+                        ))}
+                        <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {employeesWithContracts.map(employee => {
+                        const contract = employee.contractInfo;
+                        const weekDays = getWeekDays(currentWeekStart);
+
+                        return (
+                          <WeeklyScheduleRow
+                            key={employee.id}
+                            employee={employee}
+                            contract={contract}
+                            weekDays={weekDays}
+                            onSave={async (employeeId, contractId, day, hours) => {
+                              const dayKey = day.toISOString().split('T')[0];
+                              const entryKey = `${employeeId}_${contractId}_${dayKey}`;
+                              setIsSaving(prev => ({ ...prev, [entryKey]: true }));
+                              try {
+                                await handleSaveTimeEntry(employeeId, contractId, day, {
+                                  totalHours: hours,
+                                  status: 'pending'
+                                });
+                              } finally {
+                                setIsSaving(prev => ({ ...prev, [entryKey]: false }));
+                              }
+                            }}
+                            isSaving={isSaving}
+                          />
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {employeesWithContracts.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Aucun employé assigné à ce client pour cette semaine
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
