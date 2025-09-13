@@ -44,6 +44,7 @@ function InvoiceForm() {
     const [selectedWorkPeriods, setSelectedWorkPeriods] = useState([]);
     const [timeEntries, setTimeEntries] = useState([]);
     const [groupedTimeEntries, setGroupedTimeEntries] = useState({});
+    const [loadingMessage, setLoadingMessage] = useState('Récupération des données...');
 
     // État du formulaire
     const [invoiceData, setInvoiceData] = useState({
@@ -147,6 +148,7 @@ function InvoiceForm() {
 
         try {
             setIsLoading(true);
+            setLoadingMessage('Récupération des contrats du client...');
 
             // Récupérer tous les contrats du client
             const allContracts = await ContractService.getAllContracts();
@@ -157,6 +159,7 @@ function InvoiceForm() {
             );
 
             setContracts(clientContracts);
+            setLoadingMessage('Génération des périodes de travail...');
 
             // Générer les périodes de travail pour la facturation
             const periods = generateWorkPeriods(clientContracts);
@@ -269,6 +272,8 @@ function InvoiceForm() {
 
             setTimeEntries(timeEntriesData);
 
+            setLoadingMessage('Filtrage des données de pointage...');
+            
             // Filtrer selon l'intervalle sélectionné ET les work periods sélectionnés
             const selectedWorkPeriodIds = workPeriods.filter(p => p.selected).map(p => p.id);
             
@@ -293,8 +298,10 @@ function InvoiceForm() {
                 return dateInRange && matchesSelectedPeriod;
             });
 
+            setLoadingMessage('Groupement des données par employé...');
             const grouped = await groupTimeEntriesByEmployee(filtered, invoiceData.periodStart, invoiceData.periodEnd);
             
+            setLoadingMessage('Finalisation des données...');
             // Ajouter les employés sélectionnés qui n'ont pas de pointage (avec 0 heures)
             const selectedWorkPeriods = workPeriods.filter(p => p.selected);
             for (const workPeriod of selectedWorkPeriods) {
@@ -321,6 +328,7 @@ function InvoiceForm() {
                 }
             }
             
+            setLoadingMessage('Préparation de l\'affichage...');
             setGroupedTimeEntries(grouped);
 
         } catch (error) {
@@ -669,9 +677,23 @@ function InvoiceForm() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const nextStep = () => {
+    const nextStep = async () => {
         if (validateStep(currentStep)) {
+            // Afficher le loading pendant la transition
+            setIsLoading(true);
+            
+            if (currentStep === 1) {
+                setLoadingMessage('Préparation de l\'étape suivante...');
+                // Petite pause pour que l'utilisateur voie le message
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } else if (currentStep === 2) {
+                setLoadingMessage('Préparation des données de pointage...');
+                // Petite pause pour l'étape 3 qui va charger les données de pointage
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
             setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+            setIsLoading(false);
         }
     };
 
@@ -1035,7 +1057,7 @@ function InvoiceForm() {
                             {isLoading ? (
                                 <div className="text-center py-8">
                                     <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                                    <p className="text-gray-600">Chargement des contrats...</p>
+                                    <p className="text-gray-600">{loadingMessage}</p>
                                 </div>
                             ) : workPeriods.length === 0 ? (
                                 <div className="text-center py-8">
@@ -1181,7 +1203,7 @@ function InvoiceForm() {
                                 {isLoading ? (
                                     <div className="text-center py-8">
                                         <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                                        <p className="text-gray-600">Chargement des données de pointage...</p>
+                                        <p className="text-gray-600">{loadingMessage}</p>
                                     </div>
                                 ) : Object.keys(groupedTimeEntries).length === 0 ? (
                                     <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1678,10 +1700,24 @@ function InvoiceForm() {
                                 <button
                                     type="button"
                                     onClick={nextStep}
-                                    className="flex items-center px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    disabled={isLoading}
+                                    className={`flex items-center px-6 py-2 rounded-lg transition-colors ${
+                                        isLoading 
+                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                                    }`}
                                 >
-                                    Suivant
-                                    <ChevronRightIcon className="h-5 w-5 ml-2" />
+                                    {isLoading ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent mr-2"></div>
+                                            Chargement...
+                                        </>
+                                    ) : (
+                                        <>
+                                            Suivant
+                                            <ChevronRightIcon className="h-5 w-5 ml-2" />
+                                        </>
+                                    )}
                                 </button>
                             ) : (
                                 <button
