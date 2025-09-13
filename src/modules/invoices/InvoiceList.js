@@ -31,6 +31,8 @@ function InvoiceList() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
 
   // Charger les factures
   useEffect(() => {
@@ -110,17 +112,30 @@ function InvoiceList() {
     setFilteredInvoices(filtered);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette facture ?')) {
+  const handleDelete = (invoice) => {
+    setInvoiceToDelete(invoice);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (invoiceToDelete) {
       try {
-        await InvoiceService.deleteInvoice(id);
+        await InvoiceService.deleteInvoice(invoiceToDelete.id);
         toast.success('Facture supprimée avec succès');
         loadInvoices();
       } catch (error) {
         console.error('Erreur lors de la suppression:', error);
         toast.error('Erreur lors de la suppression de la facture');
+      } finally {
+        setShowDeleteModal(false);
+        setInvoiceToDelete(null);
       }
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setInvoiceToDelete(null);
   };
 
   const getStatusColor = (status) => {
@@ -349,7 +364,7 @@ function InvoiceList() {
                             <EyeIcon className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => handleDelete(invoice.id)}
+                            onClick={() => handleDelete(invoice)}
                             className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Supprimer"
                           >
@@ -408,7 +423,50 @@ function InvoiceList() {
         )}
       </div>
 
-      <ToastContainer 
+      {/* Modal de confirmation de suppression */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6">
+              {/* Icône et titre */}
+              <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+              </div>
+
+              <div className="text-center">
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Supprimer la facture
+                </h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Êtes-vous sûr de vouloir supprimer la facture{' '}
+                  <span className="font-semibold text-gray-900">
+                    {invoiceToDelete?.invoiceNumber}
+                  </span>{' '}
+                  ? Cette action est irréversible.
+                </p>
+              </div>
+
+              {/* Boutons */}
+              <div className="flex space-x-3">
+                <button
+                  onClick={cancelDelete}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer
         position="bottom-right"
         toastClassName="rounded-lg"
         progressClassName="bg-blue-600"
