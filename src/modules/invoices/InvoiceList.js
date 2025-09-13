@@ -63,39 +63,48 @@ function InvoiceList() {
       filtered = filtered.filter(invoice =>
         invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.clientCompany?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         invoice.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
+    // Filtre par statut
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(invoice => invoice.status === statusFilter);
+    }
 
     // Filtre par date
     if (dateFilter !== 'all') {
       const now = new Date();
-      let startDate;
+      let startDate, endDate;
 
       switch (dateFilter) {
         case 'thisMonth':
           startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
           break;
         case 'lastMonth':
           startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-          const endDate = new Date(now.getFullYear(), now.getMonth(), 0);
-          filtered = filtered.filter(invoice => {
-            const invoiceDate = new Date(invoice.invoiceDate);
-            return invoiceDate >= startDate && invoiceDate <= endDate;
-          });
-          return;
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+          break;
         case 'thisYear':
           startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = new Date(now.getFullYear(), 11, 31);
           break;
         default:
-          return;
+          break;
       }
 
-      filtered = filtered.filter(invoice => {
-        const invoiceDate = new Date(invoice.invoiceDate);
-        return invoiceDate >= startDate;
-      });
+      if (startDate) {
+        filtered = filtered.filter(invoice => {
+          const invoiceDate = new Date(invoice.invoiceDate);
+          if (endDate) {
+            return invoiceDate >= startDate && invoiceDate <= endDate;
+          } else {
+            return invoiceDate >= startDate;
+          }
+        });
+      }
     }
 
     setFilteredInvoices(filtered);
@@ -222,7 +231,7 @@ function InvoiceList() {
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Rechercher..."
+                  placeholder="Rechercher par numéro, client, entreprise..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
