@@ -1,6 +1,5 @@
 // src/modules/invoices/InvoiceForm.js
 import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeftIcon,
@@ -305,13 +304,13 @@ function InvoiceForm() {
                 const contractId = contractIds[i];
                 const contractPeriods = contractGroups[contractId];
 
-                // Mettre à jour AVANT le traitement avec flushSync
-                flushSync(() => {
+                // Mettre à jour AVANT le traitement
+                setTimeout(() => {
                     setProcessedContracts(i);
                     const progress = Math.round((i / contractIds.length) * 80) + 10; // 10-90%
                     setLoadingProgress(progress);
                     setLoadingMessage(`Traitement du contrat ${i + 1}/${contractIds.length}...`);
-                });
+                }, 0);
 
                 console.log(`Traitement contrat ${i + 1}/${contractIds.length}, progress: ${Math.round((i / contractIds.length) * 80) + 10}%`);
 
@@ -348,12 +347,12 @@ function InvoiceForm() {
 
                 allTimeEntries.push(...filteredEntries);
 
-                // Mettre à jour APRÈS le traitement avec flushSync
-                flushSync(() => {
+                // Mettre à jour APRÈS le traitement
+                setTimeout(() => {
                     setProcessedContracts(i + 1);
                     const finalProgress = Math.round(((i + 1) / contractIds.length) * 80) + 10;
                     setLoadingProgress(finalProgress);
-                });
+                }, 0);
 
                 console.log(`Contrat ${i + 1} traité, ${filteredEntries.length} entrées trouvées`);
 
