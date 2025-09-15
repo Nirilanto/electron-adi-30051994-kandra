@@ -244,7 +244,7 @@ const ClientTimeTrackingTab = ({ client }) => {
         try {
           await handleSaveTimeEntry(change.employeeId, change.contractId, change.day, {
             totalHours: change.hours,
-            status: 'pending'
+            status: 'validated'
           });
           successCount++;
         } catch (error) {
@@ -334,7 +334,7 @@ const ClientTimeTrackingTab = ({ client }) => {
         billingRate: contract?.billingRate || 0,
         workType: 'normal',
         notes,
-        status: 'draft'
+        status: 'validated'
       };
       
       const existingEntry = weeklyTimeEntries[employeeId]?.[dateStr];
@@ -636,81 +636,91 @@ const ClientTimeTrackingTab = ({ client }) => {
             </div>
           </div>
         </td>
-        {weekDays.map((day, dayIndex) => {
+{weekDays.map((day, dayIndex) => {
           const entry = getEntryForDay(day);
           const dayKey = day.toISOString().split('T')[0];
           const savingKey = `${employee.id}_${contract.id}_${dayKey}`;
-          const isCurrentlyEditing = editingCell === dayIndex;
           const cellIsSaving = isSaving[savingKey];
+          const isInContractPeriod = isDateInContractPeriod(day, contract);
+
+          // Si la date n'est pas dans la période du contrat, on cache la cellule
+          if (!isInContractPeriod) {
+            return (
+              <td key={dayIndex} className="px-2 py-2 text-center border-r border-gray-100 bg-gray-50">
+                <div className="text-xs text-gray-300">-</div>
+              </td>
+            );
+          }
 
           return (
             <td key={dayIndex} className="px-2 py-2 text-center border-r border-gray-100">
               {editMode ? (
                 // Mode édition : input toujours visible
                 <div className="flex flex-col items-center">
-                  <input
-                    type="number"
-                    value={(() => {
-                      const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
-                      const pendingChange = pendingChanges[changeKey];
-                      return pendingChange ? pendingChange.hours : (entry?.totalHours || '');
-                    })()}
-                    onChange={(e) => handleEditModeChange(dayIndex, e.target.value)}
-                    className={`w-12 px-1 py-1 border rounded text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
-                      pendingChanges[`${employee.id}_${contract.id}_${dayKey}`]
-                        ? 'border-orange-300 bg-orange-50'
-                        : 'border-gray-300'
-                    }`}
-                    placeholder="0"
-                    step="0.5"
-                    min="0"
-                  />
-                  {entry?.status && (
-                    <div className={`text-xs mt-1 ${
-                      entry.status === 'validated' ? 'text-green-600' :
-                      entry.status === 'invoiced' ? 'text-blue-600' :
-                      'text-yellow-600'
-                    }`}>
-                      {entry.status === 'validated' ? '✓' :
-                       entry.status === 'invoiced' ? '€' : '•'}
-                    </div>
-                  )}
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="number"
+                      value={(() => {
+                        const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
+                        const pendingChange = pendingChanges[changeKey];
+                        return pendingChange ? pendingChange.hours : (entry?.totalHours || '');
+                      })()}
+                      onChange={(e) => handleEditModeChange(dayIndex, e.target.value)}
+                      className={`w-12 px-1 py-1 border rounded text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${
+                        pendingChanges[`${employee.id}_${contract.id}_${dayKey}`]
+                          ? 'border-orange-300 bg-orange-50'
+                          : 'border-gray-300'
+                      }`}
+                      placeholder="0"
+                      step="0.5"
+                      min="0"
+                    />
+                    <button
+                      onClick={() => {
+                        const currentValue = (() => {
+                          const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
+                          const pendingChange = pendingChanges[changeKey];
+                          return parseFloat(pendingChange ? pendingChange.hours : (entry?.totalHours || 0));
+                        })();
+                        let newValue;
+                        if (currentValue === 4) {
+                          newValue = 8;
+                        } else {
+                          newValue = 4;
+                        }
+                        handleEditModeChange(dayIndex, newValue);
+                      }}
+                      className="w-6 h-6 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded text-xs font-bold flex items-center justify-center"
+                      title={(() => {
+                        const currentValue = (() => {
+                          const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
+                          const pendingChange = pendingChanges[changeKey];
+                          return parseFloat(pendingChange ? pendingChange.hours : (entry?.totalHours || 0));
+                        })();
+                        if (currentValue === 4) return "Mettre 8 heures";
+                        return "Mettre 4 heures";
+                      })()}
+                    >
+                      {(() => {
+                        const currentValue = (() => {
+                          const changeKey = `${employee.id}_${contract.id}_${dayKey}`;
+                          const pendingChange = pendingChanges[changeKey];
+                          return parseFloat(pendingChange ? pendingChange.hours : (entry?.totalHours || 0));
+                        })();
+                        if (currentValue === 4) return "8";
+                        return "4";
+                      })()}
+                    </button>
+                  </div>
                 </div>
-              ) : isCurrentlyEditing ? (
-                // Mode normal : édition cellule par cellule
-                <input
-                  type="number"
-                  value={tempHours[dayIndex] || ''}
-                  onChange={(e) => setTempHours({ ...tempHours, [dayIndex]: e.target.value })}
-                  onKeyPress={(e) => handleKeyPress(e, dayIndex)}
-                  onBlur={() => setEditingCell(null)}
-                  className="w-12 px-1 py-1 border border-blue-300 rounded text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="0"
-                  step="0.5"
-                  min="0"
-                  autoFocus
-                />
               ) : (
-                // Mode normal : affichage simple
-                <div>
-                  <div
-                    onClick={() => handleCellEdit(dayIndex, entry?.totalHours)}
-                    className={`cursor-pointer hover:bg-blue-50 px-1 py-1 rounded text-xs min-h-[20px] flex items-center justify-center ${
-                      entry?.totalHours ? 'font-medium text-blue-700' : 'text-gray-400'
-                    } ${cellIsSaving ? 'opacity-50' : ''}`}
-                  >
+                // Mode normal : affichage simple seulement (pas d'édition)
+                <div className="flex items-center justify-center">
+                  <div className={`px-1 py-1 rounded text-xs min-h-[20px] flex items-center justify-center ${
+                    entry?.totalHours ? 'font-medium text-blue-700' : 'text-gray-400'
+                  } ${cellIsSaving ? 'opacity-50' : ''}`}>
                     {cellIsSaving ? '...' : (entry?.totalHours ? `${entry.totalHours}h` : '-')}
                   </div>
-                  {entry?.status && (
-                    <div className={`text-xs mt-1 ${
-                      entry.status === 'validated' ? 'text-green-600' :
-                      entry.status === 'invoiced' ? 'text-blue-600' :
-                      'text-yellow-600'
-                    }`}>
-                      {entry.status === 'validated' ? '✓' :
-                       entry.status === 'invoiced' ? '€' : '•'}
-                    </div>
-                  )}
                 </div>
               )}
             </td>
@@ -1164,7 +1174,7 @@ const ClientTimeTrackingTab = ({ client }) => {
                               try {
                                 await handleSaveTimeEntry(employeeId, contractId, day, {
                                   totalHours: hours,
-                                  status: 'pending'
+                                  status: 'validated'
                                 });
                               } finally {
                                 setIsSaving(prev => ({ ...prev, [entryKey]: false }));
