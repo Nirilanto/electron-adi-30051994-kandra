@@ -1332,6 +1332,7 @@ function InvoiceForm() {
                                 Finalisation de la facture
                             </h2>
 
+                            {!isLoadingTimeTracking && (
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                                 <div className="space-y-1">
                                     <label className="block text-sm font-medium text-gray-700">
@@ -1398,6 +1399,7 @@ function InvoiceForm() {
                                     />
                                 </div>
                             </div>
+                            )}
 
                             {/* Tableau des heures de pointage */}
                             <div className="mb-6">
@@ -1407,29 +1409,54 @@ function InvoiceForm() {
                                 </h3>
 
                                 {isLoadingTimeTracking ? (
-                                    <div className="text-center py-8">
-                                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                                        <p className="text-gray-600 mb-4">{loadingMessage}</p>
-                                        {totalContracts > 0 && (
-                                            <div className="max-w-md mx-auto">
-                                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                    <>
+                                        {/* Barre de progression en haut */}
+                                        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <p className="text-blue-800 font-medium">{loadingMessage}</p>
+                                                <span className="text-blue-600 text-sm font-medium">{loadingProgress}%</span>
+                                            </div>
+                                            <div className="w-full bg-blue-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                                    style={{width: `${loadingProgress}%`}}
+                                                ></div>
+                                            </div>
+                                            {totalContracts > 0 && (
+                                                <div className="flex justify-between text-xs text-blue-600 mt-2">
                                                     <span>
                                                         {totalEmployees > 0
                                                             ? `Employés groupés: ${processedEmployees}/${totalEmployees}`
                                                             : `Contrats traités: ${processedContracts}/${totalContracts}`
                                                         }
                                                     </span>
-                                                    <span>{loadingProgress}%</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div
-                                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                                                        style={{width: `${loadingProgress}%`}}
-                                                    ></div>
+                                            )}
+                                        </div>
+
+                                        {/* Skeleton du tableau */}
+                                        <div className="space-y-4">
+                                            {[1, 2, 3].map((i) => (
+                                                <div key={i} className="bg-white border border-gray-200 rounded-lg p-4">
+                                                    <div className="flex items-center space-x-4 mb-4">
+                                                        <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse"></div>
+                                                        <div className="space-y-2">
+                                                            <div className="w-32 h-4 bg-gray-200 rounded animate-pulse"></div>
+                                                            <div className="w-24 h-3 bg-gray-200 rounded animate-pulse"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-7 gap-2">
+                                                        {[1, 2, 3, 4, 5, 6, 7].map((j) => (
+                                                            <div key={j} className="space-y-2">
+                                                                <div className="w-full h-3 bg-gray-200 rounded animate-pulse"></div>
+                                                                <div className="w-12 h-8 bg-gray-200 rounded animate-pulse mx-auto"></div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    </>
                                 ) : Object.keys(groupedTimeEntries).length === 0 ? (
                                     <div className="text-center py-8 bg-gray-50 rounded-lg">
                                         <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -1757,6 +1784,7 @@ function InvoiceForm() {
 
 
                             {/* Récapitulatif final */}
+                            {!isLoadingTimeTracking && (
                             <div className="bg-gray-50 rounded-lg p-6">
                                 <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
                                     <BanknotesIcon className="h-5 w-5 mr-2 text-green-600" />
@@ -1902,6 +1930,7 @@ function InvoiceForm() {
                                     </div>
                                 </div>
                             </div>
+                            )}
                         </div>
                     )}
 
@@ -1948,7 +1977,7 @@ function InvoiceForm() {
                                 <button
                                     type="button"
                                     onClick={handleSubmit}
-                                    disabled={isSubmitting || isEdit}
+                                    disabled={isSubmitting || isLoadingTimeTracking || isEdit}
                                     className={`flex items-center px-8 py-2 rounded-lg transition-colors ${
                                         isSubmitting || isEdit
                                             ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
