@@ -109,7 +109,7 @@ const Dashboard = () => {
     setStats(dashboardStats);
     
     const endingContracts = await DatabaseService.getEndingSoonContracts();
-    console.log("endingContracts    ------------------------ ", endingContracts);
+    // console.log("endingContracts    ------------------------ ", endingContracts);
     
     setEndingSoonContracts(endingContracts);
   };

@@ -1,5 +1,6 @@
 // src/modules/invoices/InvoiceForm.js
 import React, { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeftIcon,
@@ -45,6 +46,12 @@ function InvoiceForm() {
     const [timeEntries, setTimeEntries] = useState([]);
     const [groupedTimeEntries, setGroupedTimeEntries] = useState({});
     const [loadingMessage, setLoadingMessage] = useState('Récupération des données...');
+    const [loadingProgress, setLoadingProgress] = useState(0);
+    const [totalContracts, setTotalContracts] = useState(0);
+    const [processedContracts, setProcessedContracts] = useState(0);
+    const [isLoadingTimeTracking, setIsLoadingTimeTracking] = useState(false);
+    const [totalEmployees, setTotalEmployees] = useState(0);
+    const [processedEmployees, setProcessedEmployees] = useState(0);
 
     // État du formulaire
     const [invoiceData, setInvoiceData] = useState({
@@ -82,6 +89,7 @@ function InvoiceForm() {
     // Charger les données de pointage pour l'étape 3
     useEffect(() => {
         if (invoiceData.clientId && currentStep === 3 && !isFinalized) {
+            console.log('Démarrage du chargement des données de pointage...');
             loadTimeTrackingData();
         }
     }, [invoiceData.clientId, invoiceData.periodStart, invoiceData.periodEnd, currentStep, workPeriods, isFinalized]);
@@ -264,50 +272,116 @@ function InvoiceForm() {
     const loadTimeTrackingData = async () => {
         if (!invoiceData.clientId) return;
 
+        console.log('=== DÉBUT CHARGEMENT TIMETRACKING ===');
+
         try {
-            setIsLoading(true);
+            // Utiliser un loading spécifique pour les données de pointage
+            setIsLoadingTimeTracking(true);
+            setLoadingProgress(10);
+            setProcessedContracts(0);
 
-            // Récupérer les pointages pour ce client et cette période
-            const timeEntriesData = await TimeTrackingService.getTimeEntriesByClient(
-                invoiceData.clientId,
-                invoiceData.periodStart.toISOString(),
-                invoiceData.periodEnd.toISOString()
-            );
+            // Récupérer d'abord les périodes de travail sélectionnées
+            const selectedWorkPeriods = workPeriods.filter(p => p.selected);
+            console.log('Périodes sélectionnées:', selectedWorkPeriods.length);
+            setTotalContracts(selectedWorkPeriods.length);
 
-            setTimeEntries(timeEntriesData);
+            setLoadingMessage('Récupération des contrats du client...');
+            console.log('Message de chargement défini:', 'Récupération des contrats du client...');
 
-            setLoadingMessage('Filtrage des données de pointage...');
-            
-            // Filtrer selon l'intervalle sélectionné ET les work periods sélectionnés
-            const selectedWorkPeriodIds = workPeriods.filter(p => p.selected).map(p => p.id);
-            
-            const filtered = timeEntriesData.filter(entry => {
-                const entryDate = new Date(entry.date);
-                const dateInRange = entryDate >= invoiceData.periodStart && entryDate <= invoiceData.periodEnd;
-                
-                // Si aucune période de travail n'est sélectionnée, on prend tout dans la période
-                if (selectedWorkPeriodIds.length === 0) {
-                    return dateInRange;
+            // Grouper les périodes par contrat pour optimiser le traitement
+            const contractGroups = selectedWorkPeriods.reduce((acc, period) => {
+                if (!acc[period.contractId]) {
+                    acc[period.contractId] = [];
                 }
-                
-                // Sinon, il faut que l'entrée soit liée à une période sélectionnée
-                // Pour cela, on vérifie si l'entrée correspond à un contrat et employé d'une période sélectionnée
-                const matchesSelectedPeriod = selectedWorkPeriodIds.some(periodId => {
-                    const workPeriod = workPeriods.find(p => p.id === periodId);
-                    return workPeriod && 
-                           String(workPeriod.employeeId) === String(entry.employeeId) && 
-                           workPeriod.contractId === entry.contractId;
+                acc[period.contractId].push(period);
+                return acc;
+            }, {});
+
+            const allTimeEntries = [];
+            const contractIds = Object.keys(contractGroups);
+
+            // Traiter contrat par contrat
+            for (let i = 0; i < contractIds.length; i++) {
+                const contractId = contractIds[i];
+                const contractPeriods = contractGroups[contractId];
+
+                // Mettre à jour AVANT le traitement avec flushSync
+                flushSync(() => {
+                    setProcessedContracts(i);
+                    const progress = Math.round((i / contractIds.length) * 80) + 10; // 10-90%
+                    setLoadingProgress(progress);
+                    setLoadingMessage(`Traitement du contrat ${i + 1}/${contractIds.length}...`);
                 });
-                
-                return dateInRange && matchesSelectedPeriod;
+
+                console.log(`Traitement contrat ${i + 1}/${contractIds.length}, progress: ${Math.round((i / contractIds.length) * 80) + 10}%`);
+
+                // Pause pour voir la mise à jour
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Récupérer les pointages pour ce contrat spécifique
+                let contractTimeEntries;
+                try {
+                    contractTimeEntries = await TimeTrackingService.getTimeEntriesByContract(
+                        contractId,
+                        invoiceData.periodStart.toISOString(),
+                        invoiceData.periodEnd.toISOString()
+                    );
+                } catch (error) {
+                    console.warn(`Erreur lors du chargement du contrat ${contractId}, utilisation de la méthode alternative:`, error);
+                    // Fallback vers la méthode client si la méthode par contrat échoue
+                    const allClientEntries = await TimeTrackingService.getTimeEntriesByClient(
+                        invoiceData.clientId,
+                        invoiceData.periodStart.toISOString(),
+                        invoiceData.periodEnd.toISOString()
+                    );
+                    contractTimeEntries = allClientEntries.filter(entry => entry.contractId === contractId);
+                }
+
+                // Filtrer selon les employés sélectionnés pour ce contrat
+                const employeeIds = contractPeriods.map(p => p.employeeId);
+                const filteredEntries = contractTimeEntries.filter(entry => {
+                    const entryDate = new Date(entry.date);
+                    const dateInRange = entryDate >= invoiceData.periodStart && entryDate <= invoiceData.periodEnd;
+                    const employeeMatch = employeeIds.includes(entry.employeeId);
+                    return dateInRange && employeeMatch;
+                });
+
+                allTimeEntries.push(...filteredEntries);
+
+                // Mettre à jour APRÈS le traitement avec flushSync
+                flushSync(() => {
+                    setProcessedContracts(i + 1);
+                    const finalProgress = Math.round(((i + 1) / contractIds.length) * 80) + 10;
+                    setLoadingProgress(finalProgress);
+                });
+
+                console.log(`Contrat ${i + 1} traité, ${filteredEntries.length} entrées trouvées`);
+
+                // Pause pour permettre à l'UI de se mettre à jour
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            setTimeEntries(allTimeEntries);
+            setLoadingProgress(85);
+            setLoadingMessage('Groupement des données par employé...');
+
+            // Pause pour montrer le message
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const grouped = await groupTimeEntriesByEmployee(allTimeEntries, invoiceData.periodStart, invoiceData.periodEnd, (progressInfo) => {
+                setLoadingMessage(progressInfo.message);
+                setLoadingProgress(progressInfo.progress);
+                setProcessedEmployees(progressInfo.processedEmployees);
+                setTotalEmployees(progressInfo.totalEmployees);
             });
 
-            setLoadingMessage('Groupement des données par employé...');
-            const grouped = await groupTimeEntriesByEmployee(filtered, invoiceData.periodStart, invoiceData.periodEnd);
-            
+            setLoadingProgress(95);
             setLoadingMessage('Finalisation des données...');
+
+            // Pause pour montrer le message
+            await new Promise(resolve => setTimeout(resolve, 500));
+
             // Ajouter les employés sélectionnés qui n'ont pas de pointage (avec 0 heures)
-            const selectedWorkPeriods = workPeriods.filter(p => p.selected);
             for (const workPeriod of selectedWorkPeriods) {
                 if (!grouped[workPeriod.employeeId]) {
                     // Récupérer les données de l'employé
@@ -332,6 +406,7 @@ function InvoiceForm() {
                 }
             }
             
+            setLoadingProgress(100);
             setLoadingMessage('Préparation de l\'affichage...');
             setGroupedTimeEntries(grouped);
 
@@ -339,7 +414,12 @@ function InvoiceForm() {
             console.error('Erreur lors du chargement des données de pointage:', error);
             toast.error('Erreur lors du chargement des données de pointage');
         } finally {
-            setIsLoading(false);
+            setIsLoadingTimeTracking(false);
+            setLoadingProgress(0);
+            setProcessedContracts(0);
+            setTotalContracts(0);
+            setProcessedEmployees(0);
+            setTotalEmployees(0);
         }
     };
 
@@ -471,9 +551,64 @@ function InvoiceForm() {
         };
     };
 
-    const groupTimeEntriesByEmployee = async (entries, periodStart, periodEnd) => {
+    const groupTimeEntriesByEmployee = async (entries, periodStart, periodEnd, onProgress) => {
         try {
             const grouped = {};
+
+            // Grouper d'abord par employé pour compter
+            const employeeGroups = {};
+            const uniqueEmployeeIds = new Set();
+            const uniqueContractIds = new Set();
+
+            entries.forEach(entry => {
+                if (!employeeGroups[entry.employeeId]) {
+                    employeeGroups[entry.employeeId] = [];
+                }
+                employeeGroups[entry.employeeId].push(entry);
+                uniqueEmployeeIds.add(entry.employeeId);
+                uniqueContractIds.add(entry.contractId);
+            });
+
+            const employeeIds = Array.from(uniqueEmployeeIds);
+            console.log(`Groupement de ${employeeIds.length} employés...`);
+
+            // OPTIMISATION: Pré-charger tous les employés et contrats en une fois
+            if (onProgress) {
+                onProgress({
+                    message: `Chargement des données employés et contrats...`,
+                    progress: 85,
+                    processedEmployees: 0,
+                    totalEmployees: employeeIds.length
+                });
+            }
+
+            const employeesMap = {};
+            const contractsMap = {};
+
+            // Charger tous les employés en parallèle
+            const employeePromises = Array.from(uniqueEmployeeIds).map(async id => {
+                try {
+                    const employee = await EmployeeService.getEmployeeById(id);
+                    employeesMap[id] = employee;
+                } catch (error) {
+                    console.warn(`Employé ${id} non trouvé:`, error);
+                    employeesMap[id] = null;
+                }
+            });
+
+            // Charger tous les contrats en parallèle
+            const contractPromises = Array.from(uniqueContractIds).map(async id => {
+                try {
+                    const contract = await ContractService.getContractById(id);
+                    contractsMap[id] = contract;
+                } catch (error) {
+                    console.warn(`Contrat ${id} non trouvé:`, error);
+                    contractsMap[id] = null;
+                }
+            });
+
+            // Attendre que tous les chargements soient terminés
+            await Promise.all([...employeePromises, ...contractPromises]);
 
             // Générer toutes les semaines de la période sélectionnée
             const getAllWeeksInPeriod = (start, end) => {
@@ -491,11 +626,25 @@ function InvoiceForm() {
 
             const allWeeksInPeriod = getAllWeeksInPeriod(periodStart, periodEnd);
 
+            // Traiter toutes les entrées avec les données pré-chargées
             for (const entry of entries) {
+                // Mise à jour de la progression
+                if (onProgress) {
+                    const currentEmployeeIndex = employeeIds.indexOf(entry.employeeId);
+                    if (currentEmployeeIndex >= 0) {
+                        onProgress({
+                            message: `Groupement employé ${currentEmployeeIndex + 1}/${employeeIds.length}...`,
+                            progress: 85 + Math.round((currentEmployeeIndex / employeeIds.length) * 10), // 85-95%
+                            processedEmployees: currentEmployeeIndex,
+                            totalEmployees: employeeIds.length
+                        });
+                    }
+                }
+
+                // Initialiser l'employé s'il n'existe pas encore
                 if (!grouped[entry.employeeId]) {
-                    // Récupérer les données de l'employé
-                    const employee = await EmployeeService.getEmployeeById(entry.employeeId);
-                    
+                    const employee = employeesMap[entry.employeeId];
+
                     grouped[entry.employeeId] = {
                         employee: employee,
                         entries: [],
@@ -519,18 +668,15 @@ function InvoiceForm() {
                     });
                 }
 
-                // Enrichir l'entrée avec les données du contrat
+                // Enrichir l'entrée avec les données du contrat (OPTIMISÉ)
                 let enrichedEntry = { ...entry };
-                
+
                 if (entry.contractId) {
-                    try {
-                        const contract = await ContractService.getContractById(entry.contractId);
-                        if (contract) {
-                            enrichedEntry.contractTitle = contract.title || contract.jobTitle || 'Contrat sans titre';
-                            enrichedEntry.contractLocation = contract.location || '';
-                        }
-                    } catch (error) {
-                        console.warn(`Contrat ${entry.contractId} non trouvé:`, error);
+                    const contract = contractsMap[entry.contractId];
+                    if (contract) {
+                        enrichedEntry.contractTitle = contract.title || contract.jobTitle || 'Contrat sans titre';
+                        enrichedEntry.contractLocation = contract.location || '';
+                    } else {
                         enrichedEntry.contractTitle = 'Contrat non trouvé';
                     }
                 } else {
@@ -1086,10 +1232,29 @@ function InvoiceForm() {
                                 )}
                             </div>
 
-                            {isLoading ? (
+                            {isLoadingTimeTracking ? (
                                 <div className="text-center py-8">
                                     <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                                    <p className="text-gray-600">{loadingMessage}</p>
+                                    <p className="text-gray-600 mb-4">{loadingMessage}</p>
+                                    {totalContracts > 0 && (
+                                        <div className="max-w-md mx-auto">
+                                            <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                <span>
+                                                    {totalEmployees > 0
+                                                        ? `Employés groupés: ${processedEmployees}/${totalEmployees}`
+                                                        : `Contrats traités: ${processedContracts}/${totalContracts}`
+                                                    }
+                                                </span>
+                                                <span>{loadingProgress}%</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div
+                                                    className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                                    style={{width: `${loadingProgress}%`}}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ) : workPeriods.length === 0 ? (
                                 <div className="text-center py-8">
@@ -1241,10 +1406,29 @@ function InvoiceForm() {
                                     Heures de travail hebdomadaires
                                 </h3>
 
-                                {isLoading ? (
+                                {isLoadingTimeTracking ? (
                                     <div className="text-center py-8">
                                         <div className="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-4"></div>
-                                        <p className="text-gray-600">{loadingMessage}</p>
+                                        <p className="text-gray-600 mb-4">{loadingMessage}</p>
+                                        {totalContracts > 0 && (
+                                            <div className="max-w-md mx-auto">
+                                                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                                    <span>
+                                                        {totalEmployees > 0
+                                                            ? `Employés groupés: ${processedEmployees}/${totalEmployees}`
+                                                            : `Contrats traités: ${processedContracts}/${totalContracts}`
+                                                        }
+                                                    </span>
+                                                    <span>{loadingProgress}%</span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div
+                                                        className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
+                                                        style={{width: `${loadingProgress}%`}}
+                                                    ></div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 ) : Object.keys(groupedTimeEntries).length === 0 ? (
                                     <div className="text-center py-8 bg-gray-50 rounded-lg">
@@ -1748,7 +1932,7 @@ function InvoiceForm() {
                                             : 'bg-blue-600 text-white hover:bg-blue-700'
                                     }`}
                                 >
-                                    {isLoading ? (
+                                    {isLoadingTimeTracking ? (
                                         <>
                                             <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent mr-2"></div>
                                             Chargement...

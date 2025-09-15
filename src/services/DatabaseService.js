@@ -226,6 +226,9 @@ class DatabaseService {
 
   // Lire un enregistrement par ID
   async getById(entity, id) {
+    if (!id) {
+      throw new Error(`élément vec l'ID Undefined`);
+    }
     try {
       if (!this.initialized) {
         await this.initializeDatabase();
@@ -407,6 +410,7 @@ class DatabaseService {
 
         try {
           // Récupérer l'employé
+          if(!contract) return;
           const employee = await this.getEmployeeById(contract.employee_id);
           contract.employee_firstname = employee.firstname;
           contract.employee_lastname = employee.lastname;
@@ -493,7 +497,7 @@ class DatabaseService {
 
       // Récupérer tous les contrats actifs
       const activeContracts = await this.getContracts({});
-      console.log("activeContracts :::::::::::::::::::: ", activeContracts);
+      // console.log("activeContracts :::::::::::::::::::: ", activeContracts);
 
 
       // Filtrer ceux qui se terminent dans les 30 jours
