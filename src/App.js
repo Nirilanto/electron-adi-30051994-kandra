@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 // Composants de layout
 import Layout from "./components/Layout";
+import LicenseModal from "./components/LicenseModal";
 
 // Modules
 import Dashboard from "./modules/dashboard/Dashboard";
@@ -23,20 +24,32 @@ import { InvoiceList, InvoiceForm, InvoiceDetail } from './modules/invoices';
 
 // Services
 import DatabaseService from "./services/DatabaseService";
+import LicenseService from "./services/LicenseService";
 
 function App() {
   const [dbInitialized, setDbInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [licenseValid, setLicenseValid] = useState(false);
+  const [showLicenseModal, setShowLicenseModal] = useState(false);
 
-  // Initialiser la base de données au démarrage
+  // Initialiser la base de données et vérifier la licence au démarrage
   useEffect(() => {
-    const initDb = async () => {
+    const initApp = async () => {
       try {
+        // Initialiser la base de données
         await DatabaseService.initializeDatabase();
         setDbInitialized(true);
+
+        // Vérifier le statut de la licence
+        const licenseStatus = LicenseService.checkLicense();
+        if (licenseStatus.valid) {
+          setLicenseValid(true);
+        } else {
+          setShowLicenseModal(true);
+        }
       } catch (error) {
         console.error(
-          "Erreur lors de l'initialisation de la base de données:",
+          "Erreur lors de l'initialisation de l'application:",
           error
         );
       } finally {
@@ -44,8 +57,18 @@ function App() {
       }
     };
 
-    initDb();
+    initApp();
   }, []);
+
+  // Gérer l'activation de la licence
+  const handleLicenseActivation = async (code) => {
+    const result = LicenseService.activateLicense(code);
+    if (result.success) {
+      setLicenseValid(true);
+      setShowLicenseModal(false);
+    }
+    return result;
+  };
 
   // Afficher un écran de chargement pendant l'initialisation
   if (loading) {
@@ -80,6 +103,28 @@ function App() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // Vérifier la licence avant d'afficher l'application
+  if (!licenseValid) {
+    return (
+      <>
+        <div className="flex items-center justify-center h-screen bg-gray-50">
+          <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-md">
+            <h1 className="text-xl font-bold text-blue-600 mb-2">
+              Contrat Manager
+            </h1>
+            <p className="text-gray-600">
+              Activation en cours...
+            </p>
+          </div>
+        </div>
+        <LicenseModal
+          isOpen={showLicenseModal}
+          onActivate={handleLicenseActivation}
+        />
+      </>
     );
   }
 
