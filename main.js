@@ -478,10 +478,17 @@ function getClientInvoiceTemplate() {
 
         .client-box {
             border: 1px solid #ccc; /* Bordure simple économique */
-            padding: 6px; /* Espacement réduit */
-            font-size: 11px;
+            padding: 7px; /* Espacement augmenté */
+            font-size: 12px; /* Taille augmentée de 11px à 14px */
             background-color: white; /* Fond blanc pour économie */
             border-radius: 3px; /* Coins légèrement arrondis */
+            text-align: left; /* Alignement à gauche */
+            line-height: 1.2; /* Meilleur espacement des lignes */
+        }
+
+        .client-box strong {
+            font-size: 14px; /* Nom de l'entreprise encore plus grand */
+            color: #000; /* Noir pour plus de visibilité */
         }
         
         .project-info {
