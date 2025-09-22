@@ -361,10 +361,10 @@
         <!-- En-tête restructuré selon demande -->
         <div class="entete">
             <div class="entete-gauche">
-                <div class="logo">ATLANTIS</div>
-                <div class="infos-societe">221 RUE DE LAFAYETTE 75010 PARIS</div>
-                <div class="infos-societe">948 396 973 R.C.S. PARIS - APE : 7820Z</div>
-                <div class="infos-societe">CONTACTATLANTIS75@GMAIL.COM</div>
+                <div class="logo">{{company.name}}</div>
+                <div class="infos-societe">{{company.address}}</div>
+                <div class="infos-societe">{{company.siret}} {{company.rcs}} - APE : {{company.ape}}</div>
+                <div class="infos-societe">{{company.email}}</div>
             </div>
             <div class="entete-droite">
                 <div class="titre-contrat">CONTRAT DE MISE À DISPOSITION</div>

@@ -293,14 +293,14 @@ class InvoicePDFGenerator {
 
       // Informations sur l'entreprise émettrice
       company: {
-        name: company?.name || "ATLANTIS",
-        address: company?.address || "221 RUE DE LAFAYETTE",
-        postalCode: company?.zipCode || "75010",
-        city: company?.city || "PARIS",
-        siret: company?.siret || "948 396 973 R.C.S. PARIS",
-        ape: company?.ape || "7820Z",
+        name: company?.name || "VOTRE ENTREPRISE",
+        address: company?.address || "",
+        postalCode: company?.zipCode || "",
+        city: company?.city || "",
+        siret: company?.siret || "",
+        ape: company?.ape || "",
         phone: company?.phone || "",
-        email: company?.email || "CONTACTATLANTIS75@GMAIL.COM",
+        email: company?.email || "",
         logo: company?.logo || null,
       },
 

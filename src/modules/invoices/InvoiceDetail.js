@@ -22,6 +22,7 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import InvoiceService from './InvoiceService';
 import InvoicePDFGenerator from './InvoicePDFGenerator';
+import SettingsService from '../settings/SettingsService';
 
 function InvoiceDetail() {
     const { id } = useParams();
@@ -102,17 +103,8 @@ function InvoiceDetail() {
                 postalCode: invoice.clientPostalCode
             };
 
-            // Données de l'entreprise (à adapter selon vos besoins)
-            const company = {
-                name: "ATLANTIS",
-                address: "221 RUE DE LAFAYETTE",
-                zipCode: "75010",
-                city: "PARIS",
-                siret: "948 396 973 R.C.S. PARIS",
-                ape: "7820Z",
-                email: "CONTACTATLANTIS75@GMAIL.COM",
-                phone: ""
-            };
+            // Charger les données de l'entreprise depuis les paramètres
+            const company = await SettingsService.getCompanySettings();
 
             const result = await InvoicePDFGenerator.generateInvoicePDF(
                 invoice,

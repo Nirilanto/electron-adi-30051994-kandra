@@ -714,11 +714,11 @@ class PDFGenerator {
           <div class="container">
               <div class="header">
                   <div class="logo-container">
-                      <div class="logo">ATLANTIS pdf generate</div>
+                      <div class="logo">${company?.name || 'VOTRE ENTREPRISE'}</div>
                       <div class="company-info">
-                          221 RUE DE LAFAYETTE 75010 PARIS<br>
-                          CONTACTATLANTIS75@GMAIL.COM<br>
-                          948 396 973 R.C.S. PARIS - APE : 7820Z
+                          ${company?.address || ''} ${company?.zipCode || ''} ${company?.city || ''}<br>
+                          ${company?.email || ''}<br>
+                          ${company?.siret || ''} ${company?.rcs ? '- ' + company.rcs : ''} ${company?.ape ? '- APE : ' + company.ape : ''}
                       </div>
                   </div>
                   <div class="document-notice">
@@ -1274,11 +1274,11 @@ class PDFGenerator {
             <div class="container">
                 <div class="header">
                     <div class="logo-container">
-                        <div class="logo">ATLANTIS</div>
+                        <div class="logo">${company?.name || 'VOTRE ENTREPRISE'}</div>
                         <div class="company-info">
-                            221 RUE DE LAFAYETTE 75010 PARIS<br>
-                            CONTACTATLANTIS75@GMAIL.COM<br>
-                            948 396 973 R.C.S. PARIS - APE : 7820Z
+                            ${company?.address || ''} ${company?.zipCode || ''} ${company?.city || ''}<br>
+                            ${company?.email || ''}<br>
+                            ${company?.siret || ''} ${company?.rcs ? '- ' + company.rcs : ''} ${company?.ape ? '- APE : ' + company.ape : ''}
                         </div>
                     </div>
                     <div class="document-notice">
@@ -1300,22 +1300,22 @@ class PDFGenerator {
                         <div class="card-body">
                             <div class="data-row">
                                 <div class="data-label">RAISON SOCIALE</div>
-                                <div class="data-value bold">ATLANTIS</div>
+                                <div class="data-value bold">${company?.name || 'VOTRE ENTREPRISE'}</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">SIRET</div>
-                                <div class="data-value">948 396 973 R.C.S. PARIS</div>
+                                <div class="data-value">${company?.siret || ''} ${company?.rcs || ''}</div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">ADRESSE</div>
                                 <div class="data-value">
-                                    221 RUE DE LAFAYETTE<br>
-                                    75010 PARIS
+                                    ${company?.address || ''}<br>
+                                    ${company?.zipCode || ''} ${company?.city || ''}
                                 </div>
                             </div>
                             <div class="data-row">
                                 <div class="data-label">CONTACT</div>
-                                <div class="data-value">CONTACTATLANTIS75@GMAIL.COM</div>
+                                <div class="data-value">${company?.email || ''}</div>
                             </div>
                         </div>
                     </div>
@@ -1766,11 +1766,11 @@ class PDFGenerator {
             <div class="container">
                 <div class="header">
                     <div class="logo-container">
-                        <div class="logo">ATLANTIS</div>
+                        <div class="logo">${company?.name || 'VOTRE ENTREPRISE'}</div>
                         <div class="company-info">
-                            221 RUE DE LAFAYETTE 75010 PARIS<br>
-                            CONTACTATLANTIS75@GMAIL.COM<br>
-                            948 396 973 R.C.S. PARIS - APE : 7820Z
+                            ${company?.address || ''} ${company?.zipCode || ''} ${company?.city || ''}<br>
+                            ${company?.email || ''}<br>
+                            ${company?.siret || ''} ${company?.rcs ? '- ' + company.rcs : ''} ${company?.ape ? '- APE : ' + company.ape : ''}
                         </div>
                     </div>
                 </div>
@@ -1778,7 +1778,7 @@ class PDFGenerator {
                 <div class="certificate-title">Attestation de mission</div>
                 
                 <div class="certificate-content">
-                    <p>Je soussigné, Directeur des Ressources Humaines de la société ATLANTIS, certifie que :</p>
+                    <p>Je soussigné, Directeur des Ressources Humaines de la société ${company?.name || 'VOTRE ENTREPRISE'}, certifie que :</p>
                 </div>
                 
                 <div class="employee-name">${data.employee.fullName}</div>
@@ -1817,7 +1817,7 @@ class PDFGenerator {
                 <div class="signature-section">
                     <div class="signature-box">
                         <div class="signature-line"></div>
-                        <div class="signature-name">Pour ATLANTIS</div>
+                        <div class="signature-name">Pour ${company?.name || 'VOTRE ENTREPRISE'}</div>
                         <div class="signature-title">Direction des Ressources Humaines</div>
                     </div>
                 </div>
@@ -1827,7 +1827,7 @@ class PDFGenerator {
                 </div>
                 
                 <div class="footer">
-                    <p>ATLANTIS - 221 RUE DE LAFAYETTE 75010 PARIS - SIRET : 948 396 973 R.C.S. PARIS - APE : 7820Z</p>
+                    <p>${company?.name || 'VOTRE ENTREPRISE'} - ${company?.address || ''} ${company?.zipCode || ''} ${company?.city || ''} - SIRET : ${company?.siret || ''} ${company?.rcs || ''} - APE : ${company?.ape || ''}</p>
                 </div>
             </div>
         </body>
