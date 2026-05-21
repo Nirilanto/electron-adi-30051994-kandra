@@ -21,6 +21,7 @@ import GlobalTimeTracking from "./modules/timetracking/GlobalTimeTracking";
 import Settings from "./modules/settings/Settings";
 
 import { InvoiceList, InvoiceForm, InvoiceDetail } from './modules/invoices';
+import { PayrollList, PayrollForm, PayrollProfile } from './modules/payroll';
 
 // Services
 import DatabaseService from "./services/DatabaseService";
@@ -159,6 +160,12 @@ function App() {
         <Route path="/contracts/:id" element={<ContractForm />} />
         <Route path="/contracts/:id/profile" element={<ContractProfile />} />
         <Route path="/contracts/:id/edit" element={<ContractForm />} />
+
+        {/* Module Bulletins de paie */}
+        <Route path="/payroll" element={<PayrollList />} />
+        <Route path="/payroll/new" element={<PayrollForm />} />
+        <Route path="/payroll/:id" element={<PayrollProfile />} />
+        <Route path="/payroll/:id/edit" element={<PayrollForm />} />
 
         {/* Module invoices */}
         <Route path="/invoices" element={<InvoiceList />} />

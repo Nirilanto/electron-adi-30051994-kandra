@@ -58,6 +58,10 @@ function EmployeeForm() {
     idCardExpiryDate: null,
     idCardIssuePlace: '',
     qualification: 'MACON',
+    niveau: '',
+    coefficient: '',
+    indice: '',
+    departureDate: null,
     paymentMethod: 'VIREMENT',
     taxWithholding: 0,
     constructionCard: '',
@@ -101,6 +105,7 @@ function EmployeeForm() {
               ...employeeData,
               birthDate: employeeData.birthDate ? new Date(employeeData.birthDate) : null,
               hireDate: employeeData.hireDate ? new Date(employeeData.hireDate) : null,
+              departureDate: employeeData.departureDate ? new Date(employeeData.departureDate) : null,
               availableDate: employeeData.availableDate ? new Date(employeeData.availableDate) : null,
               idCardIssueDate: employeeData.idCardIssueDate ? new Date(employeeData.idCardIssueDate) : null,
               idCardExpiryDate: employeeData.idCardExpiryDate ? new Date(employeeData.idCardExpiryDate) : null
@@ -223,6 +228,7 @@ function EmployeeForm() {
         ...employee,
         birthDate: employee.birthDate ? employee.birthDate.toISOString() : null,
         hireDate: employee.hireDate ? employee.hireDate.toISOString() : null,
+        departureDate: employee.departureDate ? employee.departureDate.toISOString() : null,
         availableDate: employee.availableDate ? employee.availableDate.toISOString() : null,
         idCardIssueDate: employee.idCardIssueDate ? employee.idCardIssueDate.toISOString() : null,
         idCardExpiryDate: employee.idCardExpiryDate ? employee.idCardExpiryDate.toISOString() : null

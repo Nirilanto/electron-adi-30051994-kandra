@@ -9,6 +9,7 @@ import {
   ClockIcon,
   Cog6ToothIcon,
   ChartBarIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 
 const Sidebar = () => {
@@ -89,6 +90,12 @@ const Sidebar = () => {
       icon: ClockIcon,
       current: isActive("/invoices"),
       badge: null,
+    },
+    {
+      name: "Bulletins de paie",
+      href: "/payroll",
+      icon: BanknotesIcon,
+      current: isActive("/payroll"),
     },
     {
       name: "Paramètres",

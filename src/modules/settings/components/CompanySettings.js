@@ -217,6 +217,36 @@ function CompanySettings({ settings, onSave }) {
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+
+          <div>
+            <label htmlFor="idcc" className="block text-sm font-medium text-gray-700 mb-1">
+              IDCC (convention collective)
+            </label>
+            <input
+              type="text"
+              id="idcc"
+              name="idcc"
+              value={formData.idcc || ''}
+              onChange={handleChange}
+              placeholder="ex: 2378"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="idccLabel" className="block text-sm font-medium text-gray-700 mb-1">
+              Libellé convention
+            </label>
+            <input
+              type="text"
+              id="idccLabel"
+              name="idccLabel"
+              value={formData.idccLabel || ''}
+              onChange={handleChange}
+              placeholder="ex: Travail temporaire : salariés intérimaires"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
         
         <div className="mt-8 flex justify-end">

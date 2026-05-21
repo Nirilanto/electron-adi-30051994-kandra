@@ -72,7 +72,65 @@ const ProfessionalInfoSection = ({
             <p className="mt-1 text-sm text-red-500">{errors.hourlyRate}</p>
           )}
         </div>
-        
+
+        <div>
+          <label htmlFor="niveau" className="block text-sm font-medium text-gray-700 mb-1">
+            Niveau
+          </label>
+          <input
+            type="text"
+            id="niveau"
+            name="niveau"
+            value={employee.niveau || ''}
+            onChange={handleChange}
+            placeholder="ex: I"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="coefficient" className="block text-sm font-medium text-gray-700 mb-1">
+            Coefficient
+          </label>
+          <input
+            type="text"
+            id="coefficient"
+            name="coefficient"
+            value={employee.coefficient || ''}
+            onChange={handleChange}
+            placeholder="ex: 150"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="indice" className="block text-sm font-medium text-gray-700 mb-1">
+            Indice
+          </label>
+          <input
+            type="text"
+            id="indice"
+            name="indice"
+            value={employee.indice || ''}
+            onChange={handleChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="departureDate" className="block text-sm font-medium text-gray-700 mb-1">
+            Date de sortie
+          </label>
+          <DatePicker
+            id="departureDate"
+            selected={employee.departureDate}
+            onChange={(date) => handleDateChange(date, 'departureDate')}
+            dateFormat="dd/MM/yyyy"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            isClearable
+          />
+        </div>
+
         <div className="md:col-span-3">
           <label htmlFor="skills" className="block text-sm font-medium text-gray-700 mb-1">
             Compétences

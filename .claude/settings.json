@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\VNIR\\\\apps\\\\node-v24;\" + $env:Path; & \"C:\\\\Users\\\\VNIR\\\\apps\\\\node-v24\\\\npm.cmd\" install)",
+      "PowerShell($env:Path = \"C:\\\\Users\\\\VNIR\\\\apps\\\\node-v24;\" + $env:Path; & \"C:\\\\Users\\\\VNIR\\\\apps\\\\node-v24\\\\npm.cmd\" run dev)",
+      "PowerShell(Get-Process node, electron -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(& \"D:\\\\projet\\\\electron-adi-30051994-kandra\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\" \"D:\\\\projet\\\\electron-adi-30051994-kandra\\\\test-electron.js\" 2>&1)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.cache\\\\puppeteer\" -ErrorAction SilentlyContinue -Recurse -Depth 3 | Select-Object FullName | Select-Object -First 5; Write-Output \"---\"; Get-ChildItem \"D:\\\\projet\\\\electron-adi-30051994-kandra\\\\node_modules\\\\puppeteer\" -ErrorAction SilentlyContinue | Select-Object Name | Select-Object -First 10)"
+    ]
+  }
+}

@@ -10,6 +10,18 @@ const handlebars = require("handlebars");
 // Importer la configuration des chemins d'accès
 const config = require("./config");
 
+function findSystemBrowser() {
+  const candidates = [
+    process.env["ProgramFiles(x86)"] && path.join(process.env["ProgramFiles(x86)"], "Microsoft", "Edge", "Application", "msedge.exe"),
+    process.env["ProgramFiles"] && path.join(process.env["ProgramFiles"], "Microsoft", "Edge", "Application", "msedge.exe"),
+    process.env["ProgramFiles"] && path.join(process.env["ProgramFiles"], "Google", "Chrome", "Application", "chrome.exe"),
+    process.env["ProgramFiles(x86)"] && path.join(process.env["ProgramFiles(x86)"], "Google", "Chrome", "Application", "chrome.exe"),
+    process.env["LOCALAPPDATA"] && path.join(process.env["LOCALAPPDATA"], "Microsoft", "Edge", "Application", "msedge.exe"),
+    process.env["LOCALAPPDATA"] && path.join(process.env["LOCALAPPDATA"], "Google", "Chrome", "Application", "chrome.exe"),
+  ].filter(Boolean);
+  return candidates.find((p) => fs.existsSync(p)) || null;
+}
+
 // Configurer electron-store pour stocker les données à l'emplacement spécifique
 Store.initRenderer();
 
@@ -251,6 +263,8 @@ ipcMain.handle("generate-pdf", async (_, args) => {
       template = getClientContractTemplate();
     } else if (type === "invoice") {
       template = getClientInvoiceTemplate();
+    } else if (type === "payslip") {
+      template = getPayslipTemplate();
     } else {
       template = getClientContractTemplate(); // Par défaut
     }
@@ -308,11 +322,17 @@ ipcMain.handle("generate-pdf", async (_, args) => {
     fs.writeFileSync(tempHtmlPath, html, "utf8");
     console.log(`Fichier HTML temporaire créé: ${tempHtmlPath}`);
 
-    // Lancer Puppeteer pour générer le PDF
-    const browser = await puppeteer.launch({
+    // Lancer Puppeteer pour générer le PDF — utilise Edge/Chrome installé si disponible
+    const systemBrowserPath = findSystemBrowser();
+    const launchOptions = {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    };
+    if (systemBrowserPath) {
+      launchOptions.executablePath = systemBrowserPath;
+      console.log("Utilisation du navigateur système:", systemBrowserPath);
+    }
+    const browser = await puppeteer.launch(launchOptions);
 
     const page = await browser.newPage();
 
@@ -3486,6 +3506,192 @@ function getEmployeeContractTemplate() {
       <div class="page-number">Page 2 sur 2</div>
     </div>
   </body>
+</html>
+`;
+}
+
+function getPayslipTemplate() {
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Bulletin de paie</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 9.5px; color: #222; padding: 6mm 7mm; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .company-box { border: 1px solid #999; padding: 8px 10px; min-width: 250px; }
+  .company-box .name { font-weight: bold; margin-bottom: 2px; }
+  .title-right { text-align: right; }
+  .title-right h1 { color: #1f4e9d; font-size: 22px; letter-spacing: 1px; margin-bottom: 4px; }
+  .title-right .meta { color: #1f4e9d; font-size: 10px; }
+
+  .infos { display: flex; gap: 16px; margin-top: 6px; margin-bottom: 6px; }
+  .infos .left { flex: 1; }
+  .infos .right { flex: 1; padding-top: 10px; }
+  .infos .left table { border-collapse: collapse; }
+  .infos .left td { padding: 1px 8px 1px 0; font-size: 9.5px; }
+  .infos .left td.label { color: #1f4e9d; }
+
+  .idcc { font-weight: bold; font-size: 10px; margin: 4px 0 2px 0; }
+
+  table.lines { width: 100%; border-collapse: collapse; font-size: 9px; }
+  table.lines thead th {
+    background: #1f4e9d; color: #fff; font-weight: bold; padding: 4px 6px; text-align: left;
+  }
+  table.lines thead th.num { text-align: right; }
+  table.lines tbody td { padding: 2px 6px; border-bottom: 1px solid #eee; vertical-align: top; }
+  table.lines tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.lines .section-title td { font-weight: bold; padding-top: 5px; }
+  table.lines .indent { padding-left: 10px; font-style: italic; }
+  table.lines .total-row td { font-weight: bold; }
+
+  .band { background: #f1f1f1; padding: 4px 6px; font-weight: bold; display: flex; justify-content: space-between; margin-top: 2px; }
+  .band.blue { background: #1f4e9d; color: #fff; }
+
+  .tax-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 9px; }
+  .tax-table th { background: #f5f5f5; padding: 3px 6px; text-align: right; font-weight: normal; color: #555; }
+  .tax-table th:first-child { text-align: left; }
+  .tax-table td { padding: 2px 6px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tax-table td:first-child { text-align: left; }
+
+  .footer { display: flex; gap: 8px; margin-top: 8px; align-items: stretch; }
+  .footer .cumuls { flex: 2; }
+  .footer .net { flex: 1; }
+
+  .cumuls table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+  .cumuls th, .cumuls td { border: 1px solid #ccc; padding: 2px 4px; text-align: right; font-variant-numeric: tabular-nums; }
+  .cumuls th { background: #1f4e9d; color: #fff; font-weight: bold; }
+  .cumuls td:first-child, .cumuls th:first-child { text-align: left; }
+
+  .net-box table { width: 100%; border-collapse: collapse; }
+  .net-box .net-row { background: #1f4e9d; color: #fff; padding: 6px 8px; display: flex; justify-content: space-between; font-weight: bold; font-size: 11px; }
+  .net-box .verse-row { padding: 4px 8px; display: flex; justify-content: space-between; border: 1px solid #ccc; border-top: 0; }
+
+  .legal { margin-top: 8px; font-size: 7.5px; color: #777; text-align: center; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="company-box">
+      <div class="name">{{company.name}}</div>
+      <div>{{company.address}}</div>
+      <div>&nbsp;</div>
+      <div>{{company.zipCode}} {{company.city}}</div>
+      <div>SIRET : {{company.siret}}{{#if company.ape}} &nbsp; APE : {{company.ape}}{{/if}}</div>
+    </div>
+    <div class="title-right">
+      <h1>BULLETIN DE PAIE</h1>
+      <div class="meta">Période du {{periodStart}} au {{periodEnd}}</div>
+      <div class="meta">Paiement, le {{paymentDate}} par {{paymentMethod}}</div>
+    </div>
+  </div>
+
+  <div class="infos">
+    <div class="left">
+      <table>
+        <tr><td class="label">Code :</td><td>{{employee.code}}</td></tr>
+        <tr><td class="label">N° Sécurité soc. :</td><td>{{employee.socialSecurityNumber}}</td></tr>
+        <tr><td class="label">Emploi :</td><td>{{employee.emploi}}</td></tr>
+        <tr><td class="label">Niveau :</td><td>{{employee.niveau}}</td></tr>
+        <tr><td class="label">Coefficient :</td><td>{{employee.coefficient}}</td></tr>
+        <tr><td class="label">Indice :</td><td>{{employee.indice}}</td></tr>
+        <tr><td class="label">Ancienneté :</td><td>{{employee.hireDate}}</td></tr>
+        <tr><td class="label">Date de sortie :</td><td>{{employee.departureDate}}</td></tr>
+      </table>
+    </div>
+    <div class="right">
+      <div><strong>{{employee.civility}} {{employee.fullName}}</strong></div>
+      <div>{{employee.address}}</div>
+      {{#if employee.addressComplement}}<div>{{employee.addressComplement}}</div>{{/if}}
+      <div>&nbsp;</div>
+      <div>{{employee.postalCode}} {{employee.city}}</div>
+    </div>
+  </div>
+
+  {{#if company.idcc}}
+  <div class="idcc">IDCC {{company.idcc}}{{#if company.idccLabel}} : {{company.idccLabel}}{{/if}}</div>
+  {{/if}}
+
+  <table class="lines">
+    <thead>
+      <tr>
+        <th>Libellé</th>
+        <th class="num">Base</th>
+        <th class="num">Taux</th>
+        <th class="num">Montant</th>
+        <th class="num">Charges patronales</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each sections}}
+        {{#unless (eq name "GAINS")}}
+        <tr class="section-title"><td colspan="5">{{name}}</td></tr>
+        {{/unless}}
+        {{#each lines}}
+        <tr>
+          <td class="{{#unless ../name}}{{else}}{{#unless (eq ../name "GAINS")}}indent{{/unless}}{{/unless}}">{{libelle}}</td>
+          <td class="num">{{base}}</td>
+          <td class="num">{{taux}}</td>
+          <td class="num">{{montant}}</td>
+          <td class="num">{{chargesPatronales}}</td>
+        </tr>
+        {{/each}}
+      {{/each}}
+      <tr class="total-row"><td colspan="3">Total Brut</td><td class="num">{{totals.brut}}</td><td></td></tr>
+      <tr class="total-row"><td colspan="3">Total des cotisations et contributions sociales</td><td class="num">{{totals.cotisSal}}</td><td class="num">{{totals.cotisPat}}</td></tr>
+    </tbody>
+  </table>
+
+  <div class="band blue"><span>Montant Net social</span><span>{{totals.netSocial}}</span></div>
+  <div class="band"><span>Net à payer avant impôt</span><span>{{totals.netAvantImpot}}</span></div>
+
+  <table class="tax-table">
+    <thead>
+      <tr><th>Impôt sur le revenu</th><th>Base</th><th>Taux</th><th>Montant</th><th>Cumul annuel</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Montant net imposable</td><td></td><td></td><td>{{tax.netImposable}}</td><td>{{tax.cumulAnnuel}}</td></tr>
+      <tr><td>Impôt sur le revenu prélevé à la source</td><td>{{tax.pasBase}}</td><td>{{tax.pasTaux}}</td><td>{{tax.pasMontant}}</td><td></td></tr>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <div class="cumuls">
+      <table>
+        <thead>
+          <tr>
+            <th>Cumuls</th><th>Plafond SS</th><th>Brut</th><th>Brut abattu</th>
+            <th>Cotis. Sal.</th><th>Cotis. Pat.</th><th>Hres Trav.</th><th>Hres Pay.</th><th>Hres Supp.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Période</strong></td>
+            <td>{{cumuls.period.plafondSS}}</td><td>{{cumuls.period.brut}}</td><td>{{cumuls.period.brutAbattu}}</td>
+            <td>{{cumuls.period.cotisSal}}</td><td>{{cumuls.period.cotisPat}}</td>
+            <td>{{cumuls.period.hresTrav}}</td><td>{{cumuls.period.hresPay}}</td><td>{{cumuls.period.hresSupp}}</td>
+          </tr>
+          <tr>
+            <td><strong>Annuel</strong></td>
+            <td>{{cumuls.annual.plafondSS}}</td><td>{{cumuls.annual.brut}}</td><td>{{cumuls.annual.brutAbattu}}</td>
+            <td>{{cumuls.annual.cotisSal}}</td><td>{{cumuls.annual.cotisPat}}</td>
+            <td>{{cumuls.annual.hresTrav}}</td><td>{{cumuls.annual.hresPay}}</td><td>{{cumuls.annual.hresSupp}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="net net-box">
+      <div class="net-row"><span>Net à payer</span><span>{{totals.netAPayer}}</span></div>
+      <div class="verse-row"><span>Total versé par l'employeur</span><span>{{totals.totalVerseEmployeur}}</span></div>
+    </div>
+  </div>
+
+  <div class="legal">
+    Pour vous aider à faire valoir vos droits, conservez ce bulletin de paie sans limitation de durée.<br/>
+    Pour la définition des termes employés, se reporter au site internet service-public.fr rubrique cotisations sociales.
+  </div>
+</body>
 </html>
 `;
 }
