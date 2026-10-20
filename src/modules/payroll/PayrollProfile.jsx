@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import PayrollService from './PayrollService';
+import PdfClient from '../../services/PdfClient';
 import SettingsService from '../settings/SettingsService';
 
 const num = (v) => {
@@ -42,16 +43,12 @@ const PayrollProfile = () => {
   }, [id, navigate]);
 
   const handleGeneratePDF = async () => {
-    if (!window.electron?.generatePDF) {
-      toast.error('Génération PDF disponible uniquement dans l\'application');
-      return;
-    }
     setGenerating(true);
     try {
       const company = await SettingsService.getCompanySettings();
       const data = buildPdfData(payslip, company);
       const fileName = `bulletin_${payslip.employee?.lastname || 'salarie'}_${(payslip.periodEnd || '').replace(/-/g, '')}.pdf`;
-      const result = await window.electron.generatePDF('payslip', data, fileName);
+      const result = await PdfClient.generatePDF('payslip', data, fileName);
       if (result.success) {
         toast.success('PDF généré');
       } else if (result.reason !== 'canceled') {

@@ -1,4 +1,5 @@
 // src/modules/invoices/InvoicePDFGenerator.js
+import PdfClient from "../../services/PdfClient";
 
 /**
  * Classe pour la génération de documents PDF de factures
@@ -36,17 +37,12 @@ class InvoicePDFGenerator {
         invoice.invoiceNumber || invoice.id
       }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
 
-      // Si nous sommes dans Electron, utiliser l'API Electron
-      if (window.electron) {
-        return await window.electron.generatePDF(
-          "invoice",
-          invoiceData,
-          customPath || defaultFileName
-        );
-      } else {
-        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-        return this.openInvoicePreview(invoiceData);
-      }
+      // Génération du PDF côté serveur (ouvre le document dans un nouvel onglet)
+      return await PdfClient.generatePDF(
+        "invoice",
+        invoiceData,
+        customPath || defaultFileName
+      );
     } catch (error) {
       console.error("Erreur lors de la génération du PDF de la facture:", error);
       throw error;
@@ -85,17 +81,12 @@ class InvoicePDFGenerator {
         invoice.invoiceNumber || invoice.id
       }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
 
-      // Si nous sommes dans Electron, utiliser l'API Electron
-      if (window.electron) {
-        return await window.electron.generatePDF(
-          "quote",
-          quoteData,
-          customPath || defaultFileName
-        );
-      } else {
-        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-        return this.openQuotePreview(quoteData);
-      }
+      // Génération du PDF côté serveur (ouvre le document dans un nouvel onglet)
+      return await PdfClient.generatePDF(
+        "quote",
+        quoteData,
+        customPath || defaultFileName
+      );
     } catch (error) {
       console.error("Erreur lors de la génération du PDF du devis:", error);
       throw error;

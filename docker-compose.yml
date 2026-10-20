@@ -1,0 +1,51 @@
+# Déploiement complet : PostgreSQL + API NestJS + front React (nginx)
+#
+#   cp .env.docker.example .env.docker   # puis éditer les mots de passe / secret
+#   docker compose --env-file .env.docker up -d --build
+#
+# L'application est ensuite disponible sur http://<serveur>:${WEB_PORT:-8080}
+# Au premier lancement, l'écran de connexion propose de créer le compte administrateur.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-contrat_manager}
+      POSTGRES_USER: ${POSTGRES_USER:-contrat}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Définir POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-contrat} -d ${POSTGRES_DB:-contrat_manager}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-contrat}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-contrat_manager}?schema=public
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:?Définir JWT_SECRET (chaîne aléatoire longue)}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-12h}
+      CORS_ORIGINS: ""
+    expose:
+      - "3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:80"
+
+volumes:
+  pgdata:

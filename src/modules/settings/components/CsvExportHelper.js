@@ -74,12 +74,15 @@ const CsvExportHelper = ({ entity, displayName, disabled, className }) => {
         }));
       } else if (entity === 'contracts') {
         // Convertir les dates pour une meilleure lisibilité dans Excel
-        data = data.map(contract => ({
+        data = data.map(({ employee, client, securityMeasuresList, signature, stamp, ...contract }) => ({
           ...contract,
-          start_date: contract.start_date ? formatDate(contract.start_date) : '',
-          end_date: contract.end_date ? formatDate(contract.end_date) : '',
-          created_at: contract.created_at ? formatDate(contract.created_at) : '',
-          updated_at: contract.updated_at ? formatDate(contract.updated_at) : ''
+          securityMeasures: Array.isArray(contract.securityMeasures) ? contract.securityMeasures.join('|') : '',
+          employeeName: employee ? `${employee.firstName || employee.firstname || ''} ${employee.lastName || employee.lastname || ''}`.trim() : '',
+          clientCompany: client ? (client.companyName || client.company_name || '') : '',
+          startDate: contract.startDate ? formatDate(contract.startDate) : '',
+          endDate: contract.endDate ? formatDate(contract.endDate) : '',
+          createdAt: contract.createdAt ? formatDate(contract.createdAt) : '',
+          updatedAt: contract.updatedAt ? formatDate(contract.updatedAt) : ''
         }));
       }
       

@@ -1,6 +1,7 @@
 // src/components/Sidebar.js
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   HomeIcon,
   UserGroupIcon,
@@ -10,10 +11,13 @@ import {
   Cog6ToothIcon,
   ChartBarIcon,
   BanknotesIcon,
+  ArrowRightOnRectangleIcon,
+  UserCircleIcon,
 } from "@heroicons/react/24/outline";
 
 const Sidebar = () => {
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [timeTrackingAlert, setTimeTrackingAlert] = useState(0);
 
   // Vérifier les alertes de pointage
@@ -155,6 +159,27 @@ const Sidebar = () => {
           );
         })}
       </nav>
+
+      {/* Utilisateur connecté */}
+      {user && (
+        <div className="flex-shrink-0 px-4 py-3 border-t border-blue-700 flex items-center justify-between">
+          <div className="flex items-center min-w-0">
+            <UserCircleIcon className="h-6 w-6 text-blue-200 flex-shrink-0" />
+            <div className="ml-2 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user.name}</p>
+              <p className="text-xs text-blue-200 truncate">{user.role === "admin" ? "Administrateur" : "Utilisateur"}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            title="Se déconnecter"
+            className="ml-2 p-1.5 rounded-md text-blue-200 hover:text-white hover:bg-blue-700 transition-colors"
+          >
+            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+          </button>
+        </div>
+      )}
 
       {/* Alerte rapide pour pointage */}
       {timeTrackingAlert > 0 && !isActive("/timetracking") && (

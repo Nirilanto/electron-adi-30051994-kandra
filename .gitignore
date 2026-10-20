@@ -2,3 +2,5 @@ node_modules
 dist
 build
 dist_*
+.env.docker
+server/.pg-local

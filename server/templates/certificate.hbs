@@ -1,0 +1,257 @@
+
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Attestation de mission - {{employee.fullName}}</title>
+      <style>
+          :root {
+              --primary: #333333;
+              --secondary: #666666;
+              --light-gray: #e5e5e5;
+              --medium-gray: #cccccc;
+              --dark-gray: #444444;
+              --text: #222222;
+              --white: #ffffff;
+              --divider: #dddddd;
+          }
+          
+          * {
+              box-sizing: border-box;
+              margin: 0;
+              padding: 0;
+          }
+          
+          body {
+              font-family: Arial, Helvetica, sans-serif;
+              font-size: 11px;
+              line-height: 1.5;
+              color: var(--text);
+              background-color: var(--white);
+              padding: 0;
+          }
+          
+          .container {
+              width: 100%;
+              max-width: 210mm;
+              margin: 0 auto;
+              background-color: var(--white);
+              border: 1px solid var(--medium-gray);
+              padding: 25px;
+              position: relative;
+          }
+          
+          .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              margin-bottom: 15px;
+              padding-bottom: 10px;
+              border-bottom: 1px solid var(--divider);
+          }
+          
+          .logo-container {
+              display: flex;
+              flex-direction: column;
+          }
+          
+          .logo {
+              font-weight: 700;
+              font-size: 22px;
+              color: var(--primary);
+              margin-bottom: 3px;
+          }
+          
+          .company-info {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .certificate-title {
+              text-align: center;
+              font-weight: 700;
+              font-size: 18px;
+              color: var(--primary);
+              margin: 30px 0 20px;
+              text-transform: uppercase;
+          }
+          
+          .certificate-content {
+              margin: 0 auto;
+              max-width: 90%;
+              text-align: justify;
+              font-size: 11px;
+              line-height: 1.5;
+          }
+          
+          .employee-name {
+              text-align: center;
+              font-weight: 700;
+              font-size: 16px;
+              color: var(--primary);
+              margin: 20px 0;
+              background-color: var(--light-gray);
+              padding: 5px;
+          }
+          
+          .mission-details {
+              margin: 20px auto;
+              border: 1px solid var(--medium-gray);
+              padding: 10px;
+          }
+          
+          .detail-row {
+              display: flex;
+              margin-bottom: 5px;
+              border-bottom: 1px dotted var(--light-gray);
+              padding-bottom: 5px;
+          }
+          
+          .detail-label {
+              font-weight: 600;
+              min-width: 120px;
+              color: var(--secondary);
+          }
+          
+          .signature-section {
+              margin-top: 40px;
+              text-align: right;
+          }
+          
+          .signature-box {
+              display: inline-block;
+              width: 200px;
+              text-align: center;
+          }
+          
+          .signature-line {
+              border-bottom: 1px solid var(--medium-gray);
+              margin-bottom: 5px;
+              height: 40px;
+          }
+          
+          .signature-name {
+              font-weight: 600;
+              margin-bottom: 2px;
+              font-size: 10px;
+          }
+          
+          .signature-title {
+              font-size: 9px;
+              color: var(--secondary);
+          }
+          
+          .date-location {
+              text-align: right;
+              margin: 15px 40px;
+              font-size: 10px;
+          }
+          
+          .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 8px;
+              color: var(--secondary);
+              border-top: 1px solid var(--light-gray);
+              padding-top: 10px;
+          }
+          
+          .document-number {
+              display: inline-block;
+              background-color: var(--light-gray);
+              color: var(--primary);
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-weight: 600;
+              font-size: 10px;
+              margin-top: 10px;
+              text-align: center;
+          }
+          
+          @media print {
+              body {
+                  background-color: white;
+                  padding: 0;
+              }
+              
+              .container {
+                  box-shadow: none;
+                  max-width: none;
+                  width: 100%;
+                  border: none;
+              }
+          }
+      </style>
+  </head>
+  <body>
+      <div class="container">
+          <div class="header">
+              <div class="logo-container">
+                  <div class="logo">{{company.name}}</div>
+                  <div class="company-info">
+                      {{company.address}} {{company.zipCode}} {{company.city}}<br>
+                      {{company.siret}} - APE : {{company.ape}}<br>
+                      {{company.email}}
+                  </div>
+              </div>
+          </div>
+          
+          <div class="certificate-title">Attestation de mission</div>
+          
+          <div class="certificate-content">
+              <p>Je soussigné, Directeur des Ressources Humaines de la société {{company.name}}, certifie que :</p>
+          </div>
+          
+          <div class="employee-name">{{employee.fullName}}</div>
+          
+          <div class="certificate-content">
+              <p>A effectué une mission au sein de la société {{client.companyName}}, conformément aux conditions stipulées dans le contrat de mise à disposition.</p>
+          </div>
+          
+          <div class="mission-details">
+              <div class="detail-row">
+                  <div class="detail-label">N° de contrat :</div>
+                  <div>{{reference}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Période :</div>
+                  <div>Du {{startDate}} au {{endDate}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Qualification :</div>
+                  <div>{{employee.skills}}</div>
+              </div>
+              <div class="detail-row">
+                  <div class="detail-label">Lieu de mission :</div>
+                  <div>{{client.location}}</div>
+              </div>
+          </div>
+          
+          <div class="certificate-content">
+              <p>Il peut vous être délivré à votre demande une attestation employeur en fin de mission.</p>
+              <p>Ce document est délivré pour faire valoir ce que de droit.</p>
+          </div>
+          
+          <div class="date-location">
+              <p>Fait à PARIS, le {{generationDate}}</p>
+          </div>
+          
+          <div class="signature-section">
+              <div class="signature-box">
+                  <div class="signature-line"></div>
+                  <div class="signature-name">Pour {{company.name}}</div>
+                  <div class="signature-title">L'INTERMEDIAIRE</div>
+              </div>
+          </div>
+          
+          <div style="text-align: center; margin-top: 15px;">
+              <div class="document-number">N° {{reference}}</div>
+          </div>
+          
+          <div class="footer">
+              <p>{{company.name}} - {{company.address}} {{company.zipCode}} {{company.city}} - SIRET : {{company.siret}} - APE : {{company.ape}}</p>
+          </div>
+      </div>
+  </body>
+  </html>

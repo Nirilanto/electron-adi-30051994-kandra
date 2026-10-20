@@ -1,5 +1,6 @@
 // src/components/AutocompleteNationality.js
 import React, { useState, useEffect, useRef } from 'react';
+import DatabaseService from '../../../services/DatabaseService';
 
 // Nationalités de base (statiques, ne peuvent pas être supprimées)
 const DEFAULT_NATIONALITIES = [
@@ -13,8 +14,8 @@ const DEFAULT_NATIONALITIES = [
   'AUTRE'
 ];
 
-// Clé pour le localStorage
-const LOCAL_STORAGE_KEY = 'app_custom_nationalities';
+// Clé de stockage (partagée entre tous les utilisateurs)
+const STORAGE_KEY = 'custom_nationalities';
 
 const AutocompleteNationality = ({ value, onChange }) => {
   // État pour stocker toutes les nationalités (prédéfinies + personnalisées)
@@ -37,19 +38,20 @@ const AutocompleteNationality = ({ value, onChange }) => {
 
   // Chargement des nationalités personnalisées depuis localStorage au chargement
   useEffect(() => {
-    try {
-      const storedCustomNationalities = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (storedCustomNationalities) {
-        const customNationalities = JSON.parse(storedCustomNationalities);
+    let cancelled = false;
+    DatabaseService.get(STORAGE_KEY).then((customNationalities) => {
+      if (cancelled) return;
+      if (Array.isArray(customNationalities) && customNationalities.length > 0) {
         // Fusionner les listes et trier par ordre alphabétique
         setNationalities(sortNationalities([...DEFAULT_NATIONALITIES, ...customNationalities]));
       } else {
         // Même sans données personnalisées, on trie les valeurs par défaut
         setNationalities(sortNationalities([...DEFAULT_NATIONALITIES]));
       }
-    } catch (error) {
-      console.error("Erreur lors du chargement des nationalités depuis localStorage:", error);
-    }
+    }).catch((error) => {
+      console.error("Erreur lors du chargement des nationalités:", error);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   // Initialisation de l'input avec la valeur existante
@@ -64,9 +66,9 @@ const AutocompleteNationality = ({ value, onChange }) => {
       const customNationalities = allNationalities.filter(
         n => !DEFAULT_NATIONALITIES.includes(n)
       );
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(customNationalities));
+      DatabaseService.set(STORAGE_KEY, customNationalities);
     } catch (error) {
-      console.error("Erreur lors de l'enregistrement des nationalités dans localStorage:", error);
+      console.error("Erreur lors de l'enregistrement des nationalités:", error);
     }
   };
 

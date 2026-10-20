@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { PlusIcon, TrashIcon, ArrowLeftIcon } from '@heroicons/react/24/outline';
 import DatabaseService from '../../services/DatabaseService';
 import PayrollService from './PayrollService';
+import TimeTrackingService from '../timetracking/TimeTrackingService';
 
 const SECTIONS = [
   'GAINS',
@@ -19,14 +20,31 @@ const SECTIONS = [
   'AUTRE',
 ];
 
-const emptyLine = (section = 'GAINS') => ({
+const emptyLine = (section = 'GAINS', libelle = '') => ({
   section,
-  libelle: '',
+  libelle,
   base: '',
   taux: '',
   montant: '',
   chargesPatronales: '',
 });
+
+const STANDARD_PRESET = [
+  ['GAINS', 'Salaire horaire'],
+  ['GAINS', 'Indemnité de fin de contrat'],
+  ['GAINS', 'Indemnité compensatrice de congés payés'],
+  ['SANTE', 'Sécurité Sociale - Maladie Maternité Invalidité Décès'],
+  ['ACCIDENT DU TRAVAIL-MALADIES PROFESSIONNELLES', ''],
+  ['RETRAITE', 'Sécurité Sociale plafonnée'],
+  ['RETRAITE', 'Sécurité Sociale déplafonnée'],
+  ['RETRAITE', 'Complémentaire Tranche 1'],
+  ['FAMILLE', ''],
+  ['ASSURANCE CHOMAGE', ''],
+  ['AUTRES CONTRIBUTIONS DUES PAR L\'EMPLOYEUR', ''],
+  ['CSG/CRDS', 'CSG déductible de l\'impôt sur le revenu'],
+  ['CSG/CRDS', 'CSG/CRDS non déductible de l\'impôt sur le revenu'],
+  ['EXONERATIONS, ECRETEMENTS ET ALLEGEMENTS DE COTISATIONS', ''],
+].map(([section, libelle]) => emptyLine(section, libelle));
 
 const num = (v) => {
   const n = parseFloat(v);
@@ -52,7 +70,7 @@ const PayrollForm = () => {
     periodEnd: '',
     paymentDate: '',
     paymentMethod: 'Virement',
-    lines: [emptyLine('GAINS')],
+    lines: STANDARD_PRESET.map((l) => ({ ...l })),
     tax: {
       netImposable: '',
       pasBase: '',
@@ -161,6 +179,65 @@ const PayrollForm = () => {
 
   const removeLine = (idx) => {
     setForm((f) => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }));
+  };
+
+  const loadPreset = () => {
+    if (form.lines.some((l) => l.libelle || l.montant || l.base)) {
+      if (!window.confirm('Remplacer les lignes actuelles par le modèle standard ?')) return;
+    }
+    setForm((f) => ({ ...f, lines: STANDARD_PRESET.map((l) => ({ ...l })) }));
+  };
+
+  const autoFillFromData = async () => {
+    if (!form.employeeId) {
+      toast.error('Choisis d\'abord un salarié');
+      return;
+    }
+    if (!form.periodStart || !form.periodEnd) {
+      toast.error('Définis d\'abord la période');
+      return;
+    }
+    try {
+      const emp = employees.find((e) => Number(e.id) === Number(form.employeeId));
+      const hourlyRate = num(emp?.hourlyRate);
+      if (!hourlyRate) {
+        toast.error('Taux horaire non défini sur la fiche du salarié');
+        return;
+      }
+      // Récupérer les pointages sur la période
+      const entries = await TimeTrackingService.getTimeEntries({
+        employeeId: String(form.employeeId),
+        startDate: form.periodStart,
+        endDate: form.periodEnd,
+      });
+      const totalHours = entries.reduce((s, e) => s + (num(e.totalHours)), 0);
+      if (!totalHours) {
+        toast.warn('Aucune heure pointée sur cette période');
+      }
+      const salaireMontant = +(totalHours * hourlyRate).toFixed(2);
+      const ifmMontant = +(salaireMontant * 0.10).toFixed(2);
+      const iccpMontant = +((salaireMontant + ifmMontant) * 0.10).toFixed(2);
+
+      setForm((f) => {
+        const lines = f.lines.map((l) => {
+          if (l.section === 'GAINS' && /salaire horaire/i.test(l.libelle)) {
+            return { ...l, base: String(totalHours), taux: String(hourlyRate), montant: String(salaireMontant) };
+          }
+          if (l.section === 'GAINS' && /fin de contrat/i.test(l.libelle)) {
+            return { ...l, montant: String(ifmMontant) };
+          }
+          if (l.section === 'GAINS' && /cong[ée]s pay[ée]s/i.test(l.libelle)) {
+            return { ...l, montant: String(iccpMontant) };
+          }
+          return l;
+        });
+        return { ...f, lines };
+      });
+      toast.success(`Pré-rempli : ${totalHours}h × ${hourlyRate}€ = ${salaireMontant}€`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erreur lors du pré-remplissage');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -308,13 +385,30 @@ const PayrollForm = () => {
       <div className="bg-white p-6 rounded-lg shadow">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Lignes du bulletin</h2>
-          <button
-            type="button"
-            onClick={() => addLine('GAINS')}
-            className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 text-sm"
-          >
-            <PlusIcon className="h-4 w-4 mr-1" /> Ajouter une ligne
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={autoFillFromData}
+              className="inline-flex items-center px-3 py-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm"
+              title="Calcule Salaire / IFM / ICCP depuis les pointages et le taux horaire"
+            >
+              Pré-remplir depuis les pointages
+            </button>
+            <button
+              type="button"
+              onClick={loadPreset}
+              className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 text-sm"
+            >
+              Charger les rubriques standard
+            </button>
+            <button
+              type="button"
+              onClick={() => addLine('GAINS')}
+              className="inline-flex items-center px-3 py-1.5 bg-blue-50 text-blue-700 rounded hover:bg-blue-100 text-sm"
+            >
+              <PlusIcon className="h-4 w-4 mr-1" /> Ajouter une ligne
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">

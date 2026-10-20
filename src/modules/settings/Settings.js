@@ -15,8 +15,11 @@ import AccessMethodsSettings from './components/AccessMethodsSettings';
 import SecurityMeasuresSettings from './components/SecurityMeasuresSettings';
 import SignaturesSettings from './components/SignaturesSettings';
 import ImportExportSettings from './components/ImportExportSettings'; // Ajouté
+import UsersSettings from './components/UsersSettings';
+import { useAuth } from '../../contexts/AuthContext';
 
 function Settings() {
+  const { isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0); // État pour suivre l'onglet actif
   const [companySettings, setCompanySettings] = useState(null);
@@ -44,7 +47,8 @@ function Settings() {
     { id: 8, title: 'Accès' },
     { id: 9, title: 'Sécurité' },
     { id: 10, title: 'Signatures' },
-    { id: 11, title: 'Import/Export' } // Nouvel onglet
+    { id: 11, title: 'Import/Export' }, // Nouvel onglet
+    ...(isAdmin ? [{ id: 12, title: 'Utilisateurs' }] : [])
   ];
 
   // Chargement initial des données
@@ -532,6 +536,11 @@ function Settings() {
             <ImportExportSettings 
               onDataImported={handleDataImported}
             />
+          )}
+
+          {/* Utilisateurs (administrateurs) */}
+          {activeTab === 12 && isAdmin && (
+            <UsersSettings />
           )}
         </div>
       </div>

@@ -185,14 +185,15 @@ const CsvImportHelper = ({ entity, displayName, onComplete, className }) => {
     // Pour chaque contrat dans les données CSV
     for (const contract of data) {
       // Formater les dates si elles existent
+      const { employee, client, start_date, end_date, ...rest } = contract;
       const formattedContract = {
-        ...contract,
-        start_date: contract.start_date ? parseDate(contract.start_date) : null,
-        end_date: contract.end_date ? parseDate(contract.end_date) : null
+        ...rest,
+        startDate: (contract.startDate || start_date) ? parseDate(contract.startDate || start_date) : null,
+        endDate: (contract.endDate || end_date) ? parseDate(contract.endDate || end_date) : null
       };
       
       // Si le contrat a un ID et qu'il existe déjà, mise à jour
-      if (contract.id && existingContracts.some(c => c.id === contract.id)) {
+      if (contract.id && existingContracts.some(c => String(c.id) === String(contract.id))) {
         await DatabaseService.updateContract(contract.id, formattedContract);
       }
       // Sinon, création d'un nouveau contrat
@@ -254,31 +255,31 @@ const CsvImportHelper = ({ entity, displayName, onComplete, className }) => {
     
     // Importer chaque type de paramètre s'il y a des données
     if (taxRates.length > 0) {
-      await DatabaseService.set('settings_tax_rates', taxRates);
+      await SettingsService.replaceList(SettingsService.kinds.taxRates, taxRates);
     }
     if (hourTypes.length > 0) {
-      await DatabaseService.set('settings_hour_types', hourTypes);
+      await SettingsService.replaceList(SettingsService.kinds.hourTypes, hourTypes);
     }
     if (paymentMethods.length > 0) {
-      await DatabaseService.set('settings_payment_methods', paymentMethods);
+      await SettingsService.replaceList(SettingsService.kinds.paymentMethods, paymentMethods);
     }
     if (transportModes.length > 0) {
-      await DatabaseService.set('settings_transport_modes', transportModes);
+      await SettingsService.replaceList(SettingsService.kinds.transportModes, transportModes);
     }
     if (qualifications.length > 0) {
-      await DatabaseService.set('settings_qualifications', qualifications);
+      await SettingsService.replaceList(SettingsService.kinds.qualifications, qualifications);
     }
     if (motifTypes.length > 0) {
-      await DatabaseService.set('settings_motif_types', motifTypes);
+      await SettingsService.replaceList(SettingsService.kinds.motifTypes, motifTypes);
     }
     if (justificatifTypes.length > 0) {
-      await DatabaseService.set('settings_justificatif_types', justificatifTypes);
+      await SettingsService.replaceList(SettingsService.kinds.justificatifTypes, justificatifTypes);
     }
     if (accessMethods.length > 0) {
-      await DatabaseService.set('settings_access_methods', accessMethods);
+      await SettingsService.replaceList(SettingsService.kinds.accessMethods, accessMethods);
     }
     if (securityMeasures.length > 0) {
-      await DatabaseService.set('settings_security_measures', securityMeasures);
+      await SettingsService.replaceList(SettingsService.kinds.securityMeasures, securityMeasures);
     }
     
     // Mettre à jour les services correspondants pour recharger les données

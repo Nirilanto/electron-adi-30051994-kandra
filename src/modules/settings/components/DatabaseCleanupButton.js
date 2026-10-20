@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { TrashIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import ContractService from '../../contracts/ContractService';
+import DatabaseService from '../../../services/DatabaseService';
 
 function DatabaseCleanupButton() {
     const [isLoading, setIsLoading] = useState(false);
@@ -15,71 +15,10 @@ function DatabaseCleanupButton() {
         setCleanupResult(null);
 
         try {
-            // Récupérer tous les contrats
-            const contracts = await ContractService.getAllContracts();
-            console.log(`📊 Analyse de ${contracts.length} contrats...`);
-
-            let contractsUpdated = 0;
-            let spaceSaved = 0;
-
-            // Traiter chaque contrat
-            const updatedContracts = contracts.map(contract => {
-                const originalContract = { ...contract };
-                let contractModified = false;
-                let contractSpaceSaved = 0;
-
-                // Supprimer signature.imageData si elle existe
-                if (contract.signature && contract.signature.imageData) {
-                    const imageSize = contract.signature.imageData.length;
-                    contractSpaceSaved += imageSize;
-                    delete contract.signature.imageData;
-                    contractModified = true;
-                    console.log(`🗑️ Suppression imageData signature du contrat ${contract.contractNumber}: ${Math.round(imageSize / 1024)}KB`);
-                }
-
-                // Supprimer stamp.imageData si elle existe
-                if (contract.stamp && contract.stamp.imageData) {
-                    const imageSize = contract.stamp.imageData.length;
-                    contractSpaceSaved += imageSize;
-                    delete contract.stamp.imageData;
-                    contractModified = true;
-                    console.log(`🗑️ Suppression imageData stamp du contrat ${contract.contractNumber}: ${Math.round(imageSize / 1024)}KB`);
-                }
-
-                // Nettoyer les objets signature/stamp vides
-                if (contract.signature && Object.keys(contract.signature).length === 0) {
-                    delete contract.signature;
-                    contractModified = true;
-                }
-
-                if (contract.stamp && Object.keys(contract.stamp).length === 0) {
-                    delete contract.stamp;
-                    contractModified = true;
-                }
-
-                if (contractModified) {
-                    contractsUpdated++;
-                    spaceSaved += contractSpaceSaved;
-                }
-
-                return contract;
-            });
-
-            // Sauvegarder tous les contrats nettoyés
-            if (contractsUpdated > 0) {
-                // Utiliser directement la méthode de base pour éviter l'enrichissement
-                await ContractService.db.set('contracts', updatedContracts);
-                console.log(`✅ ${contractsUpdated} contrats nettoyés et sauvegardés`);
-            }
-
-            setCleanupResult({
-                success: true,
-                contractsTotal: contracts.length,
-                contractsUpdated,
-                spaceSavedBytes: spaceSaved,
-                spaceSavedKB: Math.round(spaceSaved / 1024),
-                spaceSavedMB: Math.round(spaceSaved / (1024 * 1024) * 100) / 100
-            });
+            // Le nettoyage est réalisé côté serveur (suppression des images dupliquées dans les contrats)
+            const result = await DatabaseService.cleanupContracts();
+            console.log(`✅ ${result.contractsUpdated} contrats nettoyés`);
+            setCleanupResult(result);
 
         } catch (error) {
             console.error('❌ Erreur lors du nettoyage:', error);

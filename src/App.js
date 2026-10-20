@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // Composants de layout
 import Layout from "./components/Layout";
-import LicenseModal from "./components/LicenseModal";
+import LoginPage from "./components/LoginPage";
+import { AuthProvider } from "./contexts/AuthContext";
 
 // Modules
 import Dashboard from "./modules/dashboard/Dashboard";
@@ -25,34 +26,35 @@ import { PayrollList, PayrollForm, PayrollProfile } from './modules/payroll';
 
 // Services
 import DatabaseService from "./services/DatabaseService";
-import LicenseService from "./services/LicenseService";
+import AuthService from "./services/AuthService";
 
 function App() {
   const [dbInitialized, setDbInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [licenseValid, setLicenseValid] = useState(false);
-  const [showLicenseModal, setShowLicenseModal] = useState(false);
+  const [initError, setInitError] = useState("");
+  const [user, setUser] = useState(null);
+  const [needsSetup, setNeedsSetup] = useState(false);
 
-  // Initialiser la base de données et vérifier la licence au démarrage
+  // Vérifier le serveur et restaurer la session au démarrage
   useEffect(() => {
     const initApp = async () => {
       try {
-        // Initialiser la base de données
         await DatabaseService.initializeDatabase();
         setDbInitialized(true);
 
-        // Vérifier le statut de la licence
-        const licenseStatus = LicenseService.checkLicense();
-        if (licenseStatus.valid) {
-          setLicenseValid(true);
-        } else {
-          setShowLicenseModal(true);
+        const status = await AuthService.getStatus();
+        setNeedsSetup(!!status.needsSetup);
+
+        const restored = await AuthService.restoreSession();
+        if (restored) {
+          setUser(restored);
         }
       } catch (error) {
         console.error(
           "Erreur lors de l'initialisation de l'application:",
           error
         );
+        setInitError(error.message || "");
       } finally {
         setLoading(false);
       }
@@ -61,14 +63,17 @@ function App() {
     initApp();
   }, []);
 
-  // Gérer l'activation de la licence
-  const handleLicenseActivation = async (code) => {
-    const result = LicenseService.activateLicense(code);
-    if (result.success) {
-      setLicenseValid(true);
-      setShowLicenseModal(false);
-    }
-    return result;
+  // Déconnexion (manuelle ou jeton expiré)
+  const handleLogout = useCallback(() => {
+    AuthService.logout();
+    setUser(null);
+  }, []);
+
+  useEffect(() => AuthService.onUnauthorized(handleLogout), [handleLogout]);
+
+  const handleAuthenticated = (authenticatedUser) => {
+    setUser(authenticatedUser);
+    setNeedsSetup(false);
   };
 
   // Afficher un écran de chargement pendant l'initialisation
@@ -83,7 +88,7 @@ function App() {
     );
   }
 
-  // Afficher un message d'erreur si la base de données n'a pas pu être initialisée
+  // Afficher un message d'erreur si le serveur n'est pas joignable
   if (!dbInitialized) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -92,10 +97,10 @@ function App() {
             Erreur d'initialisation
           </h1>
           <p className="text-gray-600 mb-4">
-            L'application n'a pas pu initialiser la base de données. Veuillez
-            vérifier que l'application dispose des droits nécessaires ou
-            contactez le support technique.
+            L'application n'a pas pu contacter le serveur ou sa base de données.
+            Vérifiez que le serveur est démarré ou contactez le support technique.
           </p>
+          {initError && <p className="text-xs text-gray-400 mb-4">{initError}</p>}
           <button
             onClick={() => window.location.reload()}
             className="btn btn-primary"
@@ -107,76 +112,60 @@ function App() {
     );
   }
 
-  // Vérifier la licence avant d'afficher l'application
-  if (!licenseValid) {
-    return (
-      <>
-        <div className="flex items-center justify-center h-screen bg-gray-50">
-          <div className="text-center max-w-md p-6 bg-white rounded-lg shadow-md">
-            <h1 className="text-xl font-bold text-blue-600 mb-2">
-              Contrat Manager
-            </h1>
-            <p className="text-gray-600">
-              Activation en cours...
-            </p>
-          </div>
-        </div>
-        <LicenseModal
-          isOpen={showLicenseModal}
-          onActivate={handleLicenseActivation}
-        />
-      </>
-    );
+  // Connexion requise
+  if (!user) {
+    return <LoginPage needsSetup={needsSetup} onAuthenticated={handleAuthenticated} />;
   }
 
   // Structure principale de l'application
   return (
-    <Layout>
-      <Routes>
-        {/* Dashboard */}
-        <Route path="/" element={<Dashboard />} />
+    <AuthProvider user={user} logout={handleLogout}>
+      <Layout>
+        <Routes>
+          {/* Dashboard */}
+          <Route path="/" element={<Dashboard />} />
 
-        {/* Module Employés */}
-        <Route path="/employees" element={<EmployeeList />} />
-        <Route path="/employees/new" element={<EmployeeForm />} />
-        <Route path="/employees/:id/profile" element={<EmployeeProfile />} />
-        <Route path="/employees/:id/edit" element={<EmployeeForm />} />
+          {/* Module Employés */}
+          <Route path="/employees" element={<EmployeeList />} />
+          <Route path="/employees/new" element={<EmployeeForm />} />
+          <Route path="/employees/:id/profile" element={<EmployeeProfile />} />
+          <Route path="/employees/:id/edit" element={<EmployeeForm />} />
 
-        {/* Module Clients */}
-        <Route path="/clients" element={<ClientList />} />
-        <Route path="/clients/new" element={<ClientForm />} />
-        {/* <Route path="/clients/:id" element={<ClientForm />} /> */}
-        <Route path="/clients/:id/profile" element={<ClientProfile />} />
-        <Route path="/clients/:id/edit" element={<ClientForm />} />
+          {/* Module Clients */}
+          <Route path="/clients" element={<ClientList />} />
+          <Route path="/clients/new" element={<ClientForm />} />
+          <Route path="/clients/:id/profile" element={<ClientProfile />} />
+          <Route path="/clients/:id/edit" element={<ClientForm />} />
 
-        <Route path="/settings" element={<Settings />} />
+          <Route path="/settings" element={<Settings />} />
 
-        {/* Module Pointage Global */}
-        <Route path="/timetracking" element={<GlobalTimeTracking />} />
+          {/* Module Pointage Global */}
+          <Route path="/timetracking" element={<GlobalTimeTracking />} />
 
-        {/* Module Contrats */}
-        <Route path="/contracts" element={<ContractList />} />
-        <Route path="/contracts/new" element={<ContractForm />} />
-        <Route path="/contracts/:id" element={<ContractForm />} />
-        <Route path="/contracts/:id/profile" element={<ContractProfile />} />
-        <Route path="/contracts/:id/edit" element={<ContractForm />} />
+          {/* Module Contrats */}
+          <Route path="/contracts" element={<ContractList />} />
+          <Route path="/contracts/new" element={<ContractForm />} />
+          <Route path="/contracts/:id" element={<ContractForm />} />
+          <Route path="/contracts/:id/profile" element={<ContractProfile />} />
+          <Route path="/contracts/:id/edit" element={<ContractForm />} />
 
-        {/* Module Bulletins de paie */}
-        <Route path="/payroll" element={<PayrollList />} />
-        <Route path="/payroll/new" element={<PayrollForm />} />
-        <Route path="/payroll/:id" element={<PayrollProfile />} />
-        <Route path="/payroll/:id/edit" element={<PayrollForm />} />
+          {/* Module Bulletins de paie */}
+          <Route path="/payroll" element={<PayrollList />} />
+          <Route path="/payroll/new" element={<PayrollForm />} />
+          <Route path="/payroll/:id" element={<PayrollProfile />} />
+          <Route path="/payroll/:id/edit" element={<PayrollForm />} />
 
-        {/* Module invoices */}
-        <Route path="/invoices" element={<InvoiceList />} />
-        <Route path="/invoices/new" element={<InvoiceForm />} />
-        <Route path="/invoices/:id" element={<InvoiceDetail />} />
-        <Route path="/invoices/:id/edit" element={<InvoiceForm />} />
+          {/* Module invoices */}
+          <Route path="/invoices" element={<InvoiceList />} />
+          <Route path="/invoices/new" element={<InvoiceForm />} />
+          <Route path="/invoices/:id" element={<InvoiceDetail />} />
+          <Route path="/invoices/:id/edit" element={<InvoiceForm />} />
 
-        {/* Redirection pour les routes non définies */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Layout>
+          {/* Redirection pour les routes non définies */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Layout>
+    </AuthProvider>
   );
 }
 

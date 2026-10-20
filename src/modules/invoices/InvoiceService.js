@@ -66,18 +66,8 @@ class InvoiceService {
   // Générer le prochain numéro de facture
   async generateInvoiceNumber() {
     try {
-      const currentYear = new Date().getFullYear();
-      const currentYearStr = currentYear.toString();
-      
-      // Récupérer le dernier numéro
-      const lastNumber = await this.db.get(this.lastInvoiceNumberKey) || 0;
-      const nextNumber = lastNumber + 1;
-      
-      // Sauvegarder le nouveau numéro
-      await this.db.set(this.lastInvoiceNumberKey, nextNumber);
-      
-      // Format: FAC-2025-0001
-      return `FAC-${currentYearStr}-${nextNumber.toString().padStart(4, '0')}`;
+      // Numéro attribué par le serveur (compteur atomique, format FAC-AAAA-NNNN)
+      return await this.db.getNextInvoiceNumber();
     } catch (error) {
       console.error('Erreur lors de la génération du numéro de facture:', error);
       throw error;

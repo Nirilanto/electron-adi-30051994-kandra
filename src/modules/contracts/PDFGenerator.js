@@ -1,4 +1,5 @@
 // src/modules/contracts/PDFGenerator.js
+import PdfClient from "../../services/PdfClient";
 
 /**
  * Classe pour la génération de documents PDF de contrats et certificats
@@ -43,17 +44,12 @@ class PDFGenerator {
         contract.contractNumber || contract.id
       }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
 
-      // Si nous sommes dans Electron, utiliser l'API Electron
-      if (window.electron) {
-        return await window.electron.generatePDF(
-          "employee_contract",
-          contractData,
-          customPath || defaultFileName
-        );
-      } else {
-        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-        return this.openEmployeeContractPreview(contractData);
-      }
+      // Génération du PDF côté serveur (ouvre le document dans un nouvel onglet)
+      return await PdfClient.generatePDF(
+        "employee_contract",
+        contractData,
+        customPath || defaultFileName
+      );
     } catch (error) {
       console.error(
         "Erreur lors de la génération du PDF du contrat employé:",
@@ -101,17 +97,12 @@ class PDFGenerator {
         contract.contractNumber || contract.id
       }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
 
-      // Si nous sommes dans Electron, utiliser l'API Electron
-      if (window.electron) {
-        return await window.electron.generatePDF(
-          "client_contract",
-          contractData,
-          customPath || defaultFileName
-        );
-      } else {
-        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-        return this.openClientContractPreview(contractData);
-      }
+      // Génération du PDF côté serveur (ouvre le document dans un nouvel onglet)
+      return await PdfClient.generatePDF(
+        "client_contract",
+        contractData,
+        customPath || defaultFileName
+      );
     } catch (error) {
       console.error(
         "Erreur lors de la génération du PDF du contrat client:",
@@ -1524,17 +1515,12 @@ class PDFGenerator {
         contract.contractNumber || contract.id
       }_${new Date().toISOString().split("T")[0].replace(/-/g, "")}.pdf`;
 
-      // Si nous sommes dans Electron, utiliser l'API Electron
-      if (window.electron) {
-        return await window.electron.generatePDF(
-          "certificate",
-          contractData,
-          customPath || defaultFileName
-        );
-      } else {
-        // En mode web, ouvrir une prévisualisation HTML dans une nouvelle fenêtre
-        return this.openCertificatePreview(contractData);
-      }
+      // Génération du PDF côté serveur (ouvre le document dans un nouvel onglet)
+      return await PdfClient.generatePDF(
+        "certificate",
+        contractData,
+        customPath || defaultFileName
+      );
     } catch (error) {
       console.error(
         "Erreur lors de la génération du PDF du certificat:",
